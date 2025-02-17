@@ -699,3 +699,42 @@ def test_munge_varnames() -> None:
 
     var = 'y.2.3:1.2:5:6'
     assert stancsv.munge_varname(var) == 'y[2,3].1[2].5.6'
+
+def test_scan_timing_normal() -> None:
+    csv_content = (
+        "# Elapsed Time: 0.005 seconds (Warm-up)\n"
+        "#                0 seconds (Sampling)\n"
+        "#                0.005 seconds (Total)\n"
+    )
+    fd = io.StringIO(csv_content)
+    config_dict = {}
+    start_line = 0
+    final_line = stancsv.scan_timing(fd, config_dict, start_line)
+    assert final_line == 3
+    expected = {'warmup': 0.005, 'sampling': 0.0, 'total': 0.005}
+    assert config_dict.get('timing') == expected
+
+def test_scan_timing_no_timing() -> None:
+    csv_content = (
+        "# merrily we roll along\n"
+        "# roll along\n"
+        "# very merrily we roll along\n"
+    )
+    fd = io.StringIO(csv_content)
+    config_dict = {}
+    start_line = 0
+    with pytest.raises(ValueError, match="Invalid timing"):
+        stancsv.scan_timing(fd, config_dict, start_line)
+
+
+def test_scan_timing_invalid_value() -> None:
+    csv_content = (
+        "# Elapsed Time: abc seconds (Warm-up)\n"
+        "#                0.200 seconds (Sampling)\n"
+        "#                0.300 seconds (Total)\n"
+    )
+    fd = io.StringIO(csv_content)
+    config_dict = {}
+    start_line = 0
+    with pytest.raises(ValueError, match="Invalid timing"):
+        stancsv.scan_timing(fd, config_dict, start_line)

@@ -79,6 +79,7 @@ def scan_sampler_csv(path: str, is_fixed_param: bool = False) -> Dict[str, Any]:
                 lineno = scan_warmup_iters(fd, dict, lineno)
                 lineno = scan_hmc_params(fd, dict, lineno)
             lineno = scan_sampling_iters(fd, dict, lineno, is_fixed_param)
+            lineno = scan_timing(fd, dict, lineno)
         except ValueError as e:
             raise ValueError("Error in reading csv file: " + path) from e
     return dict
@@ -378,6 +379,62 @@ def scan_sampling_iters(
     if not is_fixed_param:
         config_dict['ct_divergences'] = ct_divergences
         config_dict['ct_max_treedepth'] = ct_max_treedepth
+    return lineno
+
+def scan_timing(fd: TextIO, config_dict: Dict[str, Any], lineno: int) -> int:
+    """
+    Scan timing information from the trailing comment lines in a Stan CSV file.
+
+    #  Elapsed Time: 0.001332 seconds (Warm-up)
+    #                0.000249 seconds (Sampling)
+    #                0.001581 seconds (Total)
+
+
+    It extracts the time values and saves them in the config_dict under the key 'timing'
+    as a dictionary with keys 'warmup', 'sampling', and 'total'.
+    Returns the updated line number after reading the timing info.
+
+    :param fd: Open file descriptor positioned at the timing section.
+    :param config_dict: Dictionary to which the timing info is added.
+    :param lineno: Current line number
+    """
+    timing = {}
+    keys = ['warmup', 'sampling', 'total']
+    while True:
+        pos = fd.tell()
+        line = fd.readline()
+        if not line:
+            break
+        lineno += 1
+        stripped = line.strip()
+        if not stripped.startswith('#'):
+            fd.seek(pos)
+            lineno -= 1
+            break
+        content = stripped.lstrip('#').strip()
+        if not content:
+            continue
+        tokens = content.lower().split()
+        if 'elapsed' in tokens[0]:
+            key = 'warmup'
+            try:
+                t = float(tokens[2])
+            except ValueError:
+                raise ValueError(f"Invalid timing value at line {lineno}: {content}")
+        else:
+            if 'sampling' in tokens[2]:
+                key = 'sampling'
+            elif 'total' in tokens[2]:
+                key = 'total'
+            try:
+                t = float(tokens[0])
+            except ValueError:
+                raise ValueError(f"Invalid timing value at line {lineno}: {content}")
+        timing[key] = t
+    if not all(key in timing for key in keys):
+        raise ValueError(f"Invalid timing, stopped at {lineno}")
+        
+    config_dict['timing'] = timing
     return lineno
 
 

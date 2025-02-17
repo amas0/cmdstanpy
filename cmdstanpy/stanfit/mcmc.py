@@ -97,8 +97,9 @@ class CmdStanMCMC:
         self._max_treedepths: np.ndarray = np.zeros(
             self.runset.chains, dtype=int
         )
+        self._chain_timing: List[Optional[Dict[str, float]]] = []
 
-        # info from CSV initial comments and header
+        # info from CSV header and initial and final comment blocks
         config = self._validate_csv_files()
         self._metadata: InferenceMetadata = InferenceMetadata(config)
         if not self._is_fixed_param:
@@ -240,6 +241,14 @@ class CmdStanMCMC:
         """
         return self._max_treedepths if not self._is_fixed_param else None
 
+    @property
+    def timing(self) -> List[Optional[Dict[str, float]]]:
+        """
+        List of per-chain timing info scraped from CSV file.
+        Each chain has dict with keys "warmup", "sampling", "total".
+        """
+        return self._chain_timing
+
     def draws(
         self, *, inc_warmup: bool = False, concat_chains: bool = False
     ) -> np.ndarray:
@@ -301,6 +310,7 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
+                self._chain_timing.append(dzero.get("timing"))
                 if not self._is_fixed_param:
                     self._divergences[i] = dzero['ct_divergences']
                     self._max_treedepths[i] = dzero['ct_max_treedepth']
@@ -313,6 +323,7 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
+                self._chain_timing.append(drest.get("timing"))
                 for key in dzero:
                     # check args that matter for parsing, plus name, version
                     if (

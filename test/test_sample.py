@@ -1714,6 +1714,12 @@ def test_metadata() -> None:
     assert fit.column_names == col_names
     assert fit.metric_type == 'diag_e'
 
+    assert len(fit.timing) == 4
+    for i in range(4):
+        assert 'warmup' in fit.timing[i].keys()
+        assert 'sampling' in fit.timing[i].keys()
+        assert 'total' in fit.timing[i].keys()
+
     assert fit.metadata.cmdstan_config['num_samples'] == 100
     assert fit.metadata.cmdstan_config['thin'] == 1
     assert fit.metadata.cmdstan_config['algorithm'] == 'hmc'
