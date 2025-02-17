@@ -12,6 +12,7 @@ from test import check_present, raises_nested
 from typing import List
 from unittest.mock import MagicMock, patch
 
+import numpy as np
 import pytest
 
 from cmdstanpy.model import CmdStanModel
@@ -95,10 +96,13 @@ def test_exe_only() -> None:
     assert not model2._fixed_param
 
 
-def test_fixed_param() -> None:
+def test_legacy_fixed_param() -> None:
     stan = os.path.join(DATAFILES_PATH, 'datagen_poisson_glm.stan')
     model = CmdStanModel(stan_file=stan)
-    assert model._fixed_param
+    if cmdstan_version_before(2, 36):
+        assert model._fixed_param
+    else:
+        assert not model._fixed_param
 
 
 def test_model_pedantic(caplog: pytest.LogCaptureFixture) -> None:
@@ -593,3 +597,35 @@ def test_format_old_version() -> None:
         model.format(max_line_length=88)
 
     model.format(canonicalize=True)
+
+
+def test_diagnose():
+    # Check the gradients.
+    model = CmdStanModel(stan_file=BERN_STAN)
+    gradients = model.diagnose(data=BERN_DATA)
+
+    # Check we have the right columns.
+    assert set(gradients) == {
+        "param_idx",
+        "value",
+        "model",
+        "finite_diff",
+        "error",
+    }
+
+    # Check gradients against the same value as in `log_prob`.
+    inits = {"theta": 0.34903938392023830482}
+    gradients = model.diagnose(data=BERN_DATA, inits=inits)
+    np.testing.assert_allclose(gradients.model.iloc[0], -1.18847)
+
+    # Simulate bad gradients by using large finite difference.
+    with pytest.raises(RuntimeError, match="may exceed the error threshold"):
+        model.diagnose(data=BERN_DATA, epsilon=3)
+
+    # Check we get the results if we set require_gradients_ok=False.
+    gradients = model.diagnose(
+        data=BERN_DATA,
+        epsilon=3,
+        require_gradients_ok=False,
+    )
+    assert np.abs(gradients["error"]).max() > 1e-3
