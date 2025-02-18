@@ -15,7 +15,6 @@ from typing import (
     Sequence,
     Tuple,
     Union,
-    cast,
 )
 
 import numpy as np
@@ -324,7 +323,7 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
-                self._chain_time.append(drest['time']) # type: ignore
+                self._chain_time.append(drest['time'])  # type: ignore
                 for key in dzero:
                     # check args that matter for parsing, plus name, version
                     if (
