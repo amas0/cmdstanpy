@@ -311,8 +311,7 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
-                time_info = cast(Dict[str, float], dzero.get("time") or {})
-                self._chain_time.append(time_info)
+                self._chain_time.append(dzero['time'])  # type: ignore
                 if not self._is_fixed_param:
                     self._divergences[i] = dzero['ct_divergences']
                     self._max_treedepths[i] = dzero['ct_max_treedepth']
@@ -325,8 +324,7 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
-                time_info = cast(Dict[str, float], drest.get("time") or {})
-                self._chain_time.append(time_info)
+                self._chain_time.append(drest['time']) # type: ignore
                 for key in dzero:
                     # check args that matter for parsing, plus name, version
                     if (
