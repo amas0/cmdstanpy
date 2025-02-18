@@ -15,6 +15,7 @@ from typing import (
     Sequence,
     Tuple,
     Union,
+    cast,
 )
 
 import numpy as np
@@ -310,7 +311,8 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
-                self._chain_time.append(dzero.get("time"))
+                time_info = cast(Dict[str, float], dzero.get("time") or {})
+                self._chain_time.append(time_info)
                 if not self._is_fixed_param:
                     self._divergences[i] = dzero['ct_divergences']
                     self._max_treedepths[i] = dzero['ct_max_treedepth']
@@ -323,7 +325,8 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
-                self._chain_time.append(drest.get("time"))
+                time_info = cast(Dict[str, float], drest.get("time") or {})
+                self._chain_time.append(time_info)
                 for key in dzero:
                     # check args that matter for parsing, plus name, version
                     if (
