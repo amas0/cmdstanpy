@@ -97,7 +97,7 @@ class CmdStanMCMC:
         self._max_treedepths: np.ndarray = np.zeros(
             self.runset.chains, dtype=int
         )
-        self._chain_timing: List[Optional[Dict[str, float]]] = []
+        self._chain_time: List[Dict[str, float]] = []
 
         # info from CSV header and initial and final comment blocks
         config = self._validate_csv_files()
@@ -242,12 +242,12 @@ class CmdStanMCMC:
         return self._max_treedepths if not self._is_fixed_param else None
 
     @property
-    def timing(self) -> List[Optional[Dict[str, float]]]:
+    def time(self) -> List[Dict[str, float]]:
         """
-        List of per-chain timing info scraped from CSV file.
+        List of per-chain time info scraped from CSV file.
         Each chain has dict with keys "warmup", "sampling", "total".
         """
-        return self._chain_timing
+        return self._chain_time
 
     def draws(
         self, *, inc_warmup: bool = False, concat_chains: bool = False
@@ -310,7 +310,7 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
-                self._chain_timing.append(dzero.get("timing"))
+                self._chain_time.append(dzero.get("time"))
                 if not self._is_fixed_param:
                     self._divergences[i] = dzero['ct_divergences']
                     self._max_treedepths[i] = dzero['ct_max_treedepth']
@@ -323,7 +323,7 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
-                self._chain_timing.append(drest.get("timing"))
+                self._chain_time.append(drest.get("time"))
                 for key in dzero:
                     # check args that matter for parsing, plus name, version
                     if (
