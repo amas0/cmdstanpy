@@ -381,6 +381,7 @@ def scan_sampling_iters(
         config_dict['ct_max_treedepth'] = ct_max_treedepth
     return lineno
 
+
 def scan_time(fd: TextIO, config_dict: Dict[str, Any], lineno: int) -> int:
     """
     Scan time information from the trailing comment lines in a Stan CSV file.
@@ -390,8 +391,8 @@ def scan_time(fd: TextIO, config_dict: Dict[str, Any], lineno: int) -> int:
     #                0.001581 seconds (Total)
 
 
-    It extracts the time values and saves them in the config_dict under the key 'time'
-    as a dictionary with keys 'warmup', 'sampling', and 'total'.
+    It extracts the time values and saves them in the config_dict: key 'time',
+    value a dictionary with keys 'warmup', 'sampling', and 'total'.
     Returns the updated line number after reading the time info.
 
     :param fd: Open file descriptor at comment row following all sample data.
@@ -433,9 +434,10 @@ def scan_time(fd: TextIO, config_dict: Dict[str, Any], lineno: int) -> int:
         except ValueError:
             raise ValueError(f"Invalid time value at line {lineno}: {content}")
         time[key] = t
+
     if not all(key in time for key in keys):
         raise ValueError(f"Invalid time, stopped at {lineno}")
-        
+
     config_dict['time'] = time
     return lineno
 

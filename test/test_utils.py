@@ -753,4 +753,3 @@ def test_scan_time_invalid_string() -> None:
     start_line = 0
     with pytest.raises(ValueError, match="Invalid time"):
         stancsv.scan_time(fd, config_dict, start_line)
-        
