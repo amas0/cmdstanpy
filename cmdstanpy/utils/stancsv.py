@@ -431,7 +431,8 @@ def scan_time(fd: TextIO, config_dict: Dict[str, Any], lineno: int) -> int:
             raise ValueError(f"Invalid time at line {lineno}: {content}")
         try:
             t = float(time_str)
-        except ValueError:
+        except ValueError as exc:
+            # pylint: disable=raise-missing-from
             raise ValueError(f"Invalid time value at line {lineno}: {content}")
         time[key] = t
 
