@@ -424,7 +424,7 @@ def scan_time(fd: TextIO, config_dict: Dict[str, Any], lineno: int) -> int:
         elif 'Sampling' in content:
             key = 'sampling'
             time_str = tokens[0]
-        elif  'Total' in content:
+        elif 'Total' in content:
             key = 'total'
             time_str = tokens[0]
         else:
