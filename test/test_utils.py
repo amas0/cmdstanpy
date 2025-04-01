@@ -7,11 +7,9 @@ import logging
 import os
 import pathlib
 import platform
-import random
 import re
 import shutil
 import stat
-import string
 import tempfile
 from test import check_present, mark_windows_only, raises_nested
 from unittest import mock
@@ -43,6 +41,7 @@ from cmdstanpy.utils import (
     validate_dir,
     windows_short_path,
 )
+from cmdstanpy.utils.cmdstan import stanc_path
 from cmdstanpy.utils.filesystem import temp_inits, temp_single_json
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -134,6 +133,16 @@ def test_set_path() -> None:
         assert os.path.samefile(install_version, os.environ['CMDSTAN'])
 
 
+@contextlib.contextmanager
+def temporary_cmdstan_path(path: str) -> None:
+    prev = cmdstan_path()
+    try:
+        set_cmdstan_path(path)
+        yield
+    finally:
+        set_cmdstan_path(prev)
+
+
 def test_validate_path() -> None:
     if 'CMDSTAN' in os.environ:
         install_version = os.environ.get('CMDSTAN')
@@ -150,20 +159,18 @@ def test_validate_path() -> None:
     with pytest.raises(ValueError, match='No CmdStan directory'):
         validate_cmdstan_path(path_foo)
 
-    folder_name = ''.join(
-        random.choice(string.ascii_letters) for _ in range(10)
-    )
-    while os.path.exists(folder_name):
-        folder_name = ''.join(
-            random.choice(string.ascii_letters) for _ in range(10)
-        )
-    folder = pathlib.Path(folder_name)
-    folder.mkdir(parents=True)
-    (folder / "makefile").touch()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        folder = pathlib.Path(tmpdir)
+        with pytest.raises(ValueError, match='missing makefile'):
+            validate_cmdstan_path(str(folder.absolute()))
 
-    with pytest.raises(ValueError, match='missing binaries'):
-        validate_cmdstan_path(str(folder.absolute()))
-    shutil.rmtree(folder)
+        (folder / "makefile").touch()
+        with temporary_cmdstan_path(str(folder.absolute())):
+            with pytest.raises(
+                ValueError,
+                match='stanc executable not found in CmdStan installation',
+            ):
+                stanc_path()
 
 
 def test_validate_dir() -> None:
@@ -216,7 +223,6 @@ def test_cmdstan_version(caplog: pytest.LogCaptureFixture) -> None:
         fake_bin.mkdir(parents=True)
         fake_makefile = fake_path / 'makefile'
         fake_makefile.touch()
-        (fake_bin / f'stanc{EXTENSION}').touch()
         with mock.patch.dict("os.environ", CMDSTAN=str(fake_path)):
             assert str(fake_path) == cmdstan_path()
             with open(fake_makefile, 'w') as fd:
@@ -230,10 +236,7 @@ def test_cmdstan_version(caplog: pytest.LogCaptureFixture) -> None:
             check_present(caplog, ('cmdstanpy', 'INFO', expect))
 
             fake_makefile.unlink()
-            expect = (
-                'CmdStan installation {} missing makefile, '
-                'cannot get version.'.format(fake_path)
-            )
+            expect = 'No CmdStan installation found.'
             with caplog.at_level(logging.INFO):
                 cmdstan_version()
             check_present(caplog, ('cmdstanpy', 'INFO', expect))

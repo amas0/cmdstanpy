@@ -1,6 +1,7 @@
 """
 Utilities for finding and installing CmdStan
 """
+
 import os
 import platform
 import subprocess
@@ -133,13 +134,27 @@ def validate_cmdstan_path(path: str) -> None:
     """
     if not os.path.isdir(path):
         raise ValueError(f'No CmdStan directory, path {path} does not exist.')
-    if not os.path.exists(os.path.join(path, 'bin', 'stanc' + EXTENSION)):
+    if not os.path.exists(os.path.join(path, 'makefile')):
         raise ValueError(
-            f'CmdStan installataion missing binaries in {path}/bin. '
-            'Re-install cmdstan by running command "install_cmdstan '
-            '--overwrite", or Python code "import cmdstanpy; '
-            'cmdstanpy.install_cmdstan(overwrite=True)"'
+            f'CmdStan installataion missing makefile, path {path} is invalid.'
+            ' You may wish to re-install cmdstan by running command '
+            '"install_cmdstan --overwrite", or Python code '
+            '"import cmdstanpy; cmdstanpy.install_cmdstan(overwrite=True)"'
         )
+
+
+def stanc_path() -> str:
+    """
+    Returns the path to the stanc executable in the CmdStan installation.
+    """
+    cmdstan = cmdstan_path()
+    stanc_exe = os.path.join(cmdstan, 'bin', 'stanc' + EXTENSION)
+    if not os.path.exists(stanc_exe):
+        raise ValueError(
+            f'stanc executable not found in CmdStan installation: {cmdstan}.\n'
+            'You may need to re-install or re-build CmdStan.',
+        )
+    return stanc_exe
 
 
 def set_cmdstan_path(path: str) -> None:
@@ -198,13 +213,6 @@ def cmdstan_version() -> Optional[Tuple[int, ...]]:
     except ValueError as e:
         get_logger().info('No CmdStan installation found.')
         get_logger().debug("%s", e)
-        return None
-
-    if not os.path.exists(makefile):
-        get_logger().info(
-            'CmdStan installation %s missing makefile, cannot get version.',
-            cmdstan_path(),
-        )
         return None
 
     with open(makefile, 'r') as fd:

@@ -19,6 +19,7 @@ from cmdstanpy.utils.cmdstan import (
     cmdstan_path,
     cmdstan_version,
     cmdstan_version_before,
+    stanc_path,
 )
 from cmdstanpy.utils.command import do_command
 from cmdstanpy.utils.filesystem import SanitizedOrTmpFilePath
@@ -351,7 +352,7 @@ def src_info(
     :meth:`CmdStanModel.src_info`, and should not be called directly.
     """
     cmd = (
-        [os.path.join(cmdstan_path(), 'bin', 'stanc' + EXTENSION)]
+        [stanc_path()]
         # handle include-paths, allow-undefined etc
         + compiler_options.compose_stanc(None)
         + ['--info', str(stan_file)]
@@ -518,7 +519,7 @@ def format_stan_file(
 
     try:
         cmd = (
-            [os.path.join(cmdstan_path(), 'bin', 'stanc' + EXTENSION)]
+            [stanc_path()]
             # handle include-paths, allow-undefined etc
             + CompilerOptions(stanc_options=stanc_options).compose_stanc(None)
             + [str(stan_file)]
