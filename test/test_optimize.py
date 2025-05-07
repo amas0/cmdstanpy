@@ -694,3 +694,17 @@ def test_optimize_create_inits():
     assert isinstance(inits_1, dict)
     assert 'theta' in inits_1
     assert len(inits_1) == 1
+
+
+def test_optimize_init_sampling():
+    stan = os.path.join(DATAFILES_PATH, 'logistic.stan')
+    logistic_model = CmdStanModel(stan_file=stan)
+    logistic_data = os.path.join(DATAFILES_PATH, 'logistic.data.R')
+
+    mle = logistic_model.optimize(data=logistic_data)
+    inits = mle.create_inits()
+
+    fit = logistic_model.sample(data=logistic_data, inits=inits)
+
+    assert fit.chains == 4
+    assert fit.draws().shape == (1000, 4, 9)

@@ -378,3 +378,17 @@ def test_variational_create_inits():
         init1['theta'] == init2['theta']
         for init1, init2 in zip(seeded, seeded2)
     )
+
+
+def test_variational_init_sampling():
+    stan = os.path.join(DATAFILES_PATH, 'logistic.stan')
+    logistic_model = CmdStanModel(stan_file=stan)
+    logistic_data = os.path.join(DATAFILES_PATH, 'logistic.data.R')
+
+    vb = logistic_model.sample(data=logistic_data)
+    inits = vb.create_inits()
+
+    fit = logistic_model.sample(data=logistic_data, inits=inits)
+
+    assert fit.chains == 4
+    assert fit.draws().shape == (1000, 4, 9)
