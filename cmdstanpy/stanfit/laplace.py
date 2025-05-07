@@ -1,5 +1,5 @@
 """
-    Container for the result of running a laplace approximation.
+Container for the result of running a laplace approximation.
 """
 
 from typing import (
@@ -51,6 +51,39 @@ class CmdStanLaplace:
 
         config = scan_generic_csv(runset.csv_files[0])
         self._metadata = InferenceMetadata(config)
+
+    def create_inits(
+        self, seed: Optional[int] = None, chains: int = 4
+    ) -> Union[List[Dict[str, np.ndarray]], Dict[str, np.ndarray]]:
+        """
+        Create initial values for the parameters of the model
+        by randomly selecting draws from the Laplace approximation.
+
+        :param seed: Used for random selection, defaults to None
+        :param chains: Number of initial values to return, defaults to 4
+        :return: The initial values for the parameters of the model.
+
+        If ``chains`` is 1, a dictionary is returned, otherwise a list
+        of dictionaries is returned, in the format expected for the
+        ``inits`` argument. of :meth:`CmdStanModel.sample`.
+        """
+        self._assemble_draws()
+        rng = np.random.default_rng(seed)
+        idxs = rng.choice(self._draws.shape[0], size=chains, replace=False)
+        if chains == 1:
+            draw = self._draws[idxs[0]]
+            return {
+                name: var.extract_reshape(draw)
+                for name, var in self._metadata.stan_vars.items()
+            }
+        else:
+            return [
+                {
+                    name: var.extract_reshape(self._draws[idx])
+                    for name, var in self._metadata.stan_vars.items()
+                }
+                for idx in idxs
+            ]
 
     def _assemble_draws(self) -> None:
         if self._draws.shape != (0,):
