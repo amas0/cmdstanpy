@@ -725,7 +725,7 @@ class CmdStanMCMC:
             )
         if inc_warmup and not self._save_warmup:
             get_logger().warning(
-                "Draws from warmup iterations not available,"
+                'Draws from warmup iterations not available,'
                 ' must run sampler with "save_warmup=True".'
             )
         if vars is None:
