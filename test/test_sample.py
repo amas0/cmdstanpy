@@ -2083,3 +2083,33 @@ def test_serialization(stanfile='bernoulli.stan'):
     assert set(variables1) == set(variables2)
     for key, value1 in variables1.items():
         np.testing.assert_array_equal(value1, variables2[key])
+
+
+def test_mcmc_create_inits():
+    stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
+    bern_model = cmdstanpy.CmdStanModel(stan_file=stan)
+    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+
+    mcmc = bern_model.sample(data=jdata)
+
+    inits = mcmc.create_inits()
+    assert isinstance(inits, list)
+    assert len(inits) == 4
+    assert isinstance(inits[0], dict)
+    assert 'theta' in inits[0]
+
+    inits_10 = mcmc.create_inits(chains=10)
+    assert isinstance(inits_10, list)
+    assert len(inits_10) == 10
+
+    inits_1 = mcmc.create_inits(chains=1)
+    assert isinstance(inits_1, dict)
+    assert 'theta' in inits_1
+    assert len(inits_1) == 1
+
+    seeded = mcmc.create_inits(seed=1234)
+    seeded2 = mcmc.create_inits(seed=1234)
+    assert all(
+        init1['theta'] == init2['theta']
+        for init1, init2 in zip(seeded, seeded2)
+    )
