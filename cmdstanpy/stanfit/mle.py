@@ -1,7 +1,7 @@
 """Container for the result of running optimization"""
 
 from collections import OrderedDict
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -35,6 +35,30 @@ class CmdStanMLE:
         )  # make the typechecker happy
         self._save_iterations: bool = optimize_args.save_iterations
         self._set_mle_attrs(runset.csv_files[0])
+
+    def create_inits(
+        self, chains: int = 4
+    ) -> Union[List[Dict[str, np.ndarray]], Dict[str, np.ndarray]]:
+        """
+        Create initial values for the parameters of the model
+        from the MLE.
+
+        :param chains: Number of initial values to return, defaults to 4
+        :return: The initial values for the parameters of the model.
+
+        If ``chains`` is 1, a dictionary is returned, otherwise a list
+        of dictionaries is returned, in the format expected for the
+        ``inits`` argument. of :meth:`CmdStanModel.sample`.
+        """
+        mle_inits = {
+            name: var.extract_reshape(self.optimized_params_np)
+            for name, var in self._metadata.stan_vars.items()
+        }
+
+        if chains == 1:
+            return mle_inits
+        else:
+            return [mle_inits for _ in range(chains)]
 
     def __repr__(self) -> str:
         repr = 'CmdStanMLE: model={}{}'.format(

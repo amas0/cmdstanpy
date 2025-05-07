@@ -671,3 +671,26 @@ def test_serialization() -> None:
     np.testing.assert_array_equal(
         mle1.optimized_params_np, mle2.optimized_params_np
     )
+
+
+def test_optimize_create_inits():
+    stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
+    bern_model = CmdStanModel(stan_file=stan)
+    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+
+    mle = bern_model.optimize(data=jdata)
+
+    inits = mle.create_inits()
+    assert isinstance(inits, list)
+    assert len(inits) == 4
+    assert isinstance(inits[0], dict)
+    assert 'theta' in inits[0]
+
+    inits_10 = mle.create_inits(chains=10)
+    assert isinstance(inits_10, list)
+    assert len(inits_10) == 10
+
+    inits_1 = mle.create_inits(chains=1)
+    assert isinstance(inits_1, dict)
+    assert 'theta' in inits_1
+    assert len(inits_1) == 1
