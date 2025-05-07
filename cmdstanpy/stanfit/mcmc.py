@@ -105,6 +105,46 @@ class CmdStanMCMC:
         if not self._is_fixed_param:
             self._check_sampler_diagnostics()
 
+    def create_inits(
+        self, seed: Optional[int] = None, chains: int = 4
+    ) -> Union[List[Dict[str, np.ndarray]], Dict[str, np.ndarray]]:
+        """
+        Create initial values for the parameters of the model by
+        randomly selecting draws from the MCMC samples. If the samples
+        contain draws from multiple chains, each draw will be from
+        a different chain, if possible. Otherwise the chain is randomly
+        selected.
+
+        :param seed: Used for random selection, defaults to None
+        :param chains: Number of initial values to return, defaults to 4
+        :return: The initial values for the parameters of the model.
+
+        If ``chains`` is 1, a dictionary is returned, otherwise a list
+        of dictionaries is returned, in the format expected for the
+        ``inits`` argument. of :meth:`CmdStanModel.sample`.
+        """
+        self._assemble_draws()
+        rng = np.random.default_rng(seed)
+        n_draws, n_chains = self._draws.shape[:2]
+        draw_idxs = rng.choice(n_draws, size=chains, replace=False)
+        chain_idxs = rng.choice(
+            n_chains, size=chains, replace=(n_chains <= chains)
+        )
+        if chains == 1:
+            draw = self._draws[draw_idxs[0], chain_idxs[0]]
+            return {
+                name: var.extract_reshape(draw)
+                for name, var in self._metadata.stan_vars.items()
+            }
+        else:
+            return [
+                {
+                    name: var.extract_reshape(self._draws[d, i])
+                    for name, var in self._metadata.stan_vars.items()
+                }
+                for d, i in zip(draw_idxs, chain_idxs)
+            ]
+
     def __repr__(self) -> str:
         repr = 'CmdStanMCMC: model={} chains={}{}'.format(
             self.runset.model,
