@@ -1,7 +1,7 @@
 """Container for the result of running optimization"""
 
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -37,28 +37,28 @@ class CmdStanMLE:
         self._set_mle_attrs(runset.csv_files[0])
 
     def create_inits(
-        self, chains: int = 4
-    ) -> Union[List[Dict[str, np.ndarray]], Dict[str, np.ndarray]]:
+        self, seed: Optional[int] = None, chains: int = 4
+    ) -> Dict[str, np.ndarray]:
         """
         Create initial values for the parameters of the model
         from the MLE.
 
-        :param chains: Number of initial values to return, defaults to 4
+        :param seed: Unused. Kept for compatibility with other
+        create_inits methods.
+        :param chains: Unused. Kept for compatibility with other
+        create_inits methods.
         :return: The initial values for the parameters of the model.
 
-        If ``chains`` is 1, a dictionary is returned, otherwise a list
-        of dictionaries is returned, in the format expected for the
-        ``inits`` argument of :meth:`CmdStanModel.sample`.
+        Returns a dictionary of MLE estimates in the format expected
+        for the ``inits`` argument of :meth:`CmdStanModel.sample`.
+        When running multi-chain sampling, all chains will be initialized
+        at the same points.
         """
-        mle_inits = {
-            name: var.extract_reshape(self.optimized_params_np)
-            for name, var in self._metadata.stan_vars.items()
-        }
+        # pylint: disable=unused-argument
 
-        if chains == 1:
-            return mle_inits
-        else:
-            return [mle_inits for _ in range(chains)]
+        return {
+            name: np.array(val) for name, val in self.stan_variables().items()
+        }
 
     def __repr__(self) -> str:
         repr = 'CmdStanMLE: model={}{}'.format(
