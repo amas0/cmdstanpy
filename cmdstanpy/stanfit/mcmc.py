@@ -121,7 +121,7 @@ class CmdStanMCMC:
 
         If ``chains`` is 1, a dictionary is returned, otherwise a list
         of dictionaries is returned, in the format expected for the
-        ``inits`` argument. of :meth:`CmdStanModel.sample`.
+        ``inits`` argument of :meth:`CmdStanModel.sample`.
         """
         self._assemble_draws()
         rng = np.random.default_rng(seed)
