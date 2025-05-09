@@ -355,7 +355,7 @@ def test_variational_create_inits():
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
 
-    vb = bern_model.variational(data=jdata)
+    vb = bern_model.variational(data=jdata, seed=11235)
 
     inits = vb.create_inits()
     assert isinstance(inits, list)
@@ -385,7 +385,7 @@ def test_variational_init_sampling():
     logistic_model = CmdStanModel(stan_file=stan)
     logistic_data = os.path.join(DATAFILES_PATH, 'logistic.data.R')
 
-    vb = logistic_model.sample(data=logistic_data)
+    vb = logistic_model.variational(data=logistic_data, seed=11235)
     inits = vb.create_inits()
 
     fit = logistic_model.sample(data=logistic_data, inits=inits)
