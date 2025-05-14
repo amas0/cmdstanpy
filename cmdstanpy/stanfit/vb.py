@@ -1,7 +1,7 @@
 """Container for the results of running autodiff variational inference"""
 
 from collections import OrderedDict
-from typing import Dict, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
 
 import numpy as np
 import pandas as pd
@@ -29,6 +29,41 @@ class CmdStanVB:
             )
         self.runset = runset
         self._set_variational_attrs(runset.csv_files[0])
+
+    def create_inits(
+        self, seed: Optional[int] = None, chains: int = 4
+    ) -> Union[List[Dict[str, np.ndarray]], Dict[str, np.ndarray]]:
+        """
+        Create initial values for the parameters of the model
+        by randomly selecting draws from the variational approximation
+        draws.
+
+        :param seed: Used for random selection, defaults to None
+        :param chains: Number of initial values to return, defaults to 4
+        :return: The initial values for the parameters of the model.
+
+        If ``chains`` is 1, a dictionary is returned, otherwise a list
+        of dictionaries is returned, in the format expected for the
+        ``inits`` argument of :meth:`CmdStanModel.sample`.
+        """
+        rng = np.random.default_rng(seed)
+        idxs = rng.choice(
+            self.variational_sample.shape[0], size=chains, replace=False
+        )
+        if chains == 1:
+            draw = self.variational_sample[idxs[0]]
+            return {
+                name: var.extract_reshape(draw)
+                for name, var in self._metadata.stan_vars.items()
+            }
+        else:
+            return [
+                {
+                    name: var.extract_reshape(self.variational_sample[idx])
+                    for name, var in self._metadata.stan_vars.items()
+                }
+                for idx in idxs
+            ]
 
     def __repr__(self) -> str:
         repr = 'CmdStanVB: model={}{}'.format(

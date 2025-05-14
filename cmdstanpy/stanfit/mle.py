@@ -36,6 +36,30 @@ class CmdStanMLE:
         self._save_iterations: bool = optimize_args.save_iterations
         self._set_mle_attrs(runset.csv_files[0])
 
+    def create_inits(
+        self, seed: Optional[int] = None, chains: int = 4
+    ) -> Dict[str, np.ndarray]:
+        """
+        Create initial values for the parameters of the model
+        from the MLE.
+
+        :param seed: Unused. Kept for compatibility with other
+        create_inits methods.
+        :param chains: Unused. Kept for compatibility with other
+        create_inits methods.
+        :return: The initial values for the parameters of the model.
+
+        Returns a dictionary of MLE estimates in the format expected
+        for the ``inits`` argument of :meth:`CmdStanModel.sample`.
+        When running multi-chain sampling, all chains will be initialized
+        at the same points.
+        """
+        # pylint: disable=unused-argument
+
+        return {
+            name: np.array(val) for name, val in self.stan_variables().items()
+        }
+
     def __repr__(self) -> str:
         repr = 'CmdStanMLE: model={}{}'.format(
             self.runset.model, self.runset._args.method_args.compose(0, cmd=[])

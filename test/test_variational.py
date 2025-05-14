@@ -348,3 +348,47 @@ def test_serialization() -> None:
         variational1.variational_params_dict
         == variational2.variational_params_dict
     )
+
+
+def test_variational_create_inits():
+    stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
+    bern_model = CmdStanModel(stan_file=stan)
+    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+
+    vb = bern_model.variational(data=jdata, seed=11235)
+
+    inits = vb.create_inits()
+    assert isinstance(inits, list)
+    assert len(inits) == 4
+    assert isinstance(inits[0], dict)
+    assert 'theta' in inits[0]
+
+    inits_10 = vb.create_inits(chains=10)
+    assert isinstance(inits_10, list)
+    assert len(inits_10) == 10
+
+    inits_1 = vb.create_inits(chains=1)
+    assert isinstance(inits_1, dict)
+    assert 'theta' in inits_1
+    assert len(inits_1) == 1
+
+    seeded = vb.create_inits(seed=1234)
+    seeded2 = vb.create_inits(seed=1234)
+    assert all(
+        init1['theta'] == init2['theta']
+        for init1, init2 in zip(seeded, seeded2)
+    )
+
+
+def test_variational_init_sampling():
+    stan = os.path.join(DATAFILES_PATH, 'logistic.stan')
+    logistic_model = CmdStanModel(stan_file=stan)
+    logistic_data = os.path.join(DATAFILES_PATH, 'logistic.data.R')
+
+    vb = logistic_model.variational(data=logistic_data, seed=11235)
+    inits = vb.create_inits()
+
+    fit = logistic_model.sample(data=logistic_data, inits=inits)
+
+    assert fit.chains == 4
+    assert fit.draws().shape == (1000, 4, 9)
