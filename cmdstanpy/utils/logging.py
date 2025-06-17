@@ -10,7 +10,7 @@ from contextlib import AbstractContextManager
 def get_logger() -> logging.Logger:
     """cmdstanpy logger"""
     logger = logging.getLogger('cmdstanpy')
-    if len(logger.handlers) == 0:
+    if not logger.hasHandlers():
         # send all messages to handlers
         logger.setLevel(logging.DEBUG)
         # add a default handler to the logger to INFO and higher
