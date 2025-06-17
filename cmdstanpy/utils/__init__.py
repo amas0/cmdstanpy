@@ -28,7 +28,7 @@ from .filesystem import (
     windows_short_path,
 )
 from .json import write_stan_json
-from .logging import get_logger
+from .logging import get_logger, enable_logging, disable_logging
 from .stancsv import (
     check_sampler_csv,
     parse_rdump_value,

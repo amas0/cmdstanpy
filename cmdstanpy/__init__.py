@@ -42,6 +42,8 @@ from .utils import (
     set_make_env,
     show_versions,
     write_stan_json,
+    enable_logging,
+    disable_logging,
 )
 
 __all__ = [
@@ -63,4 +65,6 @@ __all__ = [
     'show_versions',
     'rebuild_cmdstan',
     'cmdstan_version',
+    "enable_logging",
+    "disable_logging",
 ]
