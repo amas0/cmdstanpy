@@ -31,14 +31,16 @@ def get_logger() -> logging.Logger:
 
 class ToggleLogging(AbstractContextManager):
     def __init__(self, disable: bool) -> None:
+        self.disable = disable
         self.logger = get_logger()
         self.prev_state = self.logger.disabled
-        self.logger.disabled = disable
+        self.logger.disabled = self.disable
 
     def __repr__(self) -> str:
         return ""
 
     def __enter__(self) -> "ToggleLogging":
+        self.logger.disabled = self.disable
         return self
 
     def __exit__(
