@@ -61,23 +61,23 @@ You may notice CmdStanPy can produce a lot of output when it is running:
     fit = model.sample(data=data_file, show_progress=False)
 
 This output is managed through the built-in :mod:`logging` module. For
-convenience, CmdStanPy provides the module-level `cmdstanpy.enable_logging()`
-and `cmdstanpy.disable_logging()` functions to simplify logging management.
+convenience, CmdStanPy provides the module-level :meth:`cmdstanpy.enable_logging()`
+and :meth:`cmdstanpy.disable_logging()` functions to simplify logging management.
 
 For example, it can be disabled entirely:
 
 .. ipython:: python
 
     import cmdstanpy
-    cmdstanpy.disable_logging();
+    cmdstanpy.disable_logging()
     # look, no output!
     fit = model.sample(data=data_file, show_progress=False)
 
-We can re-enable this by calling `enable_logging()`:
+We can re-enable this by calling ``enable_logging()``:
 
 .. ipython:: python
 
-    cmdstanpy.enable_logging();
+    cmdstanpy.enable_logging()
     fit = model.sample(data=data_file, show_progress=False)
 
 
@@ -89,7 +89,7 @@ These functions also work as context managers for more local control:
         fit = model.sample(data=data_file, show_progress=False)
 
 
-For more fine-grained control, one can interact with the underlying `logging`
+For more fine-grained control, one can interact with the underlying ``logging``
 library directly. For example, the following code installs a custom handler
 that sends all logs (including the ``DEBUG`` logs, which are hidden by
 default), to a file.
