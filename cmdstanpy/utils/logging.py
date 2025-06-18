@@ -29,13 +29,13 @@ def get_logger() -> logging.Logger:
     return logger
 
 
-class EnableLogging(AbstractContextManager):
-    def __init__(self) -> None:
+class ToggleLogging(AbstractContextManager):
+    def __init__(self, disable: bool) -> None:
         self.logger = get_logger()
         self.prev_state = self.logger.disabled
-        self.logger.disabled = False
+        self.logger.disabled = disable
 
-    def __enter__(self) -> "EnableLogging":
+    def __enter__(self) -> "ToggleLogging":
         return self
 
     def __exit__(
@@ -47,29 +47,11 @@ class EnableLogging(AbstractContextManager):
         self.logger.disabled = self.prev_state
 
 
-class DisableLogging(AbstractContextManager):
-    def __init__(self) -> None:
-        self.logger = get_logger()
-        self.prev_state = self.logger.disabled
-        self.logger.disabled = True
-
-    def __enter__(self) -> "DisableLogging":
-        return self
-
-    def __exit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[types.TracebackType],
-    ) -> None:
-        self.logger.disabled = self.prev_state
-
-
-def enable_logging() -> EnableLogging:
+def enable_logging() -> ToggleLogging:
     """Enable cmdstanpy logging. Can be used as a context manager"""
-    return EnableLogging()
+    return ToggleLogging(disable=False)
 
 
-def disable_logging() -> DisableLogging:
+def disable_logging() -> ToggleLogging:
     """Disable cmdstanpy logging. Can be used as a context manager"""
-    return DisableLogging()
+    return ToggleLogging(disable=True)
