@@ -35,6 +35,9 @@ class ToggleLogging(AbstractContextManager):
         self.prev_state = self.logger.disabled
         self.logger.disabled = disable
 
+    def __repr__(self) -> str:
+        return ""
+
     def __enter__(self) -> "ToggleLogging":
         return self
 
