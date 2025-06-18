@@ -144,4 +144,6 @@ __all__ = [
     'windows_short_path',
     'wrap_url_progress_hook',
     'write_stan_json',
+    'enable_logging',
+    'disable_logging',
 ]
