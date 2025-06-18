@@ -60,23 +60,46 @@ You may notice CmdStanPy can produce a lot of output when it is running:
 
     fit = model.sample(data=data_file, show_progress=False)
 
-This output is managed through the built-in :mod:`logging` module. For example, it can be disabled entirely:
+This output is managed through the built-in :mod:`logging` module. For
+convenience, CmdStanPy provides the module-level `cmdstanpy.enable_logging()`
+and `cmdstanpy.disable_logging()` functions to simplify logging management.
+
+For example, it can be disabled entirely:
+
+.. ipython:: python
+
+    import cmdstanpy
+    cmdstanpy.disable_logging();
+    # look, no output!
+    fit = model.sample(data=data_file, show_progress=False)
+
+We can re-enable this by calling `enable_logging()`:
+
+.. ipython:: python
+
+    cmdstanpy.enable_logging();
+    fit = model.sample(data=data_file, show_progress=False)
+
+
+These functions also work as context managers for more local control:
+
+.. ipython:: python
+
+    with cmdstanpy.disable_logging():
+        fit = model.sample(data=data_file, show_progress=False)
+
+
+For more fine-grained control, one can interact with the underlying `logging`
+library directly. For example, the following code installs a custom handler
+that sends all logs (including the ``DEBUG`` logs, which are hidden by
+default), to a file.
+
+DEBUG logging is useful primarily to developers or when trying to hunt down an issue.
 
 .. ipython:: python
 
     import logging
     cmdstanpy_logger = logging.getLogger("cmdstanpy")
-    cmdstanpy_logger.disabled = True
-    # look, no output!
-    fit = model.sample(data=data_file, show_progress=False)
-
-Or one can remove the logging handler that CmdStanPy installs by default and install their own for more
-fine-grained control. For example, the following code sends all logs (including the ``DEBUG`` logs, which are hidden by default),
-to a file.
-
-DEBUG logging is useful primarily to developers or when trying to hunt down an issue.
-
-.. ipython:: python
 
     cmdstanpy_logger.disabled = False
     # remove all existing handlers
@@ -92,6 +115,7 @@ DEBUG logging is useful primarily to developers or when trying to hunt down an i
         )
     )
     cmdstanpy_logger.addHandler(handler)
+
 
 Now, if we run the model and check the contents of the file, we will see all the possible logging.
 
