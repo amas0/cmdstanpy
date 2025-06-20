@@ -139,3 +139,13 @@ write_stan_json
 ===============
 
 .. autofunction:: cmdstanpy.write_stan_json
+
+enable_logging
+===============
+
+.. autofunction:: cmdstanpy.enable_logging
+
+disable_logging
+===============
+
+.. autofunction:: cmdstanpy.disable_logging
