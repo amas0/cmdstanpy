@@ -39,6 +39,7 @@ from cmdstanpy.utils import (
     do_command,
     flatten_chains,
     get_logger,
+    stancsv,
 )
 
 from .metadata import InferenceMetadata
@@ -429,83 +430,42 @@ class CmdStanMCMC:
         """
         if self._draws.shape != (0,):
             return
+
         num_draws = self.num_draws_sampling
-        sampling_iter_start = 0
         if self._save_warmup:
             num_draws += self.num_draws_warmup
-            sampling_iter_start = self.num_draws_warmup
         self._draws = np.empty(
             (num_draws, self.chains, len(self.column_names)),
             dtype=float,
             order='F',
         )
         self._step_size = np.empty(self.chains, dtype=float)
-        for chain in range(self.chains):
-            with open(self.runset.csv_files[chain], 'r') as fd:
-                line = fd.readline().strip()
-                # read initial comments, CSV header row
-                while len(line) > 0 and line.startswith('#'):
-                    line = fd.readline().strip()
-                if not self._is_fixed_param:
-                    # handle warmup draws, if any
-                    if self._save_warmup:
-                        for i in range(self.num_draws_warmup):
-                            line = fd.readline().strip()
-                            xs = line.split(',')
-                            self._draws[i, chain, :] = [float(x) for x in xs]
-                    line = fd.readline().strip()
-                    if line != '# Adaptation terminated':  # shouldn't happen?
-                        while line != '# Adaptation terminated':
-                            line = fd.readline().strip()
-                    # step_size, metric (diag_e and dense_e only)
-                    line = fd.readline().strip()
-                    _, step_size = line.split('=')
-                    self._step_size[chain] = float(step_size.strip())
-                    if self._metadata.cmdstan_config['metric'] != 'unit_e':
-                        line = fd.readline().strip()  # metric type
-                        line = fd.readline().lstrip(' #\t').rstrip()
-                        num_unconstrained_params = len(line.split(','))
-                        if chain == 0:  # can't allocate w/o num params
-                            if self.metric_type == 'diag_e':
-                                self._metric = np.empty(
-                                    (self.chains, num_unconstrained_params),
-                                    dtype=float,
-                                )
-                            else:
-                                self._metric = np.empty(
-                                    (
-                                        self.chains,
-                                        num_unconstrained_params,
-                                        num_unconstrained_params,
-                                    ),
-                                    dtype=float,
-                                )
-                        if line:
-                            if self.metric_type == 'diag_e':
-                                xs = line.split(',')
-                                self._metric[chain, :] = [float(x) for x in xs]
-                            else:
-                                xs = line.strip().split(',')
-                                self._metric[chain, 0, :] = [
-                                    float(x) for x in xs
-                                ]
-                                for i in range(1, num_unconstrained_params):
-                                    line = fd.readline().lstrip(' #\t').rstrip()
-                                    xs = line.split(',')
-                                    self._metric[chain, i, :] = [
-                                        float(x) for x in xs
-                                    ]
-                    else:  # unit_e changed in 2.34 to have an extra line
-                        pos = fd.tell()
-                        line = fd.readline().strip()
-                        if not line.startswith('#'):
-                            fd.seek(pos)
 
-                # process draws
-                for i in range(sampling_iter_start, num_draws):
-                    line = fd.readline().strip()
-                    xs = line.split(',')
-                    self._draws[i, chain, :] = [float(x) for x in xs]
+        for chain in range(self.chains):
+            parsed_csv = stancsv.StanCsvMCMC.from_csv(
+                self.runset.csv_files[chain],
+                is_fixed_param=self._is_fixed_param,
+            )
+            self._step_size[chain] = parsed_csv.step_size
+            if self._save_warmup and parsed_csv.warmup_draws is not None:
+                self._draws[:, chain, :] = np.concat(
+                    [parsed_csv.warmup_draws, parsed_csv.sampling_draws]
+                )
+            else:
+                self._draws[:, chain, :] = parsed_csv.sampling_draws
+
+            if parsed_csv.mass_matrix is not None:
+                if chain == 0:
+                    mm_shape = parsed_csv.mass_matrix.shape
+                    if self.metric_type == "diag_e":
+                        mm_shape = mm_shape[1:]
+                    self._metric = np.empty(
+                        (self.chains, *mm_shape),
+                        dtype=np.float32,
+                    )
+
+                self._metric[chain] = parsed_csv.mass_matrix
+
         assert self._draws is not None
 
     def summary(
