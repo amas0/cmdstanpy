@@ -96,7 +96,7 @@ def parse_hmc_adaptation_lines(
     in_matrix_block = False
     matrix_lines = []
     for line in lines_without_comments:
-        if in_matrix_block:
+        if in_matrix_block and line.strip():
             matrix_lines.append(line)
         elif line.startswith(b"Step size"):
             _, ss_str = line.split(b" = ")
@@ -142,7 +142,7 @@ class StanCsvMCMC:
 
     @classmethod
     def from_csv(
-        cls, path: Union[os.PathLike, Path], is_fixed_param: bool = False
+        cls, path: Union[os.PathLike, Path, str], is_fixed_param: bool = False
     ) -> "StanCsvMCMC":
         config_lines: List[bytes] = []
         warmup_lines: List[bytes] = []
