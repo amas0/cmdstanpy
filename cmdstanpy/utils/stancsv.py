@@ -85,7 +85,7 @@ def csv_bytes_list_to_numpy(
 
 def parse_hmc_adaptation_lines(
     adaptation_lines: List[bytes],
-) -> Tuple[float, npt.NDArray[np.float32] | None]:
+) -> Tuple[float, Optional[npt.NDArray[np.float32]]]:
     """Extracts step size/mass matrix information from the adaptation
     section of the Stan CSV. If unit metric is used, the mass matrix
     field will be None, otherwise an appropriate numpy array.

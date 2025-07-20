@@ -448,7 +448,7 @@ class CmdStanMCMC:
             )
             self._step_size[chain] = parsed_csv.step_size
             if self._save_warmup and parsed_csv.warmup_draws is not None:
-                self._draws[:, chain, :] = np.concat(
+                self._draws[:, chain, :] = np.concatenate(
                     [parsed_csv.warmup_draws, parsed_csv.sampling_draws]
                 )
             else:
