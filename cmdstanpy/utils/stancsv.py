@@ -26,6 +26,7 @@ from typing import (
 import numpy as np
 import numpy.typing as npt
 import pandas as pd
+import polars as pl
 
 from cmdstanpy import _CMDSTAN_SAMPLING, _CMDSTAN_THIN, _CMDSTAN_WARMUP
 
@@ -75,10 +76,13 @@ def csv_bytes_list_to_numpy(
     """Efficiently converts a list of bytes representing whose concatenation
     represents a CSV file into a numpy array. Includes header specifies
     whether the bytes contains an initial header line."""
-    header = 0 if includes_header else None
-    out = pd.read_csv(
-        io.BytesIO(b"".join(csv_bytes_list)), engine="pyarrow", header=header
-    ).to_numpy(dtype=np.float32)
+    out = (
+        pl.read_csv(
+            io.BytesIO(b"".join(csv_bytes_list)), has_header=includes_header
+        )
+        .to_numpy()
+        .astype(np.float32)
+    )
     # Telling the type checker we know the type is correct
     return cast(npt.NDArray[np.float32], out)
 
