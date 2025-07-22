@@ -33,8 +33,84 @@ from cmdstanpy import _CMDSTAN_SAMPLING, _CMDSTAN_THIN, _CMDSTAN_WARMUP
 
 @dataclass
 class ParsingRule:
+    """Defines a rule for parsing a Stan CSV file. The parser transitions
+    between two states: either in or out of a comment section. Each section
+    is associated with one of these rules. On each line within a section,
+    the action is called. If an alternative action should be taken when
+    entering a section, the entry_action should be specified."""
+
     action: Callable[[bytes], None]
     entry_action: Optional[Callable[[bytes], None]] = None
+
+
+@dataclass
+class StanCsvMCMC:
+    """Class containing the parsed output of a Stan CSV file sourced
+    from the `sample` inference method."""
+
+    config: Dict[str, Union[int, float, str]]
+    warmup_draws: Optional[npt.NDArray[np.float32]]
+    step_size: Optional[float]
+    mass_matrix: Optional[npt.NDArray[np.float32]]
+    sampling_draws: npt.NDArray[np.float32]
+    timings: Dict[str, float]
+
+    @classmethod
+    def from_csv(
+        cls, path: Union[os.PathLike, Path, str], is_fixed_param: bool = False
+    ) -> "StanCsvMCMC":
+        config_lines: List[bytes] = []
+        warmup_lines: List[bytes] = []
+        adaptation_lines: List[bytes] = []
+        sampling_lines: List[bytes] = []
+        timing_lines: List[bytes] = []
+
+        def add_header(line: bytes) -> None:
+            warmup_lines.append(line)
+            sampling_lines.append(line)
+
+        rules: Tuple[ParsingRule, ...] = tuple()
+        if is_fixed_param:
+            rules = (
+                ParsingRule(action=config_lines.append),
+                ParsingRule(action=sampling_lines.append),
+                ParsingRule(action=timing_lines.append),
+            )
+        else:
+            rules = (
+                ParsingRule(action=config_lines.append),
+                ParsingRule(
+                    entry_action=add_header, action=warmup_lines.append
+                ),
+                ParsingRule(action=adaptation_lines.append),
+                ParsingRule(action=sampling_lines.append),
+                ParsingRule(action=timing_lines.append),
+            )
+        with open(path, "rb") as f:
+            parse_general_stan_csv_from_lines(f, rules)
+
+        sampling_draws = csv_bytes_list_to_numpy(sampling_lines)
+        config_dict: Dict[str, Union[str, int, float]] = {}
+        scan_config(
+            io.StringIO("".join(ln.decode() for ln in config_lines)),
+            config_dict,
+            0,
+        )
+        if is_fixed_param:
+            warmup_draws, step_size, mass_matrix = None, None, None
+        else:
+            warmup_draws = csv_bytes_list_to_numpy(warmup_lines)
+            step_size, mass_matrix = parse_hmc_adaptation_lines(
+                adaptation_lines
+            )
+        return cls(
+            config_dict,
+            warmup_draws,
+            step_size,
+            mass_matrix,
+            sampling_draws,
+            parse_timing_lines(timing_lines),
+        )
 
 
 def parse_general_stan_csv_from_lines(
@@ -133,73 +209,6 @@ def parse_timing_lines(
             phase = match[0][1]
             out[phase] = seconds
     return out
-
-
-@dataclass
-class StanCsvMCMC:
-    config: Dict[str, Union[int, float, str]]
-    warmup_draws: Optional[npt.NDArray[np.float32]]
-    step_size: Optional[float]
-    mass_matrix: Optional[npt.NDArray[np.float32]]
-    sampling_draws: npt.NDArray[np.float32]
-    timings: Dict[str, float]
-
-    @classmethod
-    def from_csv(
-        cls, path: Union[os.PathLike, Path, str], is_fixed_param: bool = False
-    ) -> "StanCsvMCMC":
-        config_lines: List[bytes] = []
-        warmup_lines: List[bytes] = []
-        adaptation_lines: List[bytes] = []
-        sampling_lines: List[bytes] = []
-        timing_lines: List[bytes] = []
-
-        def add_header(line: bytes) -> None:
-            warmup_lines.append(line)
-            sampling_lines.append(line)
-
-        rules: Tuple[ParsingRule, ...] = tuple()
-        if is_fixed_param:
-            rules = (
-                ParsingRule(action=config_lines.append),
-                ParsingRule(action=sampling_lines.append),
-                ParsingRule(action=timing_lines.append),
-            )
-        else:
-            rules = (
-                ParsingRule(action=config_lines.append),
-                ParsingRule(
-                    entry_action=add_header, action=warmup_lines.append
-                ),
-                ParsingRule(action=adaptation_lines.append),
-                ParsingRule(action=sampling_lines.append),
-                ParsingRule(action=timing_lines.append),
-            )
-        with open(path, "rb") as f:
-            parse_general_stan_csv_from_lines(f, rules)
-
-        sampling_draws = csv_bytes_list_to_numpy(sampling_lines)
-        config_dict: Dict[str, Union[str, int, float]] = {}
-        scan_config(
-            io.StringIO("".join(ln.decode() for ln in config_lines)),
-            config_dict,
-            0,
-        )
-        if is_fixed_param:
-            warmup_draws, step_size, mass_matrix = None, None, None
-        else:
-            warmup_draws = csv_bytes_list_to_numpy(warmup_lines)
-            step_size, mass_matrix = parse_hmc_adaptation_lines(
-                adaptation_lines
-            )
-        return cls(
-            config_dict,
-            warmup_draws,
-            step_size,
-            mass_matrix,
-            sampling_draws,
-            parse_timing_lines(timing_lines),
-        )
 
 
 def check_sampler_csv(
