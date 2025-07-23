@@ -9,7 +9,7 @@ readme = "README.md"
 license = { text = "BSD-3-Clause" }
 authors = [{ name = "Stan Dev Team" }]
 requires-python = ">=3.8"
-dependencies = ["pandas", "numpy>=1.21", "tqdm", "stanio>=0.4.0,<2.0.0", "polars>=1.8.2"]
+dependencies = ["pandas", "numpy>=1.21", "tqdm", "stanio>=0.4.0,<2.0.0"]
 dynamic = ["version"]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -40,7 +40,7 @@ packages = ["cmdstanpy", "cmdstanpy.stanfit", "cmdstanpy.utils"]
 "cmdstanpy" = ["py.typed"]
 
 [project.optional-dependencies]
-all = ["xarray"]
+all = ["xarray", "polars>=1.8.2"]
 test = [
     "flake8",
     "pylint",

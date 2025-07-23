@@ -1,9 +1,9 @@
 """testing stancsv parsing"""
 
 from typing import List
+from unittest import mock
 
 import numpy as np
-import polars as pl
 import pytest
 
 from cmdstanpy.utils import stancsv
@@ -30,6 +30,28 @@ def test_csv_bytes_to_numpy_no_header():
     assert arr_out[0].dtype == np.float32
 
 
+def test_csv_bytes_to_numpy_no_header_no_polars():
+    lines = [
+        b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
+        b"-6.81411,0.983499,0.787025,1,1,0,6.8147,0.20649\n",
+        b"-6.85511,0.994945,0.787025,2,3,0,6.85536,0.310589\n",
+        b"-6.85511,0.812189,0.787025,1,1,0,7.16517,0.310589\n",
+    ]
+    expected = np.array(
+        [
+            [-6.76206, 1, 0.787025, 1, 1, 0, 6.81411, 0.229458],
+            [-6.81411, 0.983499, 0.787025, 1, 1, 0, 6.8147, 0.20649],
+            [-6.85511, 0.994945, 0.787025, 2, 3, 0, 6.85536, 0.310589],
+            [-6.85511, 0.812189, 0.787025, 1, 1, 0, 7.16517, 0.310589],
+        ],
+        dtype=np.float32,
+    )
+    with mock.patch.dict("sys.modules", {"polars": None}):
+        arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
+        assert np.array_equiv(arr_out, expected)
+        assert arr_out[0].dtype == np.float32
+
+
 def test_csv_bytes_to_numpy_with_header():
     lines = [
         (
@@ -54,10 +76,42 @@ def test_csv_bytes_to_numpy_with_header():
     assert np.array_equiv(arr_out, expected)
 
 
+def test_csv_bytes_to_numpy_with_header_no_polars():
+    lines = [
+        (
+            b"lp__,accept_stat__,stepsize__,treedepth__,"
+            b"n_leapfrog__,divergent__,energy__,theta\n"
+        ),
+        b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
+        b"-6.81411,0.983499,0.787025,1,1,0,6.8147,0.20649\n",
+        b"-6.85511,0.994945,0.787025,2,3,0,6.85536,0.310589\n",
+        b"-6.85511,0.812189,0.787025,1,1,0,7.16517,0.310589\n",
+    ]
+    expected = np.array(
+        [
+            [-6.76206, 1, 0.787025, 1, 1, 0, 6.81411, 0.229458],
+            [-6.81411, 0.983499, 0.787025, 1, 1, 0, 6.8147, 0.20649],
+            [-6.85511, 0.994945, 0.787025, 2, 3, 0, 6.85536, 0.310589],
+            [-6.85511, 0.812189, 0.787025, 1, 1, 0, 7.16517, 0.310589],
+        ],
+        dtype=np.float32,
+    )
+    with mock.patch.dict("sys.modules", {"polars": None}):
+        arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=True)
+        assert np.array_equiv(arr_out, expected)
+
+
 def test_csv_bytes_to_numpy_empty():
     lines = [b""]
-    with pytest.raises(pl.exceptions.NoDataError):
+    with pytest.raises(ValueError):
         stancsv.csv_bytes_list_to_numpy(lines)
+
+
+def test_csv_bytes_to_numpy_empty_no_polars():
+    lines = [b""]
+    with mock.patch.dict("sys.modules", {"polars": None}):
+        with pytest.raises(ValueError):
+            stancsv.csv_bytes_list_to_numpy(lines)
 
 
 def test_csv_bytes_to_numpy_header_no_draws():
@@ -67,8 +121,20 @@ def test_csv_bytes_to_numpy_header_no_draws():
             b"n_leapfrog__,divergent__,energy__,theta\n"
         ),
     ]
-    arr_out = stancsv.csv_bytes_list_to_numpy(lines)
-    assert arr_out.shape == (0, 8)
+    with pytest.raises(ValueError):
+        stancsv.csv_bytes_list_to_numpy(lines)
+
+
+def test_csv_bytes_to_numpy_header_no_draws_no_polars():
+    lines = [
+        (
+            b"lp__,accept_stat__,stepsize__,treedepth__,"
+            b"n_leapfrog__,divergent__,energy__,theta\n"
+        ),
+    ]
+    with mock.patch.dict("sys.modules", {"polars": None}):
+        with pytest.raises(ValueError):
+            stancsv.csv_bytes_list_to_numpy(lines)
 
 
 def test_parsing_with_rules():
