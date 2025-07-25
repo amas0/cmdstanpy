@@ -441,30 +441,30 @@ class CmdStanMCMC:
         )
         self._step_size = np.empty(self.chains, dtype=float)
 
+        mass_matrix_per_chain = []
         for chain in range(self.chains):
-            parsed_csv = stancsv.StanCsvMCMC.from_csv(
-                self.runset.csv_files[chain],
-                is_fixed_param=self._is_fixed_param,
+            with open(self.runset.csv_files[chain], "rb") as f:
+                comments, draws = stancsv.parse_stan_csv_comments_and_draws(f)
+
+            self._draws[:, chain, :] = stancsv.csv_bytes_list_to_numpy(draws)
+
+            if not self._is_fixed_param:
+                (
+                    self._step_size[chain],
+                    mass_matrix,
+                ) = stancsv.parse_hmc_adaptation_lines(comments)
+                mass_matrix_per_chain.append(mass_matrix)
+
+        if mass_matrix_per_chain[0] is not None:
+            mm_shape = mass_matrix_per_chain[0].shape
+            if self.metric_type == "diag_e":
+                mm_shape = mm_shape[1:]
+            self._metric = np.empty(
+                (self.chains, *mm_shape),
+                dtype=np.float32,
             )
-            self._step_size[chain] = parsed_csv.step_size
-            if self._save_warmup and parsed_csv.warmup_draws is not None:
-                self._draws[:, chain, :] = np.concatenate(
-                    [parsed_csv.warmup_draws, parsed_csv.sampling_draws]
-                )
-            else:
-                self._draws[:, chain, :] = parsed_csv.sampling_draws
-
-            if parsed_csv.mass_matrix is not None:
-                if chain == 0:
-                    mm_shape = parsed_csv.mass_matrix.shape
-                    if self.metric_type == "diag_e":
-                        mm_shape = mm_shape[1:]
-                    self._metric = np.empty(
-                        (self.chains, *mm_shape),
-                        dtype=np.float32,
-                    )
-
-                self._metric[chain] = parsed_csv.mass_matrix
+            for chain in range(self.chains):
+                self._metric[chain] = mass_matrix_per_chain[chain]
 
         assert self._draws is not None
 

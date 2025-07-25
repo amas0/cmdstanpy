@@ -5,14 +5,10 @@ Utility functions for reading the Stan CSV format
 import io
 import json
 import math
-import os
 import re
 import warnings
-from dataclasses import dataclass
-from pathlib import Path
 from typing import (
     Any,
-    Callable,
     Dict,
     Iterator,
     List,
@@ -31,119 +27,22 @@ import pandas as pd
 from cmdstanpy import _CMDSTAN_SAMPLING, _CMDSTAN_THIN, _CMDSTAN_WARMUP
 
 
-@dataclass
-class ParsingRule:
-    """Defines a rule for parsing a Stan CSV file. The parser transitions
-    between two states: either in or out of a comment section. Each section
-    is associated with one of these rules. On each line within a section,
-    the action is called. If an alternative action should be taken when
-    entering a section, the entry_action should be specified."""
-
-    action: Callable[[bytes], None]
-    entry_action: Optional[Callable[[bytes], None]] = None
-
-
-@dataclass
-class StanCsvMCMC:
-    """Class containing the parsed output of a Stan CSV file sourced
-    from the `sample` inference method."""
-
-    config: Dict[str, Union[int, float, str]]
-    warmup_draws: Optional[npt.NDArray[np.float32]]
-    step_size: Optional[float]
-    mass_matrix: Optional[npt.NDArray[np.float32]]
-    sampling_draws: npt.NDArray[np.float32]
-    timings: Dict[str, float]
-
-    @classmethod
-    def from_csv(
-        cls, path: Union[os.PathLike, Path, str], is_fixed_param: bool = False
-    ) -> "StanCsvMCMC":
-        config_lines: List[bytes] = []
-        warmup_lines: List[bytes] = []
-        adaptation_lines: List[bytes] = []
-        sampling_lines: List[bytes] = []
-        timing_lines: List[bytes] = []
-
-        def add_header(line: bytes) -> None:
-            warmup_lines.append(line)
-            sampling_lines.append(line)
-
-        rules: Tuple[ParsingRule, ...] = tuple()
-        if is_fixed_param:
-            rules = (
-                ParsingRule(action=config_lines.append),
-                ParsingRule(action=sampling_lines.append),
-                ParsingRule(action=timing_lines.append),
-            )
-        else:
-            rules = (
-                ParsingRule(action=config_lines.append),
-                ParsingRule(
-                    entry_action=add_header, action=warmup_lines.append
-                ),
-                ParsingRule(action=adaptation_lines.append),
-                ParsingRule(action=sampling_lines.append),
-                ParsingRule(action=timing_lines.append),
-            )
-        with open(path, "rb") as f:
-            parse_general_stan_csv_from_lines(f, rules)
-
-        sampling_draws = csv_bytes_list_to_numpy(sampling_lines)
-        config_dict: Dict[str, Union[str, int, float]] = {}
-        scan_config(
-            io.StringIO("".join(ln.decode() for ln in config_lines)),
-            config_dict,
-            0,
-        )
-        if is_fixed_param:
-            warmup_draws, step_size, mass_matrix = None, None, None
-        else:
-            warmup_draws = csv_bytes_list_to_numpy(warmup_lines)
-            step_size, mass_matrix = parse_hmc_adaptation_lines(
-                adaptation_lines
-            )
-        return cls(
-            config_dict,
-            warmup_draws,
-            step_size,
-            mass_matrix,
-            sampling_draws,
-            parse_timing_lines(timing_lines),
-        )
-
-
-def parse_general_stan_csv_from_lines(
+def parse_stan_csv_comments_and_draws(
     lines: Iterator[bytes],
-    rules: Tuple[ParsingRule, ...],
-    start_in_comment: bool = True,
-) -> None:
-    """Parses a generalized Stan CSV structure via provided rules.
-    The core idea is that Stan CSV files can be partitioned into coherent
-    sections based on the order of commented/non-commented lines in the file.
-    The rules define actions to be taken while within a given section and
-    transitioning between them. For example, in the MCMC Stan CSV files
-    an initial commented config section is followed by uncommented lines
-    that represent the warmup draws."""
-    current_rule_idx = 0
-    in_comment = start_in_comment
+) -> Tuple[List[bytes], List[bytes]]:
+    """Parses lines of a Stan CSV file into comment lines and draws lines, where
+    a draws line is just a non-commented line.
+
+    Returns a (comment_lines, draws_lines) tuple.
+    """
+    comment_lines, draws_lines = [], []
 
     for line in lines:
-        is_comment = line.startswith(b"#")
-        if is_comment == in_comment:
-            rules[current_rule_idx].action(line)
+        if line.startswith(b"#"):  # is comment line
+            comment_lines.append(line)
         else:
-            current_rule_idx += 1
-            if len(rules) == current_rule_idx:
-                raise IndexError(
-                    "Insufficient parsing rules to parse provided csv"
-                )
-            in_comment = is_comment
-            next_entry_action = rules[current_rule_idx].entry_action
-            if next_entry_action is not None:
-                next_entry_action(line)
-            else:  # If no entry_action defined, run normal action
-                rules[current_rule_idx].action(line)
+            draws_lines.append(line)
+    return comment_lines, draws_lines
 
 
 def csv_bytes_list_to_numpy(
@@ -185,19 +84,23 @@ def csv_bytes_list_to_numpy(
 
 
 def parse_hmc_adaptation_lines(
-    adaptation_lines: List[bytes],
+    comment_lines: List[bytes],
 ) -> Tuple[float, Optional[npt.NDArray[np.float32]]]:
-    """Extracts step size/mass matrix information from the adaptation
-    section of the Stan CSV. If unit metric is used, the mass matrix
-    field will be None, otherwise an appropriate numpy array.
+    """Extracts step size/mass matrix information from the Stan CSV comment
+    lines by parsing the adaptation section. If unit metric is used, the mass
+    matrix field will be None, otherwise an appropriate numpy array.
 
     Returns a (step_size, mass_matrix) tuple"""
     step_size, mass_matrix = None, None
-    lines_without_comments = (ln.lstrip(b"# ") for ln in adaptation_lines)
+
+    cleaned_lines = (ln.lstrip(b"# ") for ln in comment_lines)
     in_matrix_block = False
     matrix_lines = []
-    for line in lines_without_comments:
+    for line in cleaned_lines:
         if in_matrix_block and line.strip():
+            # Stop when we get to timing block
+            if line.startswith(b"Elapsed Time"):
+                break
             matrix_lines.append(line)
         elif line.startswith(b"Step size"):
             _, ss_str = line.split(b" = ")
@@ -216,14 +119,21 @@ def parse_hmc_adaptation_lines(
 
 
 def parse_timing_lines(
-    timing_lines: List[bytes],
+    comment_lines: List[bytes],
 ) -> Dict[str, float]:
     """Parse the timing lines into a dictionary with key corresponding
     to the phase, e.g. Warm-up, Sampling, Total, and value the elapsed seconds
     """
     out: Dict[str, float] = {}
-    lines_without_comments = (ln.lstrip(b"# ") for ln in timing_lines)
-    for line in lines_without_comments:
+
+    cleaned_lines = (ln.lstrip(b"# ") for ln in comment_lines)
+    in_timing_block = False
+    for line in cleaned_lines:
+        if line.startswith(b"Elapsed Time") and not in_timing_block:
+            in_timing_block = True
+
+        if not in_timing_block:
+            continue
         match = re.findall(r"([\d\.]+) seconds \((.+)\)", str(line))
         if match:
             seconds = float(match[0][0])

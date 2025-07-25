@@ -137,57 +137,14 @@ def test_csv_bytes_to_numpy_header_no_draws_no_polars():
             stancsv.csv_bytes_list_to_numpy(lines)
 
 
-def test_parsing_with_rules():
+def test_parse_comments_and_draws():
     lines: List[bytes] = [b"# 1\n", b"2\n", b"3\n", b"# 4\n"]
-    comment_lines = []
-    non_comment_lines = []
-    rules = (
-        stancsv.ParsingRule(action=comment_lines.append),
-        stancsv.ParsingRule(action=non_comment_lines.append),
-        stancsv.ParsingRule(action=comment_lines.append),
+    comment_lines, draws_lines = stancsv.parse_stan_csv_comments_and_draws(
+        iter(lines)
     )
-    stancsv.parse_general_stan_csv_from_lines(iter(lines), rules)
+
     assert comment_lines == [b"# 1\n", b"# 4\n"]
-    assert non_comment_lines == [b"2\n", b"3\n"]
-
-
-def test_parsing_with_rules_not_start_in_comment():
-    lines: List[bytes] = [b"1\n", b"2\n", b"3\n", b"# 4\n"]
-    comment_lines = []
-    non_comment_lines = []
-    rules = (
-        stancsv.ParsingRule(action=non_comment_lines.append),
-        stancsv.ParsingRule(action=comment_lines.append),
-    )
-    stancsv.parse_general_stan_csv_from_lines(
-        iter(lines), rules, start_in_comment=False
-    )
-    assert comment_lines == [b"# 4\n"]
-    assert non_comment_lines == [b"1\n", b"2\n", b"3\n"]
-
-
-def test_parsing_with_rules_entry_action():
-    lines: List[bytes] = [b"# 1\n", b"2\n", b"# 4\n"]
-    parsed, entry = [], []
-    rules = (
-        stancsv.ParsingRule(action=parsed.append),
-        stancsv.ParsingRule(action=parsed.append, entry_action=entry.append),
-        stancsv.ParsingRule(action=parsed.append),
-    )
-    stancsv.parse_general_stan_csv_from_lines(iter(lines), rules)
-    assert parsed == [b"# 1\n", b"# 4\n"]
-    assert entry == [b"2\n"]
-
-
-def test_parsing_insufficient_rules():
-    lines: List[bytes] = [b"# 1\n", b"2\n", b"# 4\n"]
-    parsed = []
-    rules = (
-        stancsv.ParsingRule(action=parsed.append),
-        stancsv.ParsingRule(action=parsed.append),
-    )
-    with pytest.raises(IndexError):
-        stancsv.parse_general_stan_csv_from_lines(iter(lines), rules)
+    assert draws_lines == [b"2\n", b"3\n"]
 
 
 def test_parsing_timing_lines():
