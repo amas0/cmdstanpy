@@ -49,6 +49,7 @@ test = [
     "pytest-order",
     "mypy",
     "xarray",
+    "polars>=1.8.2"
 ]
 docs = [
     "sphinx>5,<6",
