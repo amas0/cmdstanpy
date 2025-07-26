@@ -436,10 +436,10 @@ class CmdStanMCMC:
             num_draws += self.num_draws_warmup
         self._draws = np.empty(
             (num_draws, self.chains, len(self.column_names)),
-            dtype=float,
+            dtype=np.float32,
             order='F',
         )
-        self._step_size = np.empty(self.chains, dtype=float)
+        self._step_size = np.empty(self.chains, dtype=np.float32)
 
         mass_matrix_per_chain = []
         for chain in range(self.chains):
@@ -455,7 +455,7 @@ class CmdStanMCMC:
                 ) = stancsv.parse_hmc_adaptation_lines(comments)
                 mass_matrix_per_chain.append(mass_matrix)
 
-        if mass_matrix_per_chain[0] is not None:
+        if not self._is_fixed_param and mass_matrix_per_chain[0] is not None:
             mm_shape = mass_matrix_per_chain[0].shape
             if self.metric_type == "diag_e":
                 mm_shape = mm_shape[1:]
