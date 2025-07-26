@@ -26,7 +26,7 @@ def test_csv_bytes_to_numpy_no_header():
         dtype=np.float32,
     )
     arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
-    assert np.array_equiv(arr_out, expected)
+    assert np.array_equal(arr_out, expected)
     assert arr_out[0].dtype == np.float32
 
 
@@ -48,7 +48,7 @@ def test_csv_bytes_to_numpy_no_header_no_polars():
     )
     with mock.patch.dict("sys.modules", {"polars": None}):
         arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
-        assert np.array_equiv(arr_out, expected)
+        assert np.array_equal(arr_out, expected)
         assert arr_out[0].dtype == np.float32
 
 
@@ -73,7 +73,7 @@ def test_csv_bytes_to_numpy_with_header():
         dtype=np.float32,
     )
     arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=True)
-    assert np.array_equiv(arr_out, expected)
+    assert np.array_equal(arr_out, expected)
 
 
 def test_csv_bytes_to_numpy_single_element():
@@ -87,7 +87,7 @@ def test_csv_bytes_to_numpy_single_element():
         dtype=np.float32,
     )
     arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
-    assert np.array_equiv(arr_out, expected)
+    assert np.array_equal(arr_out, expected)
 
 
 def test_csv_bytes_to_numpy_single_element_no_polars():
@@ -102,7 +102,7 @@ def test_csv_bytes_to_numpy_single_element_no_polars():
     )
     with mock.patch.dict("sys.modules", {"polars": None}):
         arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
-        assert np.array_equiv(arr_out, expected)
+        assert np.array_equal(arr_out, expected)
 
 
 def test_csv_bytes_to_numpy_with_header_no_polars():
@@ -127,7 +127,7 @@ def test_csv_bytes_to_numpy_with_header_no_polars():
     )
     with mock.patch.dict("sys.modules", {"polars": None}):
         arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=True)
-        assert np.array_equiv(arr_out, expected)
+        assert np.array_equal(arr_out, expected)
 
 
 def test_csv_bytes_to_numpy_empty():
@@ -214,7 +214,7 @@ def test_parsing_adaptation_lines_diagonal():
     step_size, mass_matrix = stancsv.parse_hmc_adaptation_lines(lines)
     assert step_size == 0.787025
     assert mass_matrix is not None
-    assert np.array_equiv(mass_matrix, np.array([1, 2, 3]))
+    assert np.array_equal(mass_matrix, np.array([[1, 2, 3]]))
 
 
 def test_parsing_adaptation_lines_dense():
@@ -237,7 +237,7 @@ def test_parsing_adaptation_lines_dense():
     )
     assert step_size == 0.775147
     assert mass_matrix is not None
-    assert np.array_equiv(mass_matrix, expected)
+    assert np.array_equal(mass_matrix, expected)
 
 
 def test_parsing_adaptation_lines_missing_step_size():
@@ -276,7 +276,7 @@ def test_csv_polars_and_numpy_equiv():
         arr_out_numpy = stancsv.csv_bytes_list_to_numpy(
             lines, includes_header=False
         )
-    assert np.array_equiv(arr_out_polars, arr_out_numpy)
+    assert np.array_equal(arr_out_polars, arr_out_numpy)
 
 
 def test_csv_polars_and_numpy_equiv_one_line():
@@ -290,7 +290,7 @@ def test_csv_polars_and_numpy_equiv_one_line():
         arr_out_numpy = stancsv.csv_bytes_list_to_numpy(
             lines, includes_header=False
         )
-    assert np.array_equiv(arr_out_polars, arr_out_numpy)
+    assert np.array_equal(arr_out_polars, arr_out_numpy)
 
 
 def test_csv_polars_and_numpy_equiv_one_element():
@@ -304,4 +304,4 @@ def test_csv_polars_and_numpy_equiv_one_element():
         arr_out_numpy = stancsv.csv_bytes_list_to_numpy(
             lines, includes_header=False
         )
-    assert np.array_equiv(arr_out_polars, arr_out_numpy)
+    assert np.array_equal(arr_out_polars, arr_out_numpy)
