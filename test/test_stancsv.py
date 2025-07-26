@@ -76,6 +76,35 @@ def test_csv_bytes_to_numpy_with_header():
     assert np.array_equiv(arr_out, expected)
 
 
+def test_csv_bytes_to_numpy_single_element():
+    lines = [
+        b"-6.76206\n",
+    ]
+    expected = np.array(
+        [
+            [-6.76206],
+        ],
+        dtype=np.float32,
+    )
+    arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
+    assert np.array_equiv(arr_out, expected)
+
+
+def test_csv_bytes_to_numpy_single_element_no_polars():
+    lines = [
+        b"-6.76206\n",
+    ]
+    expected = np.array(
+        [
+            [-6.76206],
+        ],
+        dtype=np.float32,
+    )
+    with mock.patch.dict("sys.modules", {"polars": None}):
+        arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
+        assert np.array_equiv(arr_out, expected)
+
+
 def test_csv_bytes_to_numpy_with_header_no_polars():
     lines = [
         (
