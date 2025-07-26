@@ -75,9 +75,12 @@ def csv_bytes_list_to_numpy(
                 skiprows=int(includes_header),
                 delimiter=",",
                 dtype=np.float32,
+                ndmin=1,
             )
         if out.shape == (0,):
             raise ValueError("No data found to parse") from exc
+        if len(out.shape) == 1:
+            out = out.reshape(1, -1)
 
     # Telling the type checker we know the type is correct
     return cast(npt.NDArray[np.float32], out)
