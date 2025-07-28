@@ -17,7 +17,6 @@ from typing import (
     TextIO,
     Tuple,
     Union,
-    cast,
 )
 
 import numpy as np
@@ -47,7 +46,7 @@ def parse_stan_csv_comments_and_draws(
 
 def csv_bytes_list_to_numpy(
     csv_bytes_list: List[bytes], includes_header: bool = True
-) -> npt.NDArray[np.float32]:
+) -> npt.NDArray[np.float64]:
     """Efficiently converts a list of bytes representing whose concatenation
     represents a CSV file into a numpy array. Includes header specifies
     whether the bytes contains an initial header line."""
@@ -61,7 +60,7 @@ def csv_bytes_list_to_numpy(
                     has_header=includes_header,
                 )
                 .to_numpy()
-                .astype(np.float32)
+                .astype(np.float64)
             )
             if out.shape[0] == 0:
                 raise ValueError("No data found to parse")
@@ -74,7 +73,7 @@ def csv_bytes_list_to_numpy(
                 csv_bytes_list,
                 skiprows=int(includes_header),
                 delimiter=",",
-                dtype=np.float32,
+                dtype=np.float64,
                 ndmin=1,
             )
         if out.shape == (0,):
@@ -82,13 +81,12 @@ def csv_bytes_list_to_numpy(
         if len(out.shape) == 1:
             out = out.reshape(1, -1)
 
-    # Telling the type checker we know the type is correct
-    return cast(npt.NDArray[np.float32], out)
+    return out  # type: ignore
 
 
 def parse_hmc_adaptation_lines(
     comment_lines: List[bytes],
-) -> Tuple[float, Optional[npt.NDArray[np.float32]]]:
+) -> Tuple[float, Optional[npt.NDArray[np.float64]]]:
     """Extracts step size/mass matrix information from the Stan CSV comment
     lines by parsing the adaptation section. If unit metric is used, the mass
     matrix field will be None, otherwise an appropriate numpy array.
