@@ -1,11 +1,12 @@
 """testing stancsv parsing"""
 
+from test import without_import
 from typing import List
-from unittest import mock
 
 import numpy as np
 import pytest
 
+import cmdstanpy
 from cmdstanpy.utils import stancsv
 
 
@@ -46,7 +47,7 @@ def test_csv_bytes_to_numpy_no_header_no_polars():
         ],
         dtype=np.float64,
     )
-    with mock.patch.dict("sys.modules", {"polars": None}):
+    with without_import("polars", cmdstanpy.utils.stancsv):
         arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
         assert np.array_equal(arr_out, expected)
         assert arr_out[0].dtype == np.float64
@@ -100,7 +101,7 @@ def test_csv_bytes_to_numpy_single_element_no_polars():
         ],
         dtype=np.float64,
     )
-    with mock.patch.dict("sys.modules", {"polars": None}):
+    with without_import("polars", cmdstanpy.utils.stancsv):
         arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
         assert np.array_equal(arr_out, expected)
 
@@ -125,7 +126,7 @@ def test_csv_bytes_to_numpy_with_header_no_polars():
         ],
         dtype=np.float64,
     )
-    with mock.patch.dict("sys.modules", {"polars": None}):
+    with without_import("polars", cmdstanpy.utils.stancsv):
         arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=True)
         assert np.array_equal(arr_out, expected)
 
@@ -138,7 +139,7 @@ def test_csv_bytes_to_numpy_empty():
 
 def test_csv_bytes_to_numpy_empty_no_polars():
     lines = [b""]
-    with mock.patch.dict("sys.modules", {"polars": None}):
+    with without_import("polars", cmdstanpy.utils.stancsv):
         with pytest.raises(ValueError):
             stancsv.csv_bytes_list_to_numpy(lines)
 
@@ -161,7 +162,7 @@ def test_csv_bytes_to_numpy_header_no_draws_no_polars():
             b"n_leapfrog__,divergent__,energy__,theta\n"
         ),
     ]
-    with mock.patch.dict("sys.modules", {"polars": None}):
+    with without_import("polars", cmdstanpy.utils.stancsv):
         with pytest.raises(ValueError):
             stancsv.csv_bytes_list_to_numpy(lines)
 
@@ -272,7 +273,7 @@ def test_csv_polars_and_numpy_equiv():
     arr_out_polars = stancsv.csv_bytes_list_to_numpy(
         lines, includes_header=False
     )
-    with mock.patch.dict("sys.modules", {"polars": None}):
+    with without_import("polars", cmdstanpy.utils.stancsv):
         arr_out_numpy = stancsv.csv_bytes_list_to_numpy(
             lines, includes_header=False
         )
@@ -286,7 +287,7 @@ def test_csv_polars_and_numpy_equiv_one_line():
     arr_out_polars = stancsv.csv_bytes_list_to_numpy(
         lines, includes_header=False
     )
-    with mock.patch.dict("sys.modules", {"polars": None}):
+    with without_import("polars", cmdstanpy.utils.stancsv):
         arr_out_numpy = stancsv.csv_bytes_list_to_numpy(
             lines, includes_header=False
         )
@@ -300,7 +301,7 @@ def test_csv_polars_and_numpy_equiv_one_element():
     arr_out_polars = stancsv.csv_bytes_list_to_numpy(
         lines, includes_header=False
     )
-    with mock.patch.dict("sys.modules", {"polars": None}):
+    with without_import("polars", cmdstanpy.utils.stancsv):
         arr_out_numpy = stancsv.csv_bytes_list_to_numpy(
             lines, includes_header=False
         )
