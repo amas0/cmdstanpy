@@ -67,7 +67,7 @@ def csv_bytes_list_to_numpy(
                 raise ValueError("No data found to parse")
         except pl.exceptions.NoDataError as exc:
             raise ValueError("No data found to parse") from exc
-    except ImportError as exc:
+    except ImportError:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
             out = np.loadtxt(
@@ -78,7 +78,7 @@ def csv_bytes_list_to_numpy(
                 ndmin=1,
             )
         if out.shape == (0,):
-            raise ValueError("No data found to parse") from exc
+            raise ValueError("No data found to parse")  # pylint: disable=W0707
         if len(out.shape) == 1:
             out = out.reshape(1, -1)
 
