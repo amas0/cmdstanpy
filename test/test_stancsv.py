@@ -23,11 +23,11 @@ def test_csv_bytes_to_numpy_no_header():
             [-6.85511, 0.994945, 0.787025, 2, 3, 0, 6.85536, 0.310589],
             [-6.85511, 0.812189, 0.787025, 1, 1, 0, 7.16517, 0.310589],
         ],
-        dtype=np.float32,
+        dtype=np.float64,
     )
     arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
     assert np.array_equal(arr_out, expected)
-    assert arr_out[0].dtype == np.float32
+    assert arr_out[0].dtype == np.float64
 
 
 def test_csv_bytes_to_numpy_no_header_no_polars():
@@ -44,12 +44,12 @@ def test_csv_bytes_to_numpy_no_header_no_polars():
             [-6.85511, 0.994945, 0.787025, 2, 3, 0, 6.85536, 0.310589],
             [-6.85511, 0.812189, 0.787025, 1, 1, 0, 7.16517, 0.310589],
         ],
-        dtype=np.float32,
+        dtype=np.float64,
     )
     with mock.patch.dict("sys.modules", {"polars": None}):
         arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
         assert np.array_equal(arr_out, expected)
-        assert arr_out[0].dtype == np.float32
+        assert arr_out[0].dtype == np.float64
 
 
 def test_csv_bytes_to_numpy_with_header():
@@ -70,7 +70,7 @@ def test_csv_bytes_to_numpy_with_header():
             [-6.85511, 0.994945, 0.787025, 2, 3, 0, 6.85536, 0.310589],
             [-6.85511, 0.812189, 0.787025, 1, 1, 0, 7.16517, 0.310589],
         ],
-        dtype=np.float32,
+        dtype=np.float64,
     )
     arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=True)
     assert np.array_equal(arr_out, expected)
@@ -84,7 +84,7 @@ def test_csv_bytes_to_numpy_single_element():
         [
             [-6.76206],
         ],
-        dtype=np.float32,
+        dtype=np.float64,
     )
     arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
     assert np.array_equal(arr_out, expected)
@@ -98,7 +98,7 @@ def test_csv_bytes_to_numpy_single_element_no_polars():
         [
             [-6.76206],
         ],
-        dtype=np.float32,
+        dtype=np.float64,
     )
     with mock.patch.dict("sys.modules", {"polars": None}):
         arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
@@ -123,7 +123,7 @@ def test_csv_bytes_to_numpy_with_header_no_polars():
             [-6.85511, 0.994945, 0.787025, 2, 3, 0, 6.85536, 0.310589],
             [-6.85511, 0.812189, 0.787025, 1, 1, 0, 7.16517, 0.310589],
         ],
-        dtype=np.float32,
+        dtype=np.float64,
     )
     with mock.patch.dict("sys.modules", {"polars": None}):
         arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=True)
@@ -233,7 +233,7 @@ def test_parsing_adaptation_lines_dense():
             [0.230843, 3.92459, 0.126989],
             [0.0509365, 0.126989, 3.82718],
         ],
-        dtype=np.float32,
+        dtype=np.float64,
     )
     assert step_size == 0.775147
     assert mass_matrix is not None
