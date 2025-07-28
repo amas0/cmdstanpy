@@ -54,7 +54,7 @@ def csv_bytes_list_to_numpy(
         import polars as pl
 
         try:
-            out = (
+            out: npt.NDArray[np.float64] = (
                 pl.read_csv(
                     io.BytesIO(b"".join(csv_bytes_list)),
                     has_header=includes_header,
@@ -81,7 +81,7 @@ def csv_bytes_list_to_numpy(
         if len(out.shape) == 1:
             out = out.reshape(1, -1)
 
-    return out  # type: ignore
+    return out
 
 
 def parse_hmc_adaptation_lines(
