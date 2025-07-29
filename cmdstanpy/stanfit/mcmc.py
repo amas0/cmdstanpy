@@ -18,6 +18,7 @@ from typing import (
 )
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 try:
@@ -436,12 +437,12 @@ class CmdStanMCMC:
             num_draws += self.num_draws_warmup
         self._draws = np.empty(
             (num_draws, self.chains, len(self.column_names)),
-            dtype=np.float32,
+            dtype=np.float64,
             order='F',
         )
-        self._step_size = np.empty(self.chains, dtype=np.float32)
+        self._step_size = np.empty(self.chains, dtype=np.float64)
 
-        mass_matrix_per_chain = []
+        mass_matrix_per_chain: List[Optional[npt.NDArray[np.float64]]] = []
         for chain in range(self.chains):
             with open(self.runset.csv_files[chain], "rb") as f:
                 comments, draws = stancsv.parse_stan_csv_comments_and_draws(f)
@@ -455,16 +456,14 @@ class CmdStanMCMC:
                 ) = stancsv.parse_hmc_adaptation_lines(comments)
                 mass_matrix_per_chain.append(mass_matrix)
 
-        if not self._is_fixed_param and mass_matrix_per_chain[0] is not None:
-            mm_shape = mass_matrix_per_chain[0].shape
+        if all(mm is not None for mm in mass_matrix_per_chain):
             if self.metric_type == "diag_e":
-                mm_shape = mm_shape[1:]
-            self._metric = np.empty(
-                (self.chains, *mm_shape),
-                dtype=np.float32,
-            )
-            for chain in range(self.chains):
-                self._metric[chain] = mass_matrix_per_chain[chain]
+                # Mass matrix will have shape (1, num_params)
+                self._metric = np.array(
+                    [mm[0] for mm in mass_matrix_per_chain]  # type: ignore
+                )
+            else:
+                self._metric = np.array(mass_matrix_per_chain)
 
         assert self._draws is not None
 
