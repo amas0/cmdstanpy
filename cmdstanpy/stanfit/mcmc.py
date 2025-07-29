@@ -444,18 +444,25 @@ class CmdStanMCMC:
 
         mass_matrix_per_chain: List[Optional[npt.NDArray[np.float64]]] = []
         for chain in range(self.chains):
-            comments, draws = stancsv.parse_stan_csv_comments_and_draws(
-                self.runset.csv_files[chain]
-            )
+            try:
+                comments, draws = stancsv.parse_stan_csv_comments_and_draws(
+                    self.runset.csv_files[chain]
+                )
 
-            self._draws[:, chain, :] = stancsv.csv_bytes_list_to_numpy(draws)
+                self._draws[:, chain, :] = stancsv.csv_bytes_list_to_numpy(
+                    draws
+                )
 
-            if not self._is_fixed_param:
-                (
-                    self._step_size[chain],
-                    mass_matrix,
-                ) = stancsv.parse_hmc_adaptation_lines(comments)
-                mass_matrix_per_chain.append(mass_matrix)
+                if not self._is_fixed_param:
+                    (
+                        self._step_size[chain],
+                        mass_matrix,
+                    ) = stancsv.parse_hmc_adaptation_lines(comments)
+                    mass_matrix_per_chain.append(mass_matrix)
+            except Exception as exc:
+                raise ValueError(
+                    f"Parsing output from {self.runset.csv_files[chain]} failed"
+                ) from exc
 
         if all(mm is not None for mm in mass_matrix_per_chain):
             if self.metric_type == "diag_e":
