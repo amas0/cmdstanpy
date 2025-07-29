@@ -1,5 +1,7 @@
 """testing stancsv parsing"""
 
+import os
+from pathlib import Path
 from test import without_import
 from typing import List
 
@@ -8,6 +10,9 @@ import pytest
 
 import cmdstanpy
 from cmdstanpy.utils import stancsv
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+DATAFILES_PATH = os.path.join(HERE, 'data')
 
 
 def test_csv_bytes_to_numpy_no_header():
@@ -306,3 +311,23 @@ def test_csv_polars_and_numpy_equiv_one_element():
             lines, includes_header=False
         )
     assert np.array_equal(arr_out_polars, arr_out_numpy)
+
+
+def test_parse_stan_csv_from_file():
+    csv_path = os.path.join(DATAFILES_PATH, "bernoulli_output_1.csv")
+
+    comment_lines, draws_lines = stancsv.parse_stan_csv_comments_and_draws(
+        csv_path
+    )
+    assert all(ln.startswith(b"#") for ln in comment_lines)
+    assert all(not ln.startswith(b"#") for ln in draws_lines)
+
+    (
+        comment_lines_path,
+        draws_lines_path,
+    ) = stancsv.parse_stan_csv_comments_and_draws(Path(csv_path))
+    assert all(ln.startswith(b"#") for ln in comment_lines)
+    assert all(not ln.startswith(b"#") for ln in draws_lines)
+
+    assert comment_lines == comment_lines_path
+    assert draws_lines == draws_lines_path

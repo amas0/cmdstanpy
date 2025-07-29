@@ -444,8 +444,9 @@ class CmdStanMCMC:
 
         mass_matrix_per_chain: List[Optional[npt.NDArray[np.float64]]] = []
         for chain in range(self.chains):
-            with open(self.runset.csv_files[chain], "rb") as f:
-                comments, draws = stancsv.parse_stan_csv_comments_and_draws(f)
+            comments, draws = stancsv.parse_stan_csv_comments_and_draws(
+                self.runset.csv_files[chain]
+            )
 
             self._draws[:, chain, :] = stancsv.csv_bytes_list_to_numpy(draws)
 

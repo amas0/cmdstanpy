@@ -7,6 +7,7 @@ import json
 import math
 import re
 import warnings
+from pathlib import Path
 from typing import (
     Any,
     Dict,
@@ -27,21 +28,30 @@ from cmdstanpy import _CMDSTAN_SAMPLING, _CMDSTAN_THIN, _CMDSTAN_WARMUP
 
 
 def parse_stan_csv_comments_and_draws(
-    lines: Iterator[bytes],
+    stan_csv: Union[str, Path, Iterator[bytes]],
 ) -> Tuple[List[bytes], List[bytes]]:
     """Parses lines of a Stan CSV file into comment lines and draws lines, where
     a draws line is just a non-commented line.
 
     Returns a (comment_lines, draws_lines) tuple.
     """
-    comment_lines, draws_lines = [], []
 
-    for line in lines:
-        if line.startswith(b"#"):  # is comment line
-            comment_lines.append(line)
-        else:
-            draws_lines.append(line)
-    return comment_lines, draws_lines
+    def split_comments_and_draws(
+        lines: Iterator[bytes],
+    ) -> Tuple[List[bytes], List[bytes]]:
+        comment_lines, draws_lines = [], []
+        for line in lines:
+            if line.startswith(b"#"):  # is comment line
+                comment_lines.append(line)
+            else:
+                draws_lines.append(line)
+        return comment_lines, draws_lines
+
+    if isinstance(stan_csv, (str, Path)):
+        with open(stan_csv, "rb") as f:
+            return split_comments_and_draws(f)
+    else:
+        return split_comments_and_draws(stan_csv)
 
 
 def csv_bytes_list_to_numpy(
