@@ -98,14 +98,17 @@ def parse_hmc_adaptation_lines(
     comment_lines: List[bytes],
 ) -> Tuple[float, Optional[npt.NDArray[np.float64]]]:
     """Extracts step size/mass matrix information from the Stan CSV comment
-    lines by parsing the adaptation section. If unit metric is used, the mass
-    matrix field will be None, otherwise an appropriate numpy array.
+    lines by parsing the adaptation section. If the diag_e metric is used,
+    the returned mass matrix will be a 1D array of the diagnoal elements,
+    if the dense_e metric is used, it will be a 2D array representing the
+    entire matrix, and if unit_e is used then None will be returned.
 
     Returns a (step_size, mass_matrix) tuple"""
     step_size, mass_matrix = None, None
 
     cleaned_lines = (ln.lstrip(b"# ") for ln in comment_lines)
     in_matrix_block = False
+    diag_e_metric = False
     matrix_lines = []
     for line in cleaned_lines:
         if in_matrix_block and line.strip():
@@ -120,12 +123,16 @@ def parse_hmc_adaptation_lines(
             in_matrix_block = True
         elif line.startswith(b"No free"):
             break
+        elif b"diag_e" in line:
+            diag_e_metric = True
     if step_size is None:
         raise ValueError("Unable to parse adapated step size")
     if matrix_lines:
         mass_matrix = csv_bytes_list_to_numpy(
             matrix_lines, includes_header=False
         )
+        if diag_e_metric and mass_matrix.shape[0] == 1:
+            mass_matrix = mass_matrix[0]
     return step_size, mass_matrix
 
 

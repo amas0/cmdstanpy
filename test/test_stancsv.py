@@ -212,6 +212,7 @@ def test_parsing_adaptation_lines():
 
 def test_parsing_adaptation_lines_diagonal():
     lines = [
+        b"diag_e",  # Will be present in the Stan CSV config
         b"# Adaptation terminated\n",
         b"# Step size = 0.787025\n",
         b"# Diagonal elements of inverse mass matrix:\n",
@@ -220,7 +221,7 @@ def test_parsing_adaptation_lines_diagonal():
     step_size, mass_matrix = stancsv.parse_hmc_adaptation_lines(lines)
     assert step_size == 0.787025
     assert mass_matrix is not None
-    assert np.array_equal(mass_matrix, np.array([[1, 2, 3]]))
+    assert np.array_equal(mass_matrix, np.array([1, 2, 3]))
 
 
 def test_parsing_adaptation_lines_dense():

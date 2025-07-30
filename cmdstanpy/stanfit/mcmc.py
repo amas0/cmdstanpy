@@ -18,7 +18,6 @@ from typing import (
 )
 
 import numpy as np
-import numpy.typing as npt
 import pandas as pd
 
 try:
@@ -442,7 +441,7 @@ class CmdStanMCMC:
         )
         self._step_size = np.empty(self.chains, dtype=np.float64)
 
-        mass_matrix_per_chain: List[Optional[npt.NDArray[np.float64]]] = []
+        mass_matrix_per_chain = []
         for chain in range(self.chains):
             try:
                 comments, draws = stancsv.parse_stan_csv_comments_and_draws(
@@ -465,13 +464,7 @@ class CmdStanMCMC:
                 ) from exc
 
         if all(mm is not None for mm in mass_matrix_per_chain):
-            if self.metric_type == "diag_e":
-                # Mass matrix will have shape (1, num_params)
-                self._metric = np.array(
-                    [mm[0] for mm in mass_matrix_per_chain]  # type: ignore
-                )
-            else:
-                self._metric = np.array(mass_matrix_per_chain)
+            self._metric = np.array(mass_matrix_per_chain)
 
         assert self._draws is not None
 
