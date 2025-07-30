@@ -64,10 +64,13 @@ def csv_bytes_list_to_numpy(
         import polars as pl
 
         try:
+            num_cols = csv_bytes_list[0].count(b",") + 1
             out: npt.NDArray[np.float64] = (
                 pl.read_csv(
                     io.BytesIO(b"".join(csv_bytes_list)),
                     has_header=includes_header,
+                    schema_overrides=[pl.Float64] * num_cols,
+                    infer_schema=False,
                 )
                 .to_numpy()
                 .astype(np.float64)
