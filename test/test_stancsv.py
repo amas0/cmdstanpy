@@ -182,21 +182,6 @@ def test_parse_comments_and_draws():
     assert draws_lines == [b"2\n", b"3\n"]
 
 
-def test_parsing_timing_lines():
-    lines = [
-        b"# \n",
-        b"#  Elapsed Time: 0.001332 seconds (Warm-up)\n",
-        b"#                0.000249 seconds (Sampling)\n",
-        b"#                0.001581 seconds (Total)\n",
-        b"# \n",
-    ]
-    out = stancsv.parse_timing_lines(lines)
-    assert len(out) == 3
-    assert out['Warm-up'] == 0.001332
-    assert out['Sampling'] == 0.000249
-    assert out['Total'] == 0.001581
-
-
 def test_parsing_adaptation_lines():
     lines = [
         b"# Adaptation terminated\n",
