@@ -5,9 +5,9 @@ Utility functions for reading the Stan CSV format
 import io
 import json
 import math
+import os
 import re
 import warnings
-from pathlib import Path
 from typing import (
     Any,
     Dict,
@@ -28,7 +28,7 @@ from cmdstanpy import _CMDSTAN_SAMPLING, _CMDSTAN_THIN, _CMDSTAN_WARMUP
 
 
 def parse_stan_csv_comments_and_draws(
-    stan_csv: Union[str, Path, Iterator[bytes]],
+    stan_csv: Union[str, os.PathLike, Iterator[bytes]],
 ) -> Tuple[List[bytes], List[bytes]]:
     """Parses lines of a Stan CSV file into comment lines and draws lines, where
     a draws line is just a non-commented line.
@@ -47,7 +47,7 @@ def parse_stan_csv_comments_and_draws(
                 draws_lines.append(line)
         return comment_lines, draws_lines
 
-    if isinstance(stan_csv, (str, Path)):
+    if isinstance(stan_csv, (str, os.PathLike)):
         with open(stan_csv, "rb") as f:
             return split_comments_and_draws(f)
     else:
