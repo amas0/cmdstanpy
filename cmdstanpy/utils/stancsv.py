@@ -64,6 +64,8 @@ def csv_bytes_list_to_numpy(
         import polars as pl
 
         try:
+            if not csv_bytes_list:
+                raise ValueError("No data found to parse")
             num_cols = csv_bytes_list[0].count(b",") + 1
             out: npt.NDArray[np.float64] = (
                 pl.read_csv(
