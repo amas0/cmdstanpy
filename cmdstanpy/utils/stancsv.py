@@ -1,15 +1,144 @@
 """
 Utility functions for reading the Stan CSV format
 """
+
+import io
 import json
 import math
+import os
 import re
-from typing import Any, Dict, List, MutableMapping, Optional, TextIO, Union
+import warnings
+from typing import (
+    Any,
+    Dict,
+    Iterator,
+    List,
+    MutableMapping,
+    Optional,
+    TextIO,
+    Tuple,
+    Union,
+)
 
 import numpy as np
+import numpy.typing as npt
 import pandas as pd
 
 from cmdstanpy import _CMDSTAN_SAMPLING, _CMDSTAN_THIN, _CMDSTAN_WARMUP
+
+
+def parse_stan_csv_comments_and_draws(
+    stan_csv: Union[str, os.PathLike, Iterator[bytes]],
+) -> Tuple[List[bytes], List[bytes]]:
+    """Parses lines of a Stan CSV file into comment lines and draws lines, where
+    a draws line is just a non-commented line.
+
+    Returns a (comment_lines, draws_lines) tuple.
+    """
+
+    def split_comments_and_draws(
+        lines: Iterator[bytes],
+    ) -> Tuple[List[bytes], List[bytes]]:
+        comment_lines, draws_lines = [], []
+        for line in lines:
+            if line.startswith(b"#"):  # is comment line
+                comment_lines.append(line)
+            else:
+                draws_lines.append(line)
+        return comment_lines, draws_lines
+
+    if isinstance(stan_csv, (str, os.PathLike)):
+        with open(stan_csv, "rb") as f:
+            return split_comments_and_draws(f)
+    else:
+        return split_comments_and_draws(stan_csv)
+
+
+def csv_bytes_list_to_numpy(
+    csv_bytes_list: List[bytes], includes_header: bool = True
+) -> npt.NDArray[np.float64]:
+    """Efficiently converts a list of bytes representing whose concatenation
+    represents a CSV file into a numpy array. Includes header specifies
+    whether the bytes contains an initial header line."""
+    try:
+        import polars as pl
+
+        try:
+            if not csv_bytes_list:
+                raise ValueError("No data found to parse")
+            num_cols = csv_bytes_list[0].count(b",") + 1
+            out: npt.NDArray[np.float64] = (
+                pl.read_csv(
+                    io.BytesIO(b"".join(csv_bytes_list)),
+                    has_header=includes_header,
+                    schema_overrides=[pl.Float64] * num_cols,
+                    infer_schema=False,
+                )
+                .to_numpy()
+                .astype(np.float64)
+            )
+            if out.shape[0] == 0:
+                raise ValueError("No data found to parse")
+        except pl.exceptions.NoDataError as exc:
+            raise ValueError("No data found to parse") from exc
+    except ImportError:
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore")
+            out = np.loadtxt(
+                csv_bytes_list,
+                skiprows=int(includes_header),
+                delimiter=",",
+                dtype=np.float64,
+                ndmin=1,
+            )
+        if out.shape == (0,):
+            raise ValueError("No data found to parse")  # pylint: disable=W0707
+        if len(out.shape) == 1:
+            out = out.reshape(1, -1)
+
+    return out
+
+
+def parse_hmc_adaptation_lines(
+    comment_lines: List[bytes],
+) -> Tuple[float, Optional[npt.NDArray[np.float64]]]:
+    """Extracts step size/mass matrix information from the Stan CSV comment
+    lines by parsing the adaptation section. If the diag_e metric is used,
+    the returned mass matrix will be a 1D array of the diagnoal elements,
+    if the dense_e metric is used, it will be a 2D array representing the
+    entire matrix, and if unit_e is used then None will be returned.
+
+    Returns a (step_size, mass_matrix) tuple"""
+    step_size, mass_matrix = None, None
+
+    cleaned_lines = (ln.lstrip(b"# ") for ln in comment_lines)
+    in_matrix_block = False
+    diag_e_metric = False
+    matrix_lines = []
+    for line in cleaned_lines:
+        if in_matrix_block and line.strip():
+            # Stop when we get to timing block
+            if line.startswith(b"Elapsed Time"):
+                break
+            matrix_lines.append(line)
+        elif line.startswith(b"Step size"):
+            _, ss_str = line.split(b" = ")
+            step_size = float(ss_str)
+        elif line.startswith(b"Diagonal") or line.startswith(b"Elements"):
+            in_matrix_block = True
+        elif line.startswith(b"No free"):
+            break
+        elif b"diag_e" in line:
+            diag_e_metric = True
+    if step_size is None:
+        raise ValueError("Unable to parse adapated step size")
+    if matrix_lines:
+        mass_matrix = csv_bytes_list_to_numpy(
+            matrix_lines, includes_header=False
+        )
+        if diag_e_metric and mass_matrix.shape[0] == 1:
+            mass_matrix = mass_matrix[0]
+    return step_size, mass_matrix
 
 
 def check_sampler_csv(

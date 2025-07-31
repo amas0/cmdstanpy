@@ -40,7 +40,7 @@ packages = ["cmdstanpy", "cmdstanpy.stanfit", "cmdstanpy.utils"]
 "cmdstanpy" = ["py.typed"]
 
 [project.optional-dependencies]
-all = ["xarray"]
+all = ["xarray", "polars>=1.8.2"]
 test = [
     "flake8",
     "pylint",
@@ -49,6 +49,7 @@ test = [
     "pytest-order",
     "mypy",
     "xarray",
+    "polars>=1.8.2"
 ]
 docs = [
     "sphinx>5,<6",
