@@ -160,8 +160,9 @@ def test_csv_bytes_to_numpy_header_no_draws_no_polars():
             b"n_leapfrog__,divergent__,energy__,theta\n"
         ),
     ]
-    arr = stancsv.csv_bytes_list_to_numpy(lines)
-    assert arr.shape == (0, 8)
+    with without_import("polars", cmdstanpy.utils.stancsv):
+        arr = stancsv.csv_bytes_list_to_numpy(lines)
+        assert arr.shape == (0, 8)
 
 
 def test_parse_comments_and_draws():
