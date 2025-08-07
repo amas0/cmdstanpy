@@ -60,13 +60,13 @@ def csv_bytes_list_to_numpy(
     """Efficiently converts a list of bytes representing whose concatenation
     represents a CSV file into a numpy array. Includes header specifies
     whether the bytes contains an initial header line."""
+    if not csv_bytes_list:
+        return np.empty((0,))
+    num_cols = csv_bytes_list[0].count(b",") + 1
     try:
         import polars as pl
 
         try:
-            if not csv_bytes_list:
-                raise ValueError("No data found to parse")
-            num_cols = csv_bytes_list[0].count(b",") + 1
             out: npt.NDArray[np.float64] = (
                 pl.read_csv(
                     io.BytesIO(b"".join(csv_bytes_list)),
@@ -77,10 +77,8 @@ def csv_bytes_list_to_numpy(
                 .to_numpy()
                 .astype(np.float64)
             )
-            if out.shape[0] == 0:
-                raise ValueError("No data found to parse")
-        except pl.exceptions.NoDataError as exc:
-            raise ValueError("No data found to parse") from exc
+        except pl.exceptions.NoDataError:
+            return np.empty((0, num_cols))
     except ImportError:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
@@ -91,10 +89,11 @@ def csv_bytes_list_to_numpy(
                 dtype=np.float64,
                 ndmin=1,
             )
-        if out.shape == (0,):
-            raise ValueError("No data found to parse")  # pylint: disable=W0707
         if len(out.shape) == 1:
-            out = out.reshape(1, -1)
+            if out.shape[0] == 0:  # No data read
+                out = np.empty((0, num_cols))
+            else:
+                out = out.reshape(1, -1)
 
     return out
 

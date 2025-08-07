@@ -2138,3 +2138,13 @@ def test_sample_dense_mass_matrix():
     fit = linear_model.sample(data=jdata, metric="dense_e", chains=2)
     assert fit.metric is not None
     assert fit.metric.shape == (2, 3, 3)
+
+
+def test_no_output_draws():
+    stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
+    model = cmdstanpy.CmdStanModel(stan_file=stan)
+    data = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+
+    mcmc = model.sample(data=data, iter_sampling=0, save_warmup=False, chains=2)
+    draws = mcmc.draws()
+    assert np.array_equal(draws, np.empty((0, 2, len(mcmc.column_names))))
