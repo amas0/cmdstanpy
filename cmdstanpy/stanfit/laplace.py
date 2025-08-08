@@ -25,7 +25,11 @@ except ImportError:
 
 from cmdstanpy.cmdstan_args import Method
 from cmdstanpy.utils.data_munging import build_xarray_data
-from cmdstanpy.utils.stancsv import scan_generic_csv
+from cmdstanpy.utils.stancsv import (
+    csv_bytes_list_to_numpy,
+    parse_stan_csv_comments_and_draws,
+    scan_generic_csv,
+)
 
 from .metadata import InferenceMetadata
 from .mle import CmdStanMLE
@@ -89,16 +93,8 @@ class CmdStanLaplace:
         if self._draws.shape != (0,):
             return
 
-        with open(self._runset.csv_files[0], 'r') as fd:
-            while (fd.readline()).startswith("#"):
-                pass
-            self._draws = np.loadtxt(
-                fd,
-                dtype=float,
-                ndmin=2,
-                delimiter=',',
-                comments="#",
-            )
+        _, draws = parse_stan_csv_comments_and_draws(self._runset.csv_files[0])
+        self._draws = csv_bytes_list_to_numpy(draws)
 
     def stan_variable(self, var: str) -> np.ndarray:
         """
