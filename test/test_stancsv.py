@@ -310,3 +310,46 @@ def test_parse_stan_csv_from_file():
 
     assert comment_lines == comment_lines_path
     assert draws_lines == draws_lines_path
+
+
+def test_config_parsing():
+    csv_path = os.path.join(DATAFILES_PATH, "bernoulli_output_1.csv")
+
+    comment_lines, _ = stancsv.parse_stan_csv_comments_and_draws(csv_path)
+    config = stancsv.parse_config(comment_lines)
+
+    expected = {
+        'stan_version_major': 2,
+        'stan_version_minor': 19,
+        'stan_version_patch': 0,
+        'model': 'bernoulli_model',
+        'method': 'sample',
+        'num_samples': 10,
+        'num_warmup': 100,
+        'save_warmup': 0,
+        'thin': 1,
+        'engaged': 1,
+        'gamma': 0.05,
+        'delta': 0.8,
+        'kappa': 0.75,
+        't0': 10,
+        'init_buffer': 75,
+        'term_buffer': 50,
+        'window': 25,
+        'algorithm': 'hmc',
+        'engine': 'nuts',
+        'max_depth': 10,
+        'metric': 'diag_e',
+        'metric_file': '',
+        'stepsize': 1,
+        'stepsize_jitter': 0,
+        'id': 1,
+        'data_file': 'examples/bernoulli/bernoulli.data.json',
+        'init': 2,
+        'seed': 123456,
+        'diagnostic_file': '',
+        'refresh': 100,
+        'Step size': 0.787025,
+    }
+
+    assert config == expected

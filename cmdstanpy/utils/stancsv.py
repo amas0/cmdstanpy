@@ -140,6 +140,43 @@ def parse_hmc_adaptation_lines(
     return step_size, mass_matrix
 
 
+def parse_config(
+    comment_lines: List[bytes],
+) -> Dict[str, Union[str, int, float]]:
+    """Extracts the key=value config settings from Stan CSV comment
+    lines and returns a dictionary."""
+    out: Dict[str, Union[str, int, float]] = {}
+    cleaned_lines = (
+        line.decode().lstrip("# ").strip() for line in comment_lines
+    )
+    for line in cleaned_lines:
+        split_on_eq = line.split(" = ")
+        # Only want lines with key = value
+        if len(split_on_eq) != 2:
+            continue
+
+        key, val = split_on_eq
+        val = val.replace("(Default)", "").strip()
+        if key == 'file':
+            if not val.endswith('csv'):
+                out['data_file'] = val
+        else:
+            if val == 'true':
+                out[key] = 1
+            elif val == 'false':
+                out[key] = 0
+            else:
+                for cast in (int, float):
+                    try:
+                        out[key] = cast(val)
+                        break
+                    except ValueError:
+                        pass
+                else:
+                    out[key] = val
+    return out
+
+
 def check_sampler_csv(
     path: str,
     is_fixed_param: bool = False,
