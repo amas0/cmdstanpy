@@ -81,7 +81,6 @@ class CmdStanPathfinder:
         )
         return rep
 
-    # below this is identical to same functions in Laplace
     def _assemble_draws(self) -> None:
         if self._draws.shape != (0,):
             return
