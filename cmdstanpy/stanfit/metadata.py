@@ -56,6 +56,12 @@ class InferenceMetadata:
         return copy.deepcopy(self._cmdstan_config)
 
     @property
+    def column_names(self) -> Tuple[str, ...]:
+        col_names = self['column_names']
+        assert isinstance(col_names, tuple)
+        return col_names
+
+    @property
     def method_vars(self) -> Dict[str, stanio.Variable]:
         """
         Method variable names always end in `__`, e.g. `lp__`.
