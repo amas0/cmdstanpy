@@ -195,9 +195,9 @@ def extract_header_line(draws_lines: List[bytes]) -> str:
     return first_line.decode().strip()
 
 
-def parse_header(header: str) -> List[str]:
+def parse_header(header: str) -> Tuple[str, ...]:
     """Returns munged variable names from a Stan csv header line"""
-    return [munge_varname(name) for name in header.split(",")]
+    return tuple(munge_varname(name) for name in header.split(","))
 
 
 def check_sampler_csv(

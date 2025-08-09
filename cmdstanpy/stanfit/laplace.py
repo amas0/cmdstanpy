@@ -62,7 +62,7 @@ class CmdStanLaplace:
         raw_header = extract_header_line(draw_lines)
         header_info = {
             "raw_header": raw_header,
-            "column_names": tuple(parse_header((raw_header))),
+            "column_names": parse_header((raw_header)),
         }
 
         self._metadata = InferenceMetadata({**config, **header_info})
