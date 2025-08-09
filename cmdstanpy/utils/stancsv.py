@@ -221,6 +221,14 @@ def extract_config_and_header_info(
     }
 
 
+def parse_variational_eta(comment_lines: List[bytes]) -> float:
+    """Extracts the variational eta parameter from stancsv comment lines"""
+    for key, val in extract_key_val_pairs(comment_lines):
+        if key == "eta":
+            return float(val)
+    raise ValueError("Unable to parse eta from Stan CSV")
+
+
 def check_sampler_csv(
     path: str,
     is_fixed_param: bool = False,
