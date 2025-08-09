@@ -40,7 +40,6 @@ from .stancsv import (
     scan_hmc_params,
     scan_sampler_csv,
     scan_sampling_iters,
-    scan_variational_csv,
     scan_warmup_iters,
 )
 
@@ -133,7 +132,6 @@ __all__ = [
     'scan_hmc_params',
     'scan_sampler_csv',
     'scan_sampling_iters',
-    'scan_variational_csv',
     'scan_warmup_iters',
     'set_cmdstan_path',
     'set_make_env',
