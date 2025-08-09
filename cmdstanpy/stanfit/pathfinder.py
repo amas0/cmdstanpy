@@ -9,10 +9,7 @@ import numpy as np
 from cmdstanpy.cmdstan_args import Method
 from cmdstanpy.stanfit.metadata import InferenceMetadata
 from cmdstanpy.stanfit.runset import RunSet
-from cmdstanpy.utils.stancsv import (
-    csv_bytes_list_to_numpy,
-    parse_stan_csv_comments_and_draws,
-)
+from cmdstanpy.utils import stancsv
 
 
 class CmdStanPathfinder:
@@ -81,8 +78,10 @@ class CmdStanPathfinder:
         if self._draws.shape != (0,):
             return
 
-        _, draws = parse_stan_csv_comments_and_draws(self._runset.csv_files[0])
-        self._draws = csv_bytes_list_to_numpy(draws)
+        _, draws = stancsv.parse_stan_csv_comments_and_draws(
+            self._runset.csv_files[0]
+        )
+        self._draws = stancsv.csv_bytes_list_to_numpy(draws)
 
     def stan_variable(self, var: str) -> np.ndarray:
         """

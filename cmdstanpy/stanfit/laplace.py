@@ -24,11 +24,8 @@ except ImportError:
     XARRAY_INSTALLED = False
 
 from cmdstanpy.cmdstan_args import Method
+from cmdstanpy.utils import stancsv
 from cmdstanpy.utils.data_munging import build_xarray_data
-from cmdstanpy.utils.stancsv import (
-    csv_bytes_list_to_numpy,
-    parse_stan_csv_comments_and_draws,
-)
 
 from .metadata import InferenceMetadata
 from .mle import CmdStanMLE
@@ -89,8 +86,10 @@ class CmdStanLaplace:
         if self._draws.shape != (0,):
             return
 
-        _, draws = parse_stan_csv_comments_and_draws(self._runset.csv_files[0])
-        self._draws = csv_bytes_list_to_numpy(draws)
+        _, draws = stancsv.parse_stan_csv_comments_and_draws(
+            self._runset.csv_files[0]
+        )
+        self._draws = stancsv.csv_bytes_list_to_numpy(draws)
 
     def stan_variable(self, var: str) -> np.ndarray:
         """
