@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from cmdstanpy.cmdstan_args import Method, OptimizeArgs
-from cmdstanpy.utils import get_logger, scan_optimize_csv
+from cmdstanpy.utils import get_logger, stancsv
 
 from .metadata import InferenceMetadata
 from .runset import RunSet
@@ -34,7 +34,18 @@ class CmdStanMLE:
             optimize_args, OptimizeArgs
         )  # make the typechecker happy
         self._save_iterations: bool = optimize_args.save_iterations
-        self._set_mle_attrs(runset.csv_files[0])
+
+        comment_lines, draws_lines = stancsv.parse_stan_csv_comments_and_draws(
+            self.runset.csv_files[0]
+        )
+        self._metadata = InferenceMetadata(
+            stancsv.extract_config_and_header_info(comment_lines, draws_lines)
+        )
+        self._column_names = self._metadata.column_names
+        all_draws = stancsv.csv_bytes_list_to_numpy(draws_lines)
+        self._mle: np.ndarray = all_draws[-1]
+        if self._save_iterations:
+            self._all_iters: np.ndarray = all_draws
 
     def create_inits(
         self, seed: Optional[int] = None, chains: int = 4
@@ -83,14 +94,6 @@ class CmdStanMLE:
         except ValueError as e:
             # pylint: disable=raise-missing-from
             raise AttributeError(*e.args)
-
-    def _set_mle_attrs(self, sample_csv_0: str) -> None:
-        meta = scan_optimize_csv(sample_csv_0, self._save_iterations)
-        self._metadata = InferenceMetadata(meta)
-        self._column_names: Tuple[str, ...] = meta['column_names']
-        self._mle: np.ndarray = meta['mle']
-        if self._save_iterations:
-            self._all_iters: np.ndarray = meta['all_iters']
 
     @property
     def column_names(self) -> Tuple[str, ...]:
