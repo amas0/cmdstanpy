@@ -310,7 +310,7 @@ class CmdStanLaplace:
         and quantities of interest. Corresponds to Stan CSV file header row,
         with names munged to array notation, e.g. `beta[1]` not `beta.1`.
         """
-        return self._metadata.cmdstan_config['column_names']  # type: ignore
+        return self._metadata.column_names
 
     def save_csvfiles(self, dir: Optional[str] = None) -> None:
         """

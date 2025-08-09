@@ -41,7 +41,6 @@ class CmdStanMLE:
         self._metadata = InferenceMetadata(
             stancsv.extract_config_and_header_info(comment_lines, draws_lines)
         )
-        self._column_names = self._metadata.column_names
         all_draws = stancsv.csv_bytes_list_to_numpy(draws_lines)
         self._mle: np.ndarray = all_draws[-1]
         if self._save_iterations:
@@ -101,7 +100,7 @@ class CmdStanMLE:
         Names of estimated quantities, includes joint log probability,
         and all parameters, transformed parameters, and generated quantities.
         """
-        return self._column_names
+        return self.metadata.column_names
 
     @property
     def metadata(self) -> InferenceMetadata:

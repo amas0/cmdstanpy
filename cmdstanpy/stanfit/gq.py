@@ -151,7 +151,7 @@ class CmdStanGQ(Generic[Fit]):
         """
         Names of generated quantities of interest.
         """
-        return self._metadata.cmdstan_config['column_names']  # type: ignore
+        return self._metadata.column_names
 
     @property
     def metadata(self) -> InferenceMetadata:
