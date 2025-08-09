@@ -353,3 +353,13 @@ def test_config_parsing():
     }
 
     assert config == expected
+
+
+def test_extract_header_line():
+    assert stancsv.extract_header_line([b"a,b\n", b"1,2\n"]) == "a,b"
+    with pytest.raises(ValueError):
+        assert stancsv.extract_header_line([])
+    with pytest.raises(ValueError):
+        assert stancsv.extract_header_line([b""])
+    with pytest.raises(ValueError):
+        assert stancsv.extract_header_line([b"1,2\n"])

@@ -177,6 +177,29 @@ def parse_config(
     return out
 
 
+def extract_header_line(draws_lines: List[bytes]) -> str:
+    """Attempts to extract the header line from the draw lines list.
+
+    Returns the raw header line as a string"""
+    if not draws_lines:
+        raise ValueError("Attempting to parse header from empty list")
+
+    first_line = draws_lines[0]
+    if not first_line:
+        raise ValueError("Empty first line when attempting to parse header")
+    first_char = first_line[0]
+
+    if first_char in b"1234567890-":
+        raise ValueError("Header line appears to be numeric data")
+
+    return first_line.decode().strip()
+
+
+def parse_header(header: str) -> List[str]:
+    """Returns munged variable names from a Stan csv header line"""
+    return [munge_varname(name) for name in header.split(",")]
+
+
 def check_sampler_csv(
     path: str,
     is_fixed_param: bool = False,
