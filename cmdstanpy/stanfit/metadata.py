@@ -1,9 +1,12 @@
 """Container for metadata parsed from the output of a CmdStan run"""
 
 import copy
-from typing import Any, Dict
+import os
+from typing import Any, Dict, Iterator, Union
 
 import stanio
+
+from cmdstanpy.utils import stancsv
 
 
 class InferenceMetadata:
@@ -24,6 +27,13 @@ class InferenceMetadata:
         self._stan_vars = {
             k: v for (k, v) in vars.items() if not k.endswith('__')
         }
+
+    @classmethod
+    def from_csv(
+        cls, stan_csv: Union[str, os.PathLike, Iterator[bytes]]
+    ) -> 'InferenceMetadata':
+        comments, draws = stancsv.parse_stan_csv_comments_and_draws(stan_csv)
+        return cls(stancsv.extract_config_and_header_info(comments, draws))
 
     def __repr__(self) -> str:
         return 'Metadata:\n{}\n'.format(self._cmdstan_config)

@@ -200,6 +200,19 @@ def parse_header(header: str) -> Tuple[str, ...]:
     return tuple(munge_varname(name) for name in header.split(","))
 
 
+def extract_config_and_header_info(
+    comment_lines: List[bytes], draws_lines: List[bytes]
+) -> Dict[str, Union[str, int, float, Tuple[str, ...]]]:
+    """Extracts config and header info from comment/draws lines parsed
+    from a Stan CSV file."""
+    config = parse_config(comment_lines)
+    raw_header = extract_header_line(draws_lines)
+    return {
+        **config,
+        **{"raw_header": raw_header, "column_names": parse_header(raw_header)},
+    }
+
+
 def check_sampler_csv(
     path: str,
     is_fixed_param: bool = False,

@@ -11,9 +11,6 @@ from cmdstanpy.stanfit.metadata import InferenceMetadata
 from cmdstanpy.stanfit.runset import RunSet
 from cmdstanpy.utils.stancsv import (
     csv_bytes_list_to_numpy,
-    extract_header_line,
-    parse_config,
-    parse_header,
     parse_stan_csv_comments_and_draws,
 )
 
@@ -32,20 +29,8 @@ class CmdStanPathfinder:
                 'found method {}'.format(runset.method)
             )
         self._runset = runset
-
         self._draws: np.ndarray = np.array(())
-
-        comment_lines, draw_lines = parse_stan_csv_comments_and_draws(
-            self._runset.csv_files[0]
-        )
-        config = parse_config(comment_lines)
-        raw_header = extract_header_line(draw_lines)
-        header_info = {
-            "raw_header": raw_header,
-            "column_names": parse_header((raw_header)),
-        }
-
-        self._metadata = InferenceMetadata({**config, **header_info})
+        self._metadata = InferenceMetadata.from_csv(self._runset.csv_files[0])
 
     def create_inits(
         self, seed: Optional[int] = None, chains: int = 4
