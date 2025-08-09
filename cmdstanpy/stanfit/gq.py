@@ -37,7 +37,6 @@ from cmdstanpy.utils import (
     get_logger,
     stancsv,
 )
-from cmdstanpy.utils.stancsv import scan_generic_csv
 
 from .mcmc import CmdStanMCMC
 from .metadata import InferenceMetadata
@@ -70,8 +69,7 @@ class CmdStanGQ(Generic[Fit]):
         self.previous_fit: Fit = previous_fit
 
         self._draws: np.ndarray = np.array(())
-        config = self._validate_csv_files()
-        self._metadata = InferenceMetadata(config)
+        self._metadata = self._validate_csv_files()
 
     def __repr__(self) -> str:
         repr = 'CmdStanGQ: model={} chains={}{}'.format(
@@ -104,48 +102,39 @@ class CmdStanGQ(Generic[Fit]):
         self._assemble_generated_quantities()
         return self.__dict__
 
-    def _validate_csv_files(self) -> Dict[str, Any]:
+    def _validate_csv_files(self) -> InferenceMetadata:
         """
         Checks that Stan CSV output files for all chains are consistent
-        and returns dict containing config and column names.
+        and returns InferenceMetadata object containing config and column names.
 
-        Raises exception when inconsistencies detected.
+        Raises exception if inconsistencies are detected.
         """
-        dzero = {}
-        for i in range(self.chains):
-            if i == 0:
-                dzero = scan_generic_csv(
-                    path=self.runset.csv_files[i],
-                )
-            else:
-                drest = scan_generic_csv(
-                    path=self.runset.csv_files[i],
-                )
-                for key in dzero:
-                    if (
-                        key
-                        not in [
-                            'id',
-                            'fitted_params',
-                            'diagnostic_file',
-                            'metric_file',
-                            'profile_file',
-                            'init',
-                            'seed',
-                            'start_datetime',
-                        ]
-                        and dzero[key] != drest[key]
-                    ):
-                        raise ValueError(
-                            'CmdStan config mismatch in Stan CSV file {}: '
-                            'arg {} is {}, expected {}'.format(
-                                self.runset.csv_files[i],
-                                key,
-                                dzero[key],
-                                drest[key],
-                            )
+        excluded_fields = {
+            'id',
+            'fitted_params',
+            'diagnostic_file',
+            'metric_file',
+            'profile_file',
+            'init',
+            'seed',
+            'start_datetime',
+        }
+        assert self.chains >= 1  # Should be impossible
+        meta0 = InferenceMetadata.from_csv(self.runset.csv_files[0])
+        for i in range(1, self.chains):
+            meta = InferenceMetadata.from_csv(self.runset.csv_files[i])
+            for key in set(meta._cmdstan_config.keys()) - excluded_fields:
+                if meta0[key] != meta[key]:
+                    raise ValueError(
+                        'CmdStan config mismatch in Stan CSV file {}: '
+                        'arg {} is {}, expected {}'.format(
+                            self.runset.csv_files[i],
+                            key,
+                            meta0[key],
+                            meta[key],
                         )
-        return dzero
+                    )
+        return meta0
 
     @property
     def chains(self) -> int:
