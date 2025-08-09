@@ -140,12 +140,10 @@ def parse_hmc_adaptation_lines(
     return step_size, mass_matrix
 
 
-def parse_config(
+def extract_key_val_pairs(
     comment_lines: List[bytes],
-) -> Dict[str, Union[str, int, float]]:
-    """Extracts the key=value config settings from Stan CSV comment
-    lines and returns a dictionary."""
-    out: Dict[str, Union[str, int, float]] = {}
+) -> Iterator[Tuple[str, str]]:
+    """Yields cleaned key = val pairs from stan csv comments"""
     cleaned_lines = (
         line.decode().lstrip("# ").strip() for line in comment_lines
     )
@@ -156,6 +154,16 @@ def parse_config(
             continue
 
         key, val = split_on_eq
+        yield key, val
+
+
+def parse_config(
+    comment_lines: List[bytes],
+) -> Dict[str, Union[str, int, float]]:
+    """Extracts the key=value config settings from Stan CSV comment
+    lines and returns a dictionary."""
+    out: Dict[str, Union[str, int, float]] = {}
+    for key, val in extract_key_val_pairs(comment_lines):
         val = val.replace("(Default)", "").strip()
         if key == 'file':
             if not val.endswith('csv'):
