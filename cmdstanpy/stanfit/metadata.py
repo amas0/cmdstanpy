@@ -2,7 +2,7 @@
 
 import copy
 import os
-from typing import Any, Dict, Iterator, Union
+from typing import Any, Dict, Iterator, Tuple, Union
 
 import stanio
 
@@ -16,9 +16,13 @@ class InferenceMetadata:
     Assumes valid CSV files.
     """
 
-    def __init__(self, config: Dict[str, Any]) -> None:
+    def __init__(
+        self, config: Dict[str, Union[str, int, float, Tuple[str, ...]]]
+    ) -> None:
         """Initialize object from CSV headers"""
         self._cmdstan_config = config
+
+        assert isinstance(config['raw_header'], str)
         vars = stanio.parse_header(config['raw_header'])
 
         self._method_vars = {
@@ -37,6 +41,9 @@ class InferenceMetadata:
 
     def __repr__(self) -> str:
         return 'Metadata:\n{}\n'.format(self._cmdstan_config)
+
+    def __getitem__(self, key: str) -> Union[str, int, float, Tuple[str, ...]]:
+        return self._cmdstan_config[key]
 
     @property
     def cmdstan_config(self) -> Dict[str, Any]:
