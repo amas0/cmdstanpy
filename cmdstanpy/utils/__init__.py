@@ -1,6 +1,7 @@
 """
 Utility functions
 """
+
 import os
 import platform
 import sys
@@ -28,7 +29,7 @@ from .filesystem import (
     windows_short_path,
 )
 from .json import write_stan_json
-from .logging import get_logger, enable_logging, disable_logging
+from .logging import disable_logging, enable_logging, get_logger
 from .stancsv import (
     check_sampler_csv,
     parse_rdump_value,
@@ -37,7 +38,6 @@ from .stancsv import (
     scan_column_names,
     scan_config,
     scan_hmc_params,
-    scan_optimize_csv,
     scan_sampler_csv,
     scan_sampling_iters,
     scan_variational_csv,
@@ -131,7 +131,6 @@ __all__ = [
     'scan_column_names',
     'scan_config',
     'scan_hmc_params',
-    'scan_optimize_csv',
     'scan_sampler_csv',
     'scan_sampling_iters',
     'scan_variational_csv',
