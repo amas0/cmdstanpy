@@ -31,7 +31,12 @@ except ImportError:
 
 
 from cmdstanpy.cmdstan_args import Method
-from cmdstanpy.utils import build_xarray_data, flatten_chains, get_logger
+from cmdstanpy.utils import (
+    build_xarray_data,
+    flatten_chains,
+    get_logger,
+    stancsv,
+)
 from cmdstanpy.utils.stancsv import scan_generic_csv
 
 from .mcmc import CmdStanMCMC
@@ -633,11 +638,10 @@ class CmdStanGQ(Generic[Fit]):
             order='F',
         )
         for chain in range(self.chains):
-            with open(self.runset.csv_files[chain], 'r') as fd:
-                lines = (line for line in fd if not line.startswith('#'))
-                gq_sample[:, chain, :] = np.loadtxt(
-                    lines, dtype=np.ndarray, ndmin=2, skiprows=1, delimiter=','
-                )
+            _, draws = stancsv.parse_stan_csv_comments_and_draws(
+                self.runset.csv_files[chain]
+            )
+            gq_sample[:, chain, :] = stancsv.csv_bytes_list_to_numpy(draws)
         self._draws = gq_sample
 
     def _draws_start(self, inc_warmup: bool) -> Tuple[int, int]:
