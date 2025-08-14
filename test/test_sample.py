@@ -991,7 +991,8 @@ def test_from_csv_no_param_hmc() -> None:
     assert no_parameters_sample.draws_pd().shape == (100, 93)
 
 
-def test_custom_metric() -> None:
+@pytest.mark.parametrize('force_one_process_per_chain', [True, False])
+def test_custom_metric(force_one_process_per_chain: bool) -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
     bern_model = CmdStanModel(stan_file=stan)
@@ -1011,6 +1012,7 @@ def test_custom_metric() -> None:
         iter_warmup=10,
         iter_sampling=10,
         inv_metric=jmetric,
+        force_one_process_per_chain=force_one_process_per_chain,
     )
     np.testing.assert_allclose(
         fit1.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
@@ -1027,6 +1029,7 @@ def test_custom_metric() -> None:
         iter_warmup=10,
         iter_sampling=10,
         inv_metric=[jmetric, jmetric2],
+        force_one_process_per_chain=force_one_process_per_chain,
     )
     np.testing.assert_allclose(
         fit2.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
@@ -1043,6 +1046,7 @@ def test_custom_metric() -> None:
         iter_warmup=10,
         iter_sampling=10,
         inv_metric=metric_dict_1,
+        force_one_process_per_chain=force_one_process_per_chain,
     )
     for i in range(4):
         np.testing.assert_allclose(
@@ -1055,6 +1059,7 @@ def test_custom_metric() -> None:
         iter_warmup=10,
         iter_sampling=10,
         inv_metric=[metric_dict_1, metric_dict_2],
+        force_one_process_per_chain=force_one_process_per_chain,
     )
     np.testing.assert_allclose(
         fit4.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
@@ -1070,6 +1075,7 @@ def test_custom_metric() -> None:
         iter_warmup=10,
         iter_sampling=10,
         inv_metric=[np.array(metric_dict_1['inv_metric']), jmetric2],
+        force_one_process_per_chain=force_one_process_per_chain,
     )
     np.testing.assert_allclose(
         fit5.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
@@ -1090,6 +1096,7 @@ def test_custom_metric() -> None:
             iter_warmup=10,
             iter_sampling=10,
             inv_metric=[metric_dict_1, metric_dict_2],
+            force_one_process_per_chain=force_one_process_per_chain,
         )
     # metric mismatches - (not appropriate for bernoulli)
     with open(os.path.join(DATAFILES_PATH, 'metric_diag.data.json')) as fd:
@@ -1104,6 +1111,7 @@ def test_custom_metric() -> None:
             iter_warmup=10,
             iter_sampling=10,
             inv_metric=[metric_dict_1, metric_dict_2],
+            force_one_process_per_chain=force_one_process_per_chain,
         )
     # metric dict, no "inv_metric":
     some_dict = {"foo": [1, 2, 3]}
@@ -1117,6 +1125,7 @@ def test_custom_metric() -> None:
             iter_warmup=100,
             iter_sampling=200,
             inv_metric=some_dict,
+            force_one_process_per_chain=force_one_process_per_chain,
         )
 
 
