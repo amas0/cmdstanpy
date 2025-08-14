@@ -89,7 +89,7 @@ def test_bernoulli_good(stanfile: str):
     assert bern_fit.draws().shape == (100, 2, len(BERNOULLI_COLS))
     assert bern_fit.metric_type == 'diag_e'
     assert bern_fit.step_size.shape == (2,)
-    assert bern_fit.metric.shape == (2, 1)
+    assert bern_fit.inv_metric.shape == (2, 1)
 
     assert bern_fit.draws(concat_chains=True).shape == (
         200,
@@ -125,7 +125,7 @@ def test_bernoulli_good(stanfile: str):
     assert bern_sample.shape == (100, 2, len(BERNOULLI_COLS))
     assert bern_fit.metric_type == 'dense_e'
     assert bern_fit.step_size.shape == (2,)
-    assert bern_fit.metric.shape == (2, 1, 1)
+    assert bern_fit.inv_metric.shape == (2, 1, 1)
 
     bern_fit = bern_model.sample(
         data=jdata,
@@ -186,9 +186,7 @@ def test_bernoulli_good(stanfile: str):
 
 
 @pytest.mark.parametrize("stanfile", ["bernoulli.stan"])
-def test_bernoulli_unit_e(
-    stanfile: str, caplog: pytest.LogCaptureFixture
-) -> None:
+def test_bernoulli_unit_e(stanfile: str) -> None:
     stan = os.path.join(DATAFILES_PATH, stanfile)
     bern_model = CmdStanModel(stan_file=stan)
 
@@ -204,19 +202,9 @@ def test_bernoulli_unit_e(
         show_progress=False,
     )
     assert bern_fit.metric_type == 'unit_e'
-    assert bern_fit.metric is None
+    assert bern_fit.inv_metric is None
     assert bern_fit.step_size.shape == (2,)
-    with caplog.at_level(logging.INFO):
-        logging.getLogger()
-        assert bern_fit.metric is None
-    check_present(
-        caplog,
-        (
-            'cmdstanpy',
-            'INFO',
-            'Unit diagnonal metric, inverse mass matrix size unknown.',
-        ),
-    )
+
     assert bern_fit.draws().shape == (100, 2, len(BERNOULLI_COLS))
 
 
@@ -535,7 +523,7 @@ def test_fixed_param_good() -> None:
     )
     assert datagen_fit.runset._args.method == Method.SAMPLE
     assert datagen_fit.metric_type is None
-    assert datagen_fit.metric is None
+    assert datagen_fit.inv_metric is None
     assert datagen_fit.step_size is None
     assert datagen_fit.divergences is None
     assert datagen_fit.max_treedepths is None
@@ -638,7 +626,7 @@ def test_fixed_param_good() -> None:
     assert datagen_fit.column_names == tuple(column_names)
     assert datagen_fit.num_draws_sampling == 100
     assert datagen_fit.draws().shape == (100, 1, len(column_names))
-    assert datagen_fit.metric is None
+    assert datagen_fit.inv_metric is None
     assert datagen_fit.metric_type is None
     assert datagen_fit.step_size is None
 
@@ -860,7 +848,7 @@ def test_validate_big_run() -> None:
     assert fit.column_names == tuple(column_names)
     assert fit.metric_type == 'diag_e'
     assert fit.step_size.shape == (2,)
-    assert fit.metric.shape == (2, 2095)
+    assert fit.inv_metric.shape == (2, 2095)
     assert fit.draws().shape == (1000, 2, 2102)
     assert fit.draws_pd(vars=['phi']).shape == (2000, 2095)
     with raises_nested(ValueError, r'Unknown variable: gamma'):
@@ -2136,8 +2124,8 @@ def test_sample_dense_mass_matrix():
     linear_model = CmdStanModel(stan_file=stan)
 
     fit = linear_model.sample(data=jdata, metric="dense_e", chains=2)
-    assert fit.metric is not None
-    assert fit.metric.shape == (2, 3, 3)
+    assert fit.inv_metric is not None
+    assert fit.inv_metric.shape == (2, 3, 3)
 
 
 def test_no_output_draws():

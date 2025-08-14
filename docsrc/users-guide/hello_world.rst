@@ -171,7 +171,7 @@ access to the the per-chain HMC tuning parameters from the NUTS-HMC adaptive sam
 .. ipython:: python
 
     print(fit.metric_type)
-    print(fit.metric)
+    print(fit.inv_metric)
     print(fit.step_size)
 
 
