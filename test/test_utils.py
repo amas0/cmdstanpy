@@ -457,6 +457,21 @@ def test_metric_missing() -> None:
         read_metric(metric_file)
 
 
+def test_deduce_metric_type() -> None:
+    assert stancsv.try_deduce_metric_type(np.zeros((3, 3))) == 'dense_e'
+    assert stancsv.try_deduce_metric_type(np.zeros((3,))) == 'diag_e'
+
+    assert stancsv.try_deduce_metric_type([np.zeros((3, 3))]) == 'dense_e'
+    assert (
+        stancsv.try_deduce_metric_type({"inv_metric": np.zeros((3,))})
+        == 'diag_e'
+    )
+    assert (
+        stancsv.try_deduce_metric_type([{"inv_metric": np.zeros((3,))}])
+        == 'diag_e'
+    )
+
+
 @mark_windows_only
 def test_windows_short_path_directory() -> None:
     with tempfile.TemporaryDirectory(

@@ -1,6 +1,7 @@
 """
 Utilities for interacting with the filesystem on multiple platforms
 """
+
 import contextlib
 import os
 import platform
@@ -8,6 +9,8 @@ import re
 import shutil
 import tempfile
 from typing import Any, Iterator, List, Mapping, Optional, Tuple, Union
+
+import numpy as np
 
 from cmdstanpy import _TMPDIR
 
@@ -104,7 +107,7 @@ def pushd(new_dir: str) -> Iterator[None]:
 
 
 def _temp_single_json(
-    data: Union[str, os.PathLike, Mapping[str, Any], None]
+    data: Union[str, os.PathLike, Mapping[str, Any], None],
 ) -> Iterator[Optional[str]]:
     """Context manager for json files."""
     if data is None:
@@ -162,6 +165,36 @@ def _temp_multiinput(
                     os.remove(file)
     else:
         yield from _temp_single_json(input)
+
+
+@contextlib.contextmanager
+def temp_metrics(
+    metrics: Union[
+        str, os.PathLike, Mapping[str, Any], np.ndarray, List[Any], None
+    ],
+    *,
+    id: int = 1,
+) -> Iterator[Union[str, None]]:
+    if isinstance(metrics, dict):
+        if 'inv_metric' not in metrics:
+            raise ValueError('Entry "inv_metric" not found in metric dict.')
+    if isinstance(metrics, np.ndarray):
+        metrics = {"inv_metric": metrics}
+
+    if isinstance(metrics, list):
+        metrics_processed = []
+        for init in metrics:
+            if isinstance(init, np.ndarray):
+                metrics_processed.append({"inv_metric": init})
+            else:
+                metrics_processed.append(init)
+                if isinstance(metrics_processed, dict):
+                    if 'inv_metric' not in metrics_processed:
+                        raise ValueError(
+                            'Entry "inv_metric" not found in metric dict.'
+                        )
+        metrics = metrics_processed
+    yield from _temp_multiinput(metrics, base=id)
 
 
 @contextlib.contextmanager

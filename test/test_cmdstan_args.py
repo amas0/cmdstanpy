@@ -151,7 +151,7 @@ def test_bad() -> None:
     with pytest.raises(ValueError):
         args.validate(chains=2)
 
-    args = SamplerArgs(metric='dense', fixed_param=True)
+    args = SamplerArgs(metric_type='dense', fixed_param=True)
     with pytest.raises(ValueError):
         args.validate(chains=2)
 
@@ -221,22 +221,22 @@ def test_adapt() -> None:
 
 
 def test_metric() -> None:
-    args = SamplerArgs(metric='dense_e')
+    args = SamplerArgs(metric_type='dense_e')
     args.validate(chains=4)
     cmd = args.compose(1, cmd=[])
     assert 'method=sample algorithm=hmc metric=dense_e' in ' '.join(cmd)
 
-    args = SamplerArgs(metric='dense')
+    args = SamplerArgs(metric_type='dense')
     args.validate(chains=4)
     cmd = args.compose(1, cmd=[])
     assert 'method=sample algorithm=hmc metric=dense_e' in ' '.join(cmd)
 
-    args = SamplerArgs(metric='diag_e')
+    args = SamplerArgs(metric_type='diag_e')
     args.validate(chains=4)
     cmd = args.compose(1, cmd=[])
     assert 'method=sample algorithm=hmc metric=diag_e' in ' '.join(cmd)
 
-    args = SamplerArgs(metric='diag')
+    args = SamplerArgs(metric_type='diag')
     args.validate(chains=4)
     cmd = args.compose(1, cmd=[])
     assert 'method=sample algorithm=hmc metric=diag_e' in ' '.join(cmd)
@@ -247,28 +247,19 @@ def test_metric() -> None:
     assert 'metric=' not in ' '.join(cmd)
 
     jmetric = os.path.join(DATAFILES_PATH, 'bernoulli.metric.json')
-    args = SamplerArgs(metric=jmetric)
+    args = SamplerArgs(metric_file=jmetric)
     args.validate(chains=4)
     cmd = args.compose(1, cmd=[])
-    assert 'metric=diag_e' in ' '.join(cmd)
     assert 'metric_file=' in ' '.join(cmd)
     assert 'bernoulli.metric.json' in ' '.join(cmd)
 
     jmetric2 = os.path.join(DATAFILES_PATH, 'bernoulli.metric-2.json')
-    args = SamplerArgs(metric=[jmetric, jmetric2])
+    args = SamplerArgs(metric_file=[jmetric, jmetric2])
     args.validate(chains=2)
     cmd = args.compose(0, cmd=[])
     assert 'bernoulli.metric.json' in ' '.join(cmd)
     cmd = args.compose(1, cmd=[])
     assert 'bernoulli.metric-2.json' in ' '.join(cmd)
-
-    args = SamplerArgs(metric=[jmetric, jmetric2])
-    with pytest.raises(ValueError):
-        args.validate(chains=4)
-
-    args = SamplerArgs(metric='/no/such/path/to.file')
-    with pytest.raises(ValueError):
-        args.validate(chains=4)
 
 
 def test_fixed_param() -> None:

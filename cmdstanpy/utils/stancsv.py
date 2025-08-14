@@ -13,6 +13,7 @@ from typing import (
     Dict,
     Iterator,
     List,
+    Mapping,
     MutableMapping,
     Optional,
     TextIO,
@@ -673,3 +674,40 @@ def parse_rdump_value(rhs: str) -> Union[int, float, np.ndarray]:
     except TypeError as e:
         raise ValueError('bad value in Rdump file: {}'.format(rhs)) from e
     return val
+
+
+def try_deduce_metric_type(
+    inv_metric: Union[
+        str,
+        np.ndarray,
+        Mapping[str, Any],
+        List[Union[str, np.ndarray, Mapping[str, Any]]],
+    ],
+) -> Optional[str]:
+    """Given a user-supplied metric, try to infer the correct metric type."""
+    if isinstance(inv_metric, list):
+        if inv_metric:
+            inv_metric = inv_metric[0]
+
+    if isinstance(inv_metric, Mapping):
+        if (metric_type := inv_metric.get("metric_type")) in (
+            'diag_e',
+            'dense_e',
+        ):
+            return metric_type  # type: ignore
+        inv_metric = inv_metric.get('inv_metric', None)
+
+    if isinstance(inv_metric, np.ndarray):
+        if len(inv_metric.shape) == 1:
+            return 'diag_e'
+        else:
+            return 'dense_e'
+
+    if isinstance(inv_metric, str):
+        dims = read_metric(inv_metric)
+        if len(dims) == 1:
+            return 'diag_e'
+        else:
+            return 'dense_e'
+
+    return None

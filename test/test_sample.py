@@ -1004,7 +1004,7 @@ def test_custom_metric() -> None:
         seed=12345,
         iter_warmup=100,
         iter_sampling=200,
-        metric=jmetric,
+        inv_metric=jmetric,
     )
     jmetric2 = os.path.join(DATAFILES_PATH, 'bernoulli.metric-2.json')
     bern_model.sample(
@@ -1014,7 +1014,7 @@ def test_custom_metric() -> None:
         seed=12345,
         iter_warmup=100,
         iter_sampling=200,
-        metric=[jmetric, jmetric2],
+        inv_metric=[jmetric, jmetric2],
     )
     # read json in as dict
     with open(jmetric) as fd:
@@ -1028,7 +1028,7 @@ def test_custom_metric() -> None:
         seed=12345,
         iter_warmup=100,
         iter_sampling=200,
-        metric=metric_dict_1,
+        inv_metric=metric_dict_1,
     )
     bern_model.sample(
         data=jdata,
@@ -1036,7 +1036,15 @@ def test_custom_metric() -> None:
         seed=12345,
         iter_warmup=100,
         iter_sampling=200,
-        metric=[metric_dict_1, metric_dict_2],
+        inv_metric=[metric_dict_1, metric_dict_2],
+    )
+    bern_model.sample(
+        data=jdata,
+        chains=2,
+        seed=12345,
+        iter_warmup=100,
+        iter_sampling=200,
+        inv_metric=[np.array(metric_dict_1['inv_metric']), jmetric2],
     )
     with pytest.raises(
         ValueError,
@@ -1049,23 +1057,21 @@ def test_custom_metric() -> None:
             seed=12345,
             iter_warmup=100,
             iter_sampling=200,
-            metric=[metric_dict_1, metric_dict_2],
+            inv_metric=[metric_dict_1, metric_dict_2],
         )
     # metric mismatches - (not appropriate for bernoulli)
     with open(os.path.join(DATAFILES_PATH, 'metric_diag.data.json')) as fd:
         metric_dict_1 = json.load(fd)
     with open(os.path.join(DATAFILES_PATH, 'metric_dense.data.json')) as fd:
         metric_dict_2 = json.load(fd)
-    with pytest.raises(
-        ValueError, match='Found inconsistent "inv_metric" entry'
-    ):
+    with pytest.raises(RuntimeError, match='Error during sampling'):
         bern_model.sample(
             data=jdata,
             chains=2,
             seed=12345,
             iter_warmup=100,
             iter_sampling=200,
-            metric=[metric_dict_1, metric_dict_2],
+            inv_metric=[metric_dict_1, metric_dict_2],
         )
     # metric dict, no "inv_metric":
     some_dict = {"foo": [1, 2, 3]}
@@ -1078,7 +1084,7 @@ def test_custom_metric() -> None:
             seed=12345,
             iter_warmup=100,
             iter_sampling=200,
-            metric=some_dict,
+            inv_metric=some_dict,
         )
 
 
