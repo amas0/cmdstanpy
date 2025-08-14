@@ -53,6 +53,20 @@ def parse_stan_csv_comments_and_draws(
         return split_comments_and_draws(stan_csv)
 
 
+def filter_csv_bytes_by_columns(
+    csv_bytes_list: List[bytes], indexes_to_keep: List[int]
+) -> List[bytes]:
+    """Given the list of bytes representing the lines of a CSV file
+    and the indexes of columns to keep, will return a new list of bytes
+    containing only those columns in the index order provided. Assumes
+    column-delimited columns."""
+    out = []
+    for dl in csv_bytes_list:
+        split = dl.strip().split(b",")
+        out.append(b",".join(split[i] for i in indexes_to_keep) + b"\n")
+    return out
+
+
 def csv_bytes_list_to_numpy(
     csv_bytes_list: List[bytes], includes_header: bool = True
 ) -> npt.NDArray[np.float64]:
@@ -226,6 +240,26 @@ def parse_variational_eta(comment_lines: List[bytes]) -> float:
         if key == "eta":
             return float(val)
     raise ValueError("Unable to parse eta from Stan CSV")
+
+
+def extract_max_treedepth_and_divergence_counts(
+    draws_lines: List[bytes], max_treedepth: int, warmup_draws: int
+) -> Tuple[int, int]:
+    """Extracts the max treedepth and divergence counts from the draw lines
+    of the MCMC stan csv output."""
+    column_names = draws_lines[0].strip().split(b",")
+    indexes_to_keep = [
+        column_names.index(b"treedepth__"),
+        column_names.index(b"divergent__"),
+    ]
+    sampling_draws = draws_lines[1 + warmup_draws :]
+
+    filtered = filter_csv_bytes_by_columns(sampling_draws, indexes_to_keep)
+    arr = csv_bytes_list_to_numpy(filtered, includes_header=False).astype(int)
+
+    num_max_treedepth = np.sum(arr[:, 0] == max_treedepth)
+    num_divergences = np.sum(arr[:, 1])
+    return num_max_treedepth, num_divergences
 
 
 def check_sampler_csv(
