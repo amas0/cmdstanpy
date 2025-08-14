@@ -1009,7 +1009,13 @@ class CmdStanModel:
                             'Chain_id must be a non-negative integer value,'
                             ' found {}.'.format(chain_id)
                         )
-        if metric not in [None, 'diag', 'dense', 'unit_e', 'diag_e', 'dense_e']:
+        if metric is not None and metric not in (
+            'diag',
+            'dense',
+            'unit_e',
+            'diag_e',
+            'dense_e',
+        ):
             get_logger().warning(
                 "Providing anything other than metric type for"
                 " 'metric' is deprecated and will be removed"

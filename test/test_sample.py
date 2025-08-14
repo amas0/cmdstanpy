@@ -996,56 +996,88 @@ def test_custom_metric() -> None:
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
     bern_model = CmdStanModel(stan_file=stan)
     jmetric = os.path.join(DATAFILES_PATH, 'bernoulli.metric.json')
-    # just test that it runs without error
-    bern_model.sample(
-        data=jdata,
-        chains=2,
-        parallel_chains=2,
-        seed=12345,
-        iter_warmup=100,
-        iter_sampling=200,
-        inv_metric=jmetric,
-    )
     jmetric2 = os.path.join(DATAFILES_PATH, 'bernoulli.metric-2.json')
-    bern_model.sample(
-        data=jdata,
-        chains=2,
-        parallel_chains=2,
-        seed=12345,
-        iter_warmup=100,
-        iter_sampling=200,
-        inv_metric=[jmetric, jmetric2],
-    )
     # read json in as dict
     with open(jmetric) as fd:
         metric_dict_1 = json.load(fd)
     with open(jmetric2) as fd:
         metric_dict_2 = json.load(fd)
-    bern_model.sample(
+    # just test that it runs without error
+    fit1 = bern_model.sample(
+        data=jdata,
+        chains=2,
+        parallel_chains=2,
+        seed=12345,
+        iter_warmup=10,
+        iter_sampling=10,
+        inv_metric=jmetric,
+    )
+    np.testing.assert_allclose(
+        fit1.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
+    )
+    np.testing.assert_allclose(
+        fit1.inv_metric[1], metric_dict_1['inv_metric'], atol=1e-6
+    )
+
+    fit2 = bern_model.sample(
+        data=jdata,
+        chains=2,
+        parallel_chains=2,
+        seed=12345,
+        iter_warmup=10,
+        iter_sampling=10,
+        inv_metric=[jmetric, jmetric2],
+    )
+    np.testing.assert_allclose(
+        fit2.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
+    )
+    np.testing.assert_allclose(
+        fit2.inv_metric[1], metric_dict_2['inv_metric'], atol=1e-6
+    )
+
+    fit3 = bern_model.sample(
         data=jdata,
         chains=4,
         parallel_chains=2,
         seed=12345,
-        iter_warmup=100,
-        iter_sampling=200,
+        iter_warmup=10,
+        iter_sampling=10,
         inv_metric=metric_dict_1,
     )
-    bern_model.sample(
+    for i in range(4):
+        np.testing.assert_allclose(
+            fit3.inv_metric[i], metric_dict_1['inv_metric'], atol=1e-6
+        )
+    fit4 = bern_model.sample(
         data=jdata,
         chains=2,
         seed=12345,
-        iter_warmup=100,
-        iter_sampling=200,
+        iter_warmup=10,
+        iter_sampling=10,
         inv_metric=[metric_dict_1, metric_dict_2],
     )
-    bern_model.sample(
+    np.testing.assert_allclose(
+        fit4.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
+    )
+    np.testing.assert_allclose(
+        fit4.inv_metric[1], metric_dict_2['inv_metric'], atol=1e-6
+    )
+
+    fit5 = bern_model.sample(
         data=jdata,
         chains=2,
         seed=12345,
-        iter_warmup=100,
-        iter_sampling=200,
+        iter_warmup=10,
+        iter_sampling=10,
         inv_metric=[np.array(metric_dict_1['inv_metric']), jmetric2],
     )
+    np.testing.assert_allclose(
+        fit5.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
+    )
+    np.testing.assert_allclose(
+        fit5.inv_metric[1], metric_dict_2['inv_metric'], atol=1e-6
+    )
+
     with pytest.raises(
         ValueError,
         match='Number of metric files must match number of chains,',
@@ -1055,8 +1087,8 @@ def test_custom_metric() -> None:
             chains=4,
             parallel_chains=2,
             seed=12345,
-            iter_warmup=100,
-            iter_sampling=200,
+            iter_warmup=10,
+            iter_sampling=10,
             inv_metric=[metric_dict_1, metric_dict_2],
         )
     # metric mismatches - (not appropriate for bernoulli)
@@ -1069,8 +1101,8 @@ def test_custom_metric() -> None:
             data=jdata,
             chains=2,
             seed=12345,
-            iter_warmup=100,
-            iter_sampling=200,
+            iter_warmup=10,
+            iter_sampling=10,
             inv_metric=[metric_dict_1, metric_dict_2],
         )
     # metric dict, no "inv_metric":
