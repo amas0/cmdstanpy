@@ -315,6 +315,30 @@ def count_warmup_and_sampling_draws(
         return determine_draw_counts(stan_csv)
 
 
+def parse_timing_lines(
+    comment_lines: List[bytes],
+) -> Dict[str, float]:
+    """Parse the timing lines into a dictionary with key corresponding
+    to the phase, e.g. Warm-up, Sampling, Total, and value the elapsed seconds
+    """
+    out: Dict[str, float] = {}
+
+    cleaned_lines = (ln.lstrip(b"# ") for ln in comment_lines)
+    in_timing_block = False
+    for line in cleaned_lines:
+        if line.startswith(b"Elapsed Time") and not in_timing_block:
+            in_timing_block = True
+
+        if not in_timing_block:
+            continue
+        match = re.findall(r"([\d\.]+) seconds \((.+)\)", str(line))
+        if match:
+            seconds = float(match[0][0])
+            phase = match[0][1]
+            out[phase] = seconds
+    return out
+
+
 def check_sampler_csv(
     path: str,
     is_fixed_param: bool = False,
