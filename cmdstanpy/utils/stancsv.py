@@ -262,6 +262,59 @@ def extract_max_treedepth_and_divergence_counts(
     return num_max_treedepth, num_divergences
 
 
+def count_warmup_and_sampling_draws(
+    stan_csv: Union[str, os.PathLike, Iterator[bytes]],
+) -> Tuple[int, int]:
+    """Scans through a Stan CSV file to count the number of lines in the
+    warmup/sampling blocks to determine counts for warmup and sampling draws.
+    """
+
+    def determine_draw_counts(lines: Iterator[bytes]) -> Tuple[int, int]:
+        is_fixed_param = False
+        header_line_idx = None
+        adaptation_block_idx = None
+        sampling_block_idx = None
+        timing_block_idx = None
+        for i, line in enumerate(lines):
+            if header_line_idx is None:
+                if b"fixed_param" in line:
+                    is_fixed_param = True
+                if line.startswith(b"lp__"):
+                    header_line_idx = i
+                continue
+
+            if not is_fixed_param and adaptation_block_idx is None:
+                if line.startswith(b"#"):
+                    adaptation_block_idx = i
+            elif sampling_block_idx is None:
+                if not line.startswith(b"#"):
+                    sampling_block_idx = i
+            elif timing_block_idx is None:
+                if line.startswith(b"#"):
+                    timing_block_idx = i
+            else:
+                break
+        else:
+            # Will raise if lines exhausts without all blocks being identified
+            raise ValueError(
+                "Unable to count warmup and sampling draws from Stan csv"
+            )
+
+        if is_fixed_param:
+            num_warmup = 0
+        else:
+            assert adaptation_block_idx is not None
+            num_warmup = adaptation_block_idx - header_line_idx - 1
+        num_sampling = timing_block_idx - sampling_block_idx
+        return num_warmup, num_sampling
+
+    if isinstance(stan_csv, (str, os.PathLike)):
+        with open(stan_csv, "rb") as f:
+            return determine_draw_counts(f)
+    else:
+        return determine_draw_counts(stan_csv)
+
+
 def check_sampler_csv(
     path: str,
     is_fixed_param: bool = False,
