@@ -313,9 +313,13 @@ def count_warmup_and_sampling_draws(
 
 
 def raise_on_inconsistent_draws_shape(draw_lines: List[bytes]) -> None:
+    """Throws a ValueError if any draws are found to have an inconsistent
+    shape, i.e. too many/few columns compared to the header"""
+
     def column_count(ln: bytes) -> int:
         return ln.count(b",") + 1
 
+    # Consider empty draws to be consistent
     if not draw_lines:
         return
 
