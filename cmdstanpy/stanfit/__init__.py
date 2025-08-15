@@ -212,7 +212,7 @@ def from_csv(
             assert isinstance(config_dict['iter'], int)
             assert isinstance(config_dict['grad_samples'], int)
             assert isinstance(config_dict['elbo_samples'], int)
-            assert isinstance(config_dict['eta'], float)
+            assert isinstance(config_dict['eta'], (int, float))
             assert isinstance(config_dict['tol_rel_obj'], float)
             assert isinstance(config_dict['eval_elbo'], int)
             assert isinstance(config_dict['output_samples'], int)
