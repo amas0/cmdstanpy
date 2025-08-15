@@ -2,7 +2,7 @@
 
 import glob
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional, Union
 
 from cmdstanpy.cmdstan_args import (
     CmdStanArgs,
@@ -12,7 +12,7 @@ from cmdstanpy.cmdstan_args import (
     SamplerArgs,
     VariationalArgs,
 )
-from cmdstanpy.utils import check_sampler_csv, get_logger, scan_config
+from cmdstanpy.utils import check_sampler_csv, get_logger, stancsv
 
 from .gq import CmdStanGQ
 from .laplace import CmdStanLaplace
@@ -103,10 +103,9 @@ def from_csv(
                 ' includes non-csv file: {}'.format(file)
             )
 
-    config_dict: Dict[str, Any] = {}
     try:
-        with open(csvfiles[0], 'r') as fd:
-            scan_config(fd, config_dict, 0)
+        comments, _ = stancsv.parse_stan_csv_comments_and_draws(csvfiles[0])
+        config_dict = stancsv.parse_config(comments)
     except (IOError, OSError, PermissionError) as e:
         raise ValueError('Cannot read CSV file: {}'.format(csvfiles[0])) from e
     if 'model' not in config_dict or 'method' not in config_dict:
@@ -120,12 +119,17 @@ def from_csv(
         )
     try:
         if config_dict['method'] == 'sample':
+            assert isinstance(config_dict['num_samples'], int)
+            assert isinstance(config_dict['num_warmup'], int)
+            assert isinstance(config_dict['thin'], int)
+            assert isinstance(config_dict['model'], str)
+            save_warmup = config_dict['save_warmup'] == 1
             chains = len(csvfiles)
             sampler_args = SamplerArgs(
                 iter_sampling=config_dict['num_samples'],
                 iter_warmup=config_dict['num_warmup'],
                 thin=config_dict['thin'],
-                save_warmup=config_dict['save_warmup'],
+                save_warmup=save_warmup,
             )
             # bugfix 425, check for fixed_params output
             try:
@@ -134,7 +138,7 @@ def from_csv(
                     iter_sampling=config_dict['num_samples'],
                     iter_warmup=config_dict['num_warmup'],
                     thin=config_dict['thin'],
-                    save_warmup=config_dict['save_warmup'],
+                    save_warmup=save_warmup,
                 )
             except ValueError:
                 try:
@@ -143,13 +147,13 @@ def from_csv(
                         iter_sampling=config_dict['num_samples'],
                         iter_warmup=config_dict['num_warmup'],
                         thin=config_dict['thin'],
-                        save_warmup=config_dict['save_warmup'],
+                        save_warmup=save_warmup,
                     )
                     sampler_args = SamplerArgs(
                         iter_sampling=config_dict['num_samples'],
                         iter_warmup=config_dict['num_warmup'],
                         thin=config_dict['thin'],
-                        save_warmup=config_dict['save_warmup'],
+                        save_warmup=save_warmup,
                         fixed_param=True,
                     )
                 except ValueError as e:
@@ -176,10 +180,15 @@ def from_csv(
                     "Cannot find optimization algorithm"
                     " in file {}.".format(csvfiles[0])
                 )
+            assert isinstance(config_dict['algorithm'], str)
+            assert isinstance(config_dict['model'], str)
+            save_iterations = config_dict['save_iterations'] == 1
+            jacobian = config_dict.get('jacobian', 0) == 1
+
             optimize_args = OptimizeArgs(
                 algorithm=config_dict['algorithm'],
-                save_iterations=config_dict['save_iterations'],
-                jacobian=config_dict.get('jacobian', 0),
+                save_iterations=save_iterations,
+                jacobian=jacobian,
             )
             cmdstan_args = CmdStanArgs(
                 model_name=config_dict['model'],
@@ -198,6 +207,15 @@ def from_csv(
                     "Cannot find variational algorithm"
                     " in file {}.".format(csvfiles[0])
                 )
+            assert isinstance(config_dict['model'], str)
+            assert isinstance(config_dict['algorithm'], str)
+            assert isinstance(config_dict['iter'], int)
+            assert isinstance(config_dict['grad_samples'], int)
+            assert isinstance(config_dict['elbo_samples'], int)
+            assert isinstance(config_dict['eta'], float)
+            assert isinstance(config_dict['tol_rel_obj'], float)
+            assert isinstance(config_dict['eval_elbo'], int)
+            assert isinstance(config_dict['output_samples'], int)
             variational_args = VariationalArgs(
                 algorithm=config_dict['algorithm'],
                 iter=config_dict['iter'],
@@ -220,10 +238,14 @@ def from_csv(
                 runset._set_retcode(i, 0)
             return CmdStanVB(runset)
         elif config_dict['method'] == 'laplace':
+            assert isinstance(config_dict['mode'], str)
+            assert isinstance(config_dict['draws'], int)
+            assert isinstance(config_dict['model'], str)
+            jacobian = config_dict['jacobian'] == 1
             laplace_args = LaplaceArgs(
                 mode=config_dict['mode'],
                 draws=config_dict['draws'],
-                jacobian=config_dict['jacobian'],
+                jacobian=jacobian,
             )
             cmdstan_args = CmdStanArgs(
                 model_name=config_dict['model'],
@@ -241,6 +263,9 @@ def from_csv(
             )  # type: ignore
             return CmdStanLaplace(runset, mode=mode)
         elif config_dict['method'] == 'pathfinder':
+            assert isinstance(config_dict['num_draws'], int)
+            assert isinstance(config_dict['num_paths'], int)
+            assert isinstance(config_dict['model'], str)
             pathfinder_args = PathfinderArgs(
                 num_draws=config_dict['num_draws'],
                 num_paths=config_dict['num_paths'],

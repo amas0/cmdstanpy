@@ -42,7 +42,6 @@ def test_good() -> None:
         runset._set_retcode(i, 0)
     config = check_sampler_csv(
         path=runset.csv_files[i],
-        is_fixed_param=False,
         iter_sampling=100,
         iter_warmup=1000,
         save_warmup=False,

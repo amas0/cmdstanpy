@@ -8,17 +8,7 @@ import math
 import os
 import re
 import warnings
-from typing import (
-    Any,
-    Dict,
-    Iterator,
-    List,
-    MutableMapping,
-    Optional,
-    TextIO,
-    Tuple,
-    Union,
-)
+from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -154,9 +144,10 @@ def parse_hmc_adaptation_lines(
 
 
 def extract_key_val_pairs(
-    comment_lines: List[bytes],
+    comment_lines: List[bytes], remove_default_text: bool = True
 ) -> Iterator[Tuple[str, str]]:
-    """Yields cleaned key = val pairs from stan csv comments"""
+    """Yields cleaned key = val pairs from stan csv comments.
+    Removes '(Default)' text from values if remove_default_text is True."""
     cleaned_lines = (
         line.decode().lstrip("# ").strip() for line in comment_lines
     )
@@ -167,6 +158,8 @@ def extract_key_val_pairs(
             continue
 
         key, val = split_on_eq
+        if remove_default_text:
+            val = val.replace("(Default)", "").strip()
         yield key, val
 
 
@@ -177,7 +170,6 @@ def parse_config(
     lines and returns a dictionary."""
     out: Dict[str, Union[str, int, float]] = {}
     for key, val in extract_key_val_pairs(comment_lines):
-        val = val.replace("(Default)", "").strip()
         if key == 'file':
             if not val.endswith('csv'):
                 out['data_file'] = val
@@ -247,6 +239,8 @@ def extract_max_treedepth_and_divergence_counts(
 ) -> Tuple[int, int]:
     """Extracts the max treedepth and divergence counts from the draw lines
     of the MCMC stan csv output."""
+    if len(draws_lines) <= 1:  # Empty draws
+        return 0, 0
     column_names = draws_lines[0].strip().split(b",")
     indexes_to_keep = [
         column_names.index(b"treedepth__"),
@@ -289,6 +283,9 @@ def count_warmup_and_sampling_draws(
             elif sampling_block_idx is None:
                 if not line.startswith(b"#"):
                     sampling_block_idx = i
+                elif line.startswith(b"#  Elapsed"):
+                    sampling_block_idx = i
+                    timing_block_idx = i
             elif timing_block_idx is None:
                 if line.startswith(b"#"):
                     timing_block_idx = i
@@ -389,11 +386,14 @@ def parse_sampler_metadata_from_csv(
         config = extract_config_and_header_info(comments, draws)
         num_warmup, num_sampling = count_warmup_and_sampling_draws(path)
         timings = parse_timing_lines(comments)
-        max_depth = config["max_depth"]
-        assert isinstance(max_depth, int)
-        max_tree_hits, divs = extract_max_treedepth_and_divergence_counts(
-            draws, max_depth, num_warmup
-        )
+        if config['algorithm'] != 'fixed_param':
+            max_depth = config["max_depth"]
+            assert isinstance(max_depth, int)
+            max_tree_hits, divs = extract_max_treedepth_and_divergence_counts(
+                draws, max_depth, num_warmup
+            )
+        else:
+            max_tree_hits, divs = 0, 0
     except (KeyError, ValueError) as exc:
         raise ValueError(f"Error in reading csv file: {path}") from exc
 
@@ -412,97 +412,6 @@ def parse_sampler_metadata_from_csv(
     return {**config, **addtl}
 
 
-def scan_sampler_csv(path: str, is_fixed_param: bool = False) -> Dict[str, Any]:
-    """Process sampler stan_csv output file line by line."""
-    dict: Dict[str, Any] = {}
-    lineno = 0
-    with open(path, 'r') as fd:
-        try:
-            lineno = scan_config(fd, dict, lineno)
-            lineno = scan_column_names(fd, dict, lineno)
-            if not is_fixed_param:
-                lineno = scan_warmup_iters(fd, dict, lineno)
-                lineno = scan_hmc_params(fd, dict, lineno)
-            lineno = scan_sampling_iters(fd, dict, lineno, is_fixed_param)
-            lineno = scan_time(fd, dict, lineno)
-        except ValueError as e:
-            raise ValueError("Error in reading csv file: " + path) from e
-    return dict
-
-
-def scan_config(fd: TextIO, config_dict: Dict[str, Any], lineno: int) -> int:
-    """
-    Scan initial stan_csv file comments lines and
-    save non-default configuration information to config_dict.
-    """
-    cur_pos = fd.tell()
-    line = fd.readline().strip()
-    while len(line) > 0 and line.startswith('#'):
-        lineno += 1
-        if line.endswith('(Default)'):
-            line = line.replace('(Default)', '')
-        line = line.lstrip(' #\t')
-        key_val = line.split('=')
-        if len(key_val) == 2:
-            if key_val[0].strip() == 'file' and not key_val[1].endswith('csv'):
-                config_dict['data_file'] = key_val[1].strip()
-            elif key_val[0].strip() != 'file':
-                raw_val = key_val[1].strip()
-                val: Union[int, float, str]
-                try:
-                    val = int(raw_val)
-                except ValueError:
-                    try:
-                        val = float(raw_val)
-                    except ValueError:
-                        if raw_val == "true":
-                            val = 1
-                        elif raw_val == "false":
-                            val = 0
-                        else:
-                            val = raw_val
-                config_dict[key_val[0].strip()] = val
-        cur_pos = fd.tell()
-        line = fd.readline().strip()
-    fd.seek(cur_pos)
-    return lineno
-
-
-def scan_warmup_iters(
-    fd: TextIO, config_dict: Dict[str, Any], lineno: int
-) -> int:
-    """
-    Check warmup iterations, if any.
-    """
-    if 'save_warmup' not in config_dict:
-        return lineno
-    cur_pos = fd.tell()
-    line = fd.readline().strip()
-    draws_found = 0
-    while len(line) > 0 and not line.startswith('#'):
-        lineno += 1
-        draws_found += 1
-        cur_pos = fd.tell()
-        line = fd.readline().strip()
-    fd.seek(cur_pos)
-    config_dict['draws_warmup'] = draws_found
-    return lineno
-
-
-def scan_column_names(
-    fd: TextIO, config_dict: MutableMapping[str, Any], lineno: int
-) -> int:
-    """
-    Process columns header, add to config_dict as 'column_names'
-    """
-    line = fd.readline().strip()
-    lineno += 1
-    config_dict['raw_header'] = line.strip()
-    names = line.split(',')
-    config_dict['column_names'] = tuple(munge_varnames(names))
-    return lineno
-
-
 def munge_varname(name: str) -> str:
     if '.' not in name and ':' not in name:
         return name
@@ -517,190 +426,6 @@ def munge_varname(name: str) -> str:
         tuple_parts[i] = part
 
     return '.'.join(tuple_parts)
-
-
-def munge_varnames(names: List[str]) -> List[str]:
-    """
-    Change formatting for indices of container var elements
-    from use of dot separator to array-like notation, e.g.,
-    rewrite label ``y_forecast.2.4`` to ``y_forecast[2,4]``.
-    """
-    if names is None:
-        raise ValueError('missing argument "names"')
-    return [munge_varname(name) for name in names]
-
-
-def scan_hmc_params(
-    fd: TextIO, config_dict: Dict[str, Any], lineno: int
-) -> int:
-    """
-    Scan step size, metric from  stan_csv file comment lines.
-    """
-    metric = config_dict['metric']
-    line = fd.readline().strip()
-    lineno += 1
-    if not line == '# Adaptation terminated':
-        raise ValueError(
-            'line {}: expecting metric, found:\n\t "{}"'.format(lineno, line)
-        )
-    line = fd.readline().strip()
-    lineno += 1
-    label, step_size = line.split('=')
-    if not label.startswith('# Step size'):
-        raise ValueError(
-            'line {}: expecting step size, '
-            'found:\n\t "{}"'.format(lineno, line)
-        )
-    try:
-        float(step_size.strip())
-    except ValueError as e:
-        raise ValueError(
-            'line {}: invalid step size: {}'.format(lineno, step_size)
-        ) from e
-    before_metric = fd.tell()
-    line = fd.readline().strip()
-    lineno += 1
-    if metric == 'unit_e':
-        if line.startswith("# No free parameters"):
-            return lineno
-        else:
-            fd.seek(before_metric)
-            return lineno - 1
-
-    if not (
-        (
-            metric == 'diag_e'
-            and line == '# Diagonal elements of inverse mass matrix:'
-        )
-        or (
-            metric == 'dense_e' and line == '# Elements of inverse mass matrix:'
-        )
-    ):
-        raise ValueError(
-            'line {}: invalid or missing mass matrix '
-            'specification'.format(lineno)
-        )
-    line = fd.readline().lstrip(' #\t')
-    lineno += 1
-    num_unconstrained_params = len(line.split(','))
-    if metric == 'diag_e':
-        return lineno
-    else:
-        for _ in range(1, num_unconstrained_params):
-            line = fd.readline().lstrip(' #\t')
-            lineno += 1
-            if len(line.split(',')) != num_unconstrained_params:
-                raise ValueError(
-                    'line {}: invalid or missing mass matrix '
-                    'specification'.format(lineno)
-                )
-        return lineno
-
-
-def scan_sampling_iters(
-    fd: TextIO, config_dict: Dict[str, Any], lineno: int, is_fixed_param: bool
-) -> int:
-    """
-    Parse sampling iteration, save number of iterations to config_dict.
-    Also save number of divergences, max_treedepth hits
-    """
-    draws_found = 0
-    num_cols = len(config_dict['column_names'])
-    if not is_fixed_param:
-        idx_divergent = config_dict['column_names'].index('divergent__')
-        idx_treedepth = config_dict['column_names'].index('treedepth__')
-        max_treedepth = config_dict['max_depth']
-        ct_divergences = 0
-        ct_max_treedepth = 0
-
-    cur_pos = fd.tell()
-    line = fd.readline().strip()
-    while len(line) > 0 and not line.startswith('#'):
-        lineno += 1
-        draws_found += 1
-        data = line.split(',')
-        if len(data) != num_cols:
-            raise ValueError(
-                'line {}: bad draw, expecting {} items, found {}\n'.format(
-                    lineno, num_cols, len(line.split(','))
-                )
-                + 'This error could be caused by running out of disk space.\n'
-                'Try clearing up TEMP or setting output_dir to a path'
-                ' on another drive.',
-            )
-        cur_pos = fd.tell()
-        line = fd.readline().strip()
-        if not is_fixed_param:
-            ct_divergences += int(data[idx_divergent])  # type: ignore
-            if int(data[idx_treedepth]) == max_treedepth:  # type: ignore
-                ct_max_treedepth += 1
-
-    fd.seek(cur_pos)
-    config_dict['draws_sampling'] = draws_found
-    if not is_fixed_param:
-        config_dict['ct_divergences'] = ct_divergences
-        config_dict['ct_max_treedepth'] = ct_max_treedepth
-    return lineno
-
-
-def scan_time(fd: TextIO, config_dict: Dict[str, Any], lineno: int) -> int:
-    """
-    Scan time information from the trailing comment lines in a Stan CSV file.
-
-    #  Elapsed Time: 0.001332 seconds (Warm-up)
-    #                0.000249 seconds (Sampling)
-    #                0.001581 seconds (Total)
-
-
-    It extracts the time values and saves them in the config_dict: key 'time',
-    value a dictionary with keys 'warmup', 'sampling', and 'total'.
-    Returns the updated line number after reading the time info.
-
-    :param fd: Open file descriptor at comment row following all sample data.
-    :param config_dict: Dictionary to which the time info is added.
-    :param lineno: Current line number
-    """
-    time = {}
-    keys = ['warmup', 'sampling', 'total']
-    while True:
-        pos = fd.tell()
-        line = fd.readline()
-        if not line:
-            break
-        lineno += 1
-        stripped = line.strip()
-        if not stripped.startswith('#'):
-            fd.seek(pos)
-            lineno -= 1
-            break
-        content = stripped.lstrip('#').strip()
-        if not content:
-            continue
-        tokens = content.split()
-        if len(tokens) < 3:
-            raise ValueError(f"Invalid time at line {lineno}: {content}")
-        if 'Warm-up' in content:
-            key = 'warmup'
-            time_str = tokens[2]
-        elif 'Sampling' in content:
-            key = 'sampling'
-            time_str = tokens[0]
-        elif 'Total' in content:
-            key = 'total'
-            time_str = tokens[0]
-        else:
-            raise ValueError(f"Invalid time at line {lineno}: {content}")
-        try:
-            t = float(time_str)
-        except ValueError as e:
-            raise ValueError(f"Invalid time at line {lineno}: {content}") from e
-        time[key] = t
-
-    if not all(key in time for key in keys):
-        raise ValueError(f"Invalid time, stopped at {lineno}")
-
-    config_dict['time'] = time
-    return lineno
 
 
 def read_metric(path: str) -> List[int]:
