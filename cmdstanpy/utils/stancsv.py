@@ -394,6 +394,38 @@ def check_sampler_csv(
     return meta
 
 
+def parse_sampler_metadata_from_csv(
+    path: Union[str, os.PathLike],
+) -> Dict[str, Union[int, float, str, Tuple[str, ...], Dict[str, float]]]:
+    """Parses sampling metadata from a given Stan CSV path for a sample run"""
+    try:
+        comments, draws = parse_stan_csv_comments_and_draws(path)
+        config = extract_config_and_header_info(comments, draws)
+        num_warmup, num_sampling = count_warmup_and_sampling_draws(path)
+        timings = parse_timing_lines(comments)
+        max_depth = config["max_depth"]
+        assert isinstance(max_depth, int)
+        max_tree_hits, divs = extract_max_treedepth_and_divergence_counts(
+            draws, max_depth, num_warmup
+        )
+    except (KeyError, ValueError) as exc:
+        raise ValueError(f"Error in reading csv file: {path}") from exc
+
+    key_renames = {
+        "Warm-up": "warmup",
+        "Sampling": "sampling",
+        "Total": "total",
+    }
+    addtl: Dict[str, Union[int, Dict[str, float]]] = {
+        "draws_warmup": num_warmup,
+        "draws_sampling": num_sampling,
+        "ct_divergences": divs,
+        "ct_max_treedepth": max_tree_hits,
+        "time": {key_renames[k]: v for k, v in timings.items()},
+    }
+    return {**config, **addtl}
+
+
 def scan_sampler_csv(path: str, is_fixed_param: bool = False) -> Dict[str, Any]:
     """Process sampler stan_csv output file line by line."""
     dict: Dict[str, Any] = {}
