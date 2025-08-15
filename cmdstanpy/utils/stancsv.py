@@ -103,7 +103,7 @@ def csv_bytes_list_to_numpy(
 
 def parse_hmc_adaptation_lines(
     comment_lines: List[bytes],
-) -> Tuple[float, Optional[npt.NDArray[np.float64]]]:
+) -> Tuple[Optional[float], Optional[npt.NDArray[np.float64]]]:
     """Extracts step size/mass matrix information from the Stan CSV comment
     lines by parsing the adaptation section. If the diag_e metric is used,
     the returned mass matrix will be a 1D array of the diagnoal elements,
@@ -132,8 +132,6 @@ def parse_hmc_adaptation_lines(
             break
         elif b"diag_e" in line:
             diag_e_metric = True
-    if step_size is None:
-        raise ValueError("Unable to parse adapated step size")
     if matrix_lines:
         mass_matrix = csv_bytes_list_to_numpy(
             matrix_lines, includes_header=False
@@ -242,10 +240,16 @@ def extract_max_treedepth_and_divergence_counts(
     if len(draws_lines) <= 1:  # Empty draws
         return 0, 0
     column_names = draws_lines[0].strip().split(b",")
-    indexes_to_keep = [
-        column_names.index(b"treedepth__"),
-        column_names.index(b"divergent__"),
-    ]
+
+    try:
+        indexes_to_keep = [
+            column_names.index(b"treedepth__"),
+            column_names.index(b"divergent__"),
+        ]
+    except ValueError:
+        # Throws if treedepth/divergent columns not recorded
+        return 0, 0
+
     sampling_draws = draws_lines[1 + warmup_draws :]
 
     filtered = filter_csv_bytes_by_columns(sampling_draws, indexes_to_keep)
@@ -275,6 +279,12 @@ def count_warmup_and_sampling_draws(
                     is_fixed_param = True
                 if line.startswith(b"lp__"):
                     header_line_idx = i
+                    num_dunder_cols = sum(
+                        col.endswith(b"__") for col in line.split(b",")
+                    )
+                    # See issue #805
+                    if num_dunder_cols < 7:
+                        is_fixed_param = True
                 continue
 
             if not is_fixed_param and adaptation_block_idx is None:

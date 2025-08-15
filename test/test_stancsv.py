@@ -225,16 +225,12 @@ def test_parsing_adaptation_lines_dense():
     assert np.array_equal(mass_matrix, expected)
 
 
-def test_parsing_adaptation_lines_missing_step_size():
+def test_parsing_adaptation_lines_missing_everything():
     lines = [
         b"# Adaptation terminated\n",
         b"# Elements of inverse mass matrix:\n",
-        b"# 2.84091, 0.230843, 0.0509365\n",
-        b"# 0.230843, 3.92459, 0.126989\n",
-        b"# 0.0509365, 0.126989, 3.82718\n",
     ]
-    with pytest.raises(ValueError):
-        stancsv.parse_hmc_adaptation_lines(lines)
+    assert stancsv.parse_hmc_adaptation_lines(lines) == (None, None)
 
 
 def test_parsing_adaptation_lines_no_free_params():
