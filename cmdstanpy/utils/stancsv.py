@@ -312,6 +312,23 @@ def count_warmup_and_sampling_draws(
         return determine_draw_counts(stan_csv)
 
 
+def raise_on_inconsistent_draws_shape(draw_lines: List[bytes]) -> None:
+    def column_count(ln: bytes) -> int:
+        return ln.count(b",") + 1
+
+    if not draw_lines:
+        return
+
+    header, *draws = draw_lines
+    num_cols = column_count(header)
+    for i, draw in enumerate(draws, start=1):
+        if (draw_size := column_count(draw)) != num_cols:
+            raise ValueError(
+                f"line {i}: bad draw, expecting {num_cols} items,"
+                f" found {draw_size}"
+            )
+
+
 def parse_timing_lines(
     comment_lines: List[bytes],
 ) -> Dict[str, float]:
@@ -383,6 +400,7 @@ def parse_sampler_metadata_from_csv(
     """Parses sampling metadata from a given Stan CSV path for a sample run"""
     try:
         comments, draws = parse_stan_csv_comments_and_draws(path)
+        raise_on_inconsistent_draws_shape(draws)
         config = extract_config_and_header_info(comments, draws)
         num_warmup, num_sampling = count_warmup_and_sampling_draws(path)
         timings = parse_timing_lines(comments)
