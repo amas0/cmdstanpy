@@ -140,7 +140,6 @@ def from_csv(
                 try:
                     check_sampler_csv(
                         csvfiles[0],
-                        is_fixed_param=True,
                         iter_sampling=config_dict['num_samples'],
                         iter_warmup=config_dict['num_warmup'],
                         thin=config_dict['thin'],

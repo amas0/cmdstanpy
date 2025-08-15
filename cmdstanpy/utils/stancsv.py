@@ -340,56 +340,42 @@ def parse_timing_lines(
 
 
 def check_sampler_csv(
-    path: str,
-    is_fixed_param: bool = False,
-    iter_sampling: Optional[int] = None,
-    iter_warmup: Optional[int] = None,
+    path: Union[str, os.PathLike],
+    iter_sampling: int = _CMDSTAN_SAMPLING,
+    iter_warmup: int = _CMDSTAN_WARMUP,
     save_warmup: bool = False,
-    thin: Optional[int] = None,
+    thin: int = _CMDSTAN_THIN,
 ) -> Dict[str, Any]:
     """Capture essential config, shape from stan_csv file."""
-    meta = scan_sampler_csv(path, is_fixed_param)
-    if thin is None:
-        thin = _CMDSTAN_THIN
-    elif thin > _CMDSTAN_THIN:
+    meta = parse_sampler_metadata_from_csv(path)
+    if thin > _CMDSTAN_THIN:
         if 'thin' not in meta:
             raise ValueError(
-                'bad Stan CSV file {}, '
-                'config error, expected thin = {}'.format(path, thin)
+                f'Bad Stan CSV file {path}, config error, '
+                f'expected thin = {thin}'
             )
         if meta['thin'] != thin:
             raise ValueError(
-                'bad Stan CSV file {}, '
-                'config error, expected thin = {}, found {}'.format(
-                    path, thin, meta['thin']
-                )
+                f'Bad Stan CSV file {path}, '
+                f'config error, expected thin = {thin}, found {meta["thin"]}'
             )
-    draws_sampling = iter_sampling
-    if draws_sampling is None:
-        draws_sampling = _CMDSTAN_SAMPLING
-    draws_warmup = iter_warmup
-    if draws_warmup is None:
-        draws_warmup = _CMDSTAN_WARMUP
-    draws_warmup = int(math.ceil(draws_warmup / thin))
-    draws_sampling = int(math.ceil(draws_sampling / thin))
+    draws_warmup = int(math.ceil(iter_warmup / thin))
+    draws_sampling = int(math.ceil(iter_sampling / thin))
     if meta['draws_sampling'] != draws_sampling:
         raise ValueError(
-            'bad Stan CSV file {}, expected {} draws, found {}'.format(
-                path, draws_sampling, meta['draws_sampling']
-            )
+            f'Bad Stan CSV file {path}, expected {draws_sampling} draws, '
+            f'found {meta["draws_sampling"]}'
         )
     if save_warmup:
-        if not ('save_warmup' in meta and meta['save_warmup'] in (1, 'true')):
+        if not ('save_warmup' in meta and meta['save_warmup'] == 1):
             raise ValueError(
-                'bad Stan CSV file {}, '
-                'config error, expected save_warmup = 1'.format(path)
+                f'Bad Stan CSV file {path}, '
+                'config error, expected save_warmup = 1'
             )
         if meta['draws_warmup'] != draws_warmup:
             raise ValueError(
-                'bad Stan CSV file {}, '
-                'expected {} warmup draws, found {}'.format(
-                    path, draws_warmup, meta['draws_warmup']
-                )
+                f'Bad Stan CSV file {path}, expected {draws_warmup} '
+                f'warmup draws, found {meta["draws_warmup"]}'
             )
     return meta
 

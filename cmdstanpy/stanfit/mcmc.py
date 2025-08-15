@@ -345,7 +345,6 @@ class CmdStanMCMC:
             if i == 0:
                 dzero = check_sampler_csv(
                     path=self.runset.csv_files[i],
-                    is_fixed_param=self._is_fixed_param,
                     iter_sampling=self._iter_sampling,
                     iter_warmup=self._iter_warmup,
                     save_warmup=self._save_warmup,
@@ -358,7 +357,6 @@ class CmdStanMCMC:
             else:
                 drest = check_sampler_csv(
                     path=self.runset.csv_files[i],
-                    is_fixed_param=self._is_fixed_param,
                     iter_sampling=self._iter_sampling,
                     iter_warmup=self._iter_warmup,
                     save_warmup=self._save_warmup,
