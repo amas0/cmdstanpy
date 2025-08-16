@@ -260,6 +260,19 @@ def extract_max_treedepth_and_divergence_counts(
     return num_max_treedepth, num_divergences
 
 
+def is_sneaky_fixed_param(header_line: bytes) -> bool:
+    """Returns True if the header line indicates that the sampler
+    ran with the fixed_param sampler automatically, despite the
+    algorithm listed as 'hmc'.
+
+    See issue #805"""
+    num_dunder_cols = sum(
+        col.endswith(b"__") for col in header_line.split(b",")
+    )
+
+    return (num_dunder_cols < 7) and b"lp__" in header_line
+
+
 def count_warmup_and_sampling_draws(
     stan_csv: Union[str, os.PathLike, Iterator[bytes]],
 ) -> Tuple[int, int]:
@@ -279,12 +292,8 @@ def count_warmup_and_sampling_draws(
                     is_fixed_param = True
                 if line.startswith(b"lp__"):
                     header_line_idx = i
-                    num_dunder_cols = sum(
-                        col.endswith(b"__") for col in line.split(b",")
-                    )
-                    # See issue #805
-                    if num_dunder_cols < 7:
-                        is_fixed_param = True
+                    if not is_fixed_param:
+                        is_fixed_param = is_sneaky_fixed_param(line)
                 continue
 
             if not is_fixed_param and adaptation_block_idx is None:
@@ -340,6 +349,65 @@ def raise_on_inconsistent_draws_shape(draw_lines: List[bytes]) -> None:
             raise ValueError(
                 f"line {i}: bad draw, expecting {num_cols} items,"
                 f" found {draw_size}"
+            )
+
+
+def raise_on_invalid_adaptation_block(comment_lines: List[bytes]) -> None:
+    def column_count(ln: bytes) -> int:
+        return ln.count(b",") + 1
+
+    ln_iter = enumerate(comment_lines, start=2)
+    metric = None
+    for _, line in ln_iter:
+        if b"metric =" in line:
+            _, val = line.split(b" = ")
+            metric = val.replace(b"(Default)", b"").strip().decode()
+        if b"Adaptation terminated" in line:
+            break
+    else:  # No adaptation block found
+        raise ValueError("No adaptation block found, expecting metric")
+
+    if metric is None:
+        raise ValueError("No reported metric found")
+    # At this point iterator should be in the adaptation block
+
+    # Ensure step size exists and is valid float
+    num, line = next(ln_iter)
+    key, step_size = line.split(b" = ")
+    if not key.startswith(b"# Step size"):
+        raise ValueError(
+            f"line {num}: expecting step size, "
+            f"found:\n\t \"{line.decode()}\""
+        )
+    try:
+        float(step_size.strip())
+    except ValueError as exc:
+        raise ValueError(
+            f"line {num}: invalid step size: {step_size.decode()}"
+        ) from exc
+
+    # Ensure mass matrix valid
+    num, line = next(ln_iter)
+    if metric == "unit_e":
+        return
+    if not (
+        (metric == "diag_e" and line.startswith(b"# Diagonal elements of "))
+        or (metric == "dense_e" and line.startswith(b"# Elements of inverse"))
+    ):
+        print(metric)
+        raise ValueError(
+            f"line {num}: invalid or missing mass matrix specification"
+        )
+
+    # Validating mass matrix shape
+    _, line = next(ln_iter)
+    num_unconstrained_params = column_count(line)
+    if metric == "diag_e":
+        return
+    for (num, line), _ in zip(ln_iter, range(1, num_unconstrained_params)):
+        if column_count(line) != num_unconstrained_params:
+            raise ValueError(
+                f"line {num}: invalid or missing mass matrix specification"
             )
 
 
@@ -418,7 +486,10 @@ def parse_sampler_metadata_from_csv(
         config = extract_config_and_header_info(comments, draws)
         num_warmup, num_sampling = count_warmup_and_sampling_draws(path)
         timings = parse_timing_lines(comments)
-        if config['algorithm'] != 'fixed_param':
+        if (config['algorithm'] != 'fixed_param') and not is_sneaky_fixed_param(
+            draws[0]
+        ):
+            raise_on_invalid_adaptation_block(comments)
             max_depth = config["max_depth"]
             assert isinstance(max_depth, int)
             max_tree_hits, divs = extract_max_treedepth_and_divergence_counts(
