@@ -181,6 +181,7 @@ def test_parsing_adaptation_lines():
         b"# Step size = 0.787025\n",
         b"# Diagonal elements of inverse mass matrix:\n",
         b"# 1\n",
+        b"# Elapsed Time\n",
     ]
     step_size, mass_matrix = stancsv.parse_hmc_adaptation_lines(lines)
     assert step_size == 0.787025
@@ -359,3 +360,32 @@ def test_extract_header_line():
         assert stancsv.extract_header_line([b""])
     with pytest.raises(ValueError):
         assert stancsv.extract_header_line([b"1,2\n"])
+
+
+def test_column_filter_basic():
+    data = [b"1,2,3\n", b"4,5,6\n"]
+    indexes = [0, 2]
+    expected = [b"1,3\n", b"4,6\n"]
+    assert stancsv.filter_csv_bytes_by_columns(data, indexes) == expected
+
+
+def test_column_filter_empty_input():
+    assert not stancsv.filter_csv_bytes_by_columns([], [0])
+
+
+def test_column_filter_empty_indexes():
+    data = [b"1,2,3\n", b"4,5,6\n"]
+    assert stancsv.filter_csv_bytes_by_columns(data, []) == [b"\n", b"\n"]
+
+
+def test_column_filter_single_column():
+    data = [b"a,b,c\n", b"d,e,f\n"]
+    assert stancsv.filter_csv_bytes_by_columns(data, [1]) == [b"b\n", b"e\n"]
+
+
+def test_column_filter_non_consecutive_indexes():
+    data = [b"9,8,7,6\n", b"5,4,3,2\n"]
+    assert stancsv.filter_csv_bytes_by_columns(data, [2, 0]) == [
+        b"7,9\n",
+        b"3,5\n",
+    ]
