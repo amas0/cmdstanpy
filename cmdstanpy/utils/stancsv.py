@@ -377,12 +377,12 @@ def raise_on_invalid_adaptation_block(comment_lines: List[bytes]) -> None:
 
     # Ensure step size exists and is valid float
     num, line = next(ln_iter)
-    key, step_size = line.split(b" = ")
-    if not key.startswith(b"# Step size"):
+    if not line.startswith(b"# Step size"):
         raise ValueError(
             f"line {num}: expecting step size, "
             f"found:\n\t \"{line.decode()}\""
         )
+    _, step_size = line.split(b" = ")
     try:
         float(step_size.strip())
     except ValueError as exc:
