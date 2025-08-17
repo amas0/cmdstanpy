@@ -398,7 +398,6 @@ def raise_on_invalid_adaptation_block(comment_lines: List[bytes]) -> None:
         (metric == "diag_e" and line.startswith(b"# Diagonal elements of "))
         or (metric == "dense_e" and line.startswith(b"# Elements of inverse"))
     ):
-        print(metric)
         raise ValueError(
             f"line {num}: invalid or missing mass matrix specification"
         )
