@@ -119,7 +119,6 @@ class CmdStanGQ(Generic[Fit]):
             'seed',
             'start_datetime',
         }
-        assert self.chains >= 1  # Should be impossible
         meta0 = InferenceMetadata.from_csv(self.runset.csv_files[0])
         for i in range(1, self.chains):
             meta = InferenceMetadata.from_csv(self.runset.csv_files[i])
