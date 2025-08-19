@@ -69,16 +69,19 @@ def csv_bytes_list_to_numpy(
     try:
         import polars as pl
 
-        out: npt.NDArray[np.float64] = (
-            pl.read_csv(
-                io.BytesIO(b"".join(csv_bytes_list)),
-                has_header=includes_header,
-                schema_overrides=[pl.Float64] * num_cols,
-                infer_schema=False,
+        try:
+            out: npt.NDArray[np.float64] = (
+                pl.read_csv(
+                    io.BytesIO(b"".join(csv_bytes_list)),
+                    has_header=includes_header,
+                    schema_overrides=[pl.Float64] * num_cols,
+                    infer_schema=False,
+                )
+                .to_numpy()
+                .astype(np.float64)
             )
-            .to_numpy()
-            .astype(np.float64)
-        )
+        except pl.exceptions.NoDataError:
+            return np.empty((0,))
     except ImportError:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
