@@ -323,8 +323,9 @@ def count_warmup_and_sampling_draws(
         if is_fixed_param:
             num_warmup = 0
         else:
-            assert adaptation_block_idx is not None
-            num_warmup = adaptation_block_idx - header_line_idx - 1
+            num_warmup = (
+                adaptation_block_idx - header_line_idx - 1  # type: ignore
+            )
         num_sampling = timing_block_idx - sampling_block_idx
         return num_warmup, num_sampling
 
@@ -493,8 +494,7 @@ def parse_sampler_metadata_from_csv(
             draws[0]
         ):
             raise_on_invalid_adaptation_block(comments)
-            max_depth = config["max_depth"]
-            assert isinstance(max_depth, int)
+            max_depth: int = config["max_depth"]  # type: ignore
             max_tree_hits, divs = extract_max_treedepth_and_divergence_counts(
                 draws, max_depth, num_warmup
             )

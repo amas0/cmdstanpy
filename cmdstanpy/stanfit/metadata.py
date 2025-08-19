@@ -22,8 +22,7 @@ class InferenceMetadata:
         """Initialize object from CSV headers"""
         self._cmdstan_config = config
 
-        assert isinstance(config['raw_header'], str)
-        vars = stanio.parse_header(config['raw_header'])
+        vars = stanio.parse_header(config['raw_header'])  # type: ignore
 
         self._method_vars = {
             k: v for (k, v) in vars.items() if k.endswith('__')
@@ -58,8 +57,7 @@ class InferenceMetadata:
     @property
     def column_names(self) -> Tuple[str, ...]:
         col_names = self['column_names']
-        assert isinstance(col_names, tuple)
-        return col_names
+        return col_names  # type: ignore
 
     @property
     def method_vars(self) -> Dict[str, stanio.Variable]:
