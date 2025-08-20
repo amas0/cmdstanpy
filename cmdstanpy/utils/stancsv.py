@@ -19,10 +19,10 @@ from cmdstanpy import _CMDSTAN_SAMPLING, _CMDSTAN_THIN, _CMDSTAN_WARMUP
 def parse_comments_header_and_draws(
     stan_csv: Union[str, os.PathLike, Iterator[bytes]],
 ) -> Tuple[List[bytes], Optional[str], List[bytes]]:
-    """Parses lines of a Stan CSV file into comment lines and draws lines, where
-    a draws line is just a non-commented line.
+    """Parses lines of a Stan CSV file into comment lines, the header line,
+    and draws lines.
 
-    Returns a (comment_lines, draws_lines) tuple.
+    Returns a (comment_lines, header, draws_lines) tuple.
     """
 
     def partition_csv(
@@ -226,8 +226,8 @@ def parse_variational_eta(comment_lines: List[bytes]) -> float:
 def extract_max_treedepth_and_divergence_counts(
     header: str, draws_lines: List[bytes], max_treedepth: int, warmup_draws: int
 ) -> Tuple[int, int]:
-    """Extracts the max treedepth and divergence counts from the draw lines
-    of the MCMC stan csv output."""
+    """Extracts the max treedepth and divergence counts from the header
+    and draw lines of the MCMC stan csv output."""
     if len(draws_lines) <= 1:  # Empty draws
         return 0, 0
     column_names = header.split(",")
@@ -346,6 +346,10 @@ def raise_on_inconsistent_draws_shape(
 
 
 def raise_on_invalid_adaptation_block(comment_lines: List[bytes]) -> None:
+    """Throws ValueErrors if the parsed adaptation block is invalid, e.g.
+    the metric information is not present, consistent with the rest of
+    the file, or the step size info cannot be processed."""
+
     def column_count(ln: bytes) -> int:
         return ln.count(b",") + 1
 
