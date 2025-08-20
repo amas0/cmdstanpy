@@ -442,14 +442,20 @@ class CmdStanMCMC:
         mass_matrix_per_chain = []
         for chain in range(self.chains):
             try:
-                comments, draws = stancsv.parse_stan_csv_comments_and_draws(
+                (
+                    comments,
+                    header,
+                    draws,
+                ) = stancsv.parse_comments_header_and_draws(
                     self.runset.csv_files[chain]
                 )
 
-                self._draws[:, chain, :] = stancsv.csv_bytes_list_to_numpy(
-                    draws
-                )
+                draws_np = stancsv.csv_bytes_list_to_numpy(draws)
+                if draws_np.shape[0] == 0:
+                    n_cols = header.count(",") + 1  # type: ignore
+                    draws_np = np.empty((0, n_cols))
 
+                self._draws[:, chain, :] = draws_np
                 if not self._is_fixed_param:
                     (
                         self._step_size[chain],

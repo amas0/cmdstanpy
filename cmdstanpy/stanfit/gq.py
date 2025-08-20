@@ -626,7 +626,7 @@ class CmdStanGQ(Generic[Fit]):
             order='F',
         )
         for chain in range(self.chains):
-            _, draws = stancsv.parse_stan_csv_comments_and_draws(
+            *_, draws = stancsv.parse_comments_header_and_draws(
                 self.runset.csv_files[chain]
             )
             gq_sample[:, chain, :] = stancsv.csv_bytes_list_to_numpy(draws)

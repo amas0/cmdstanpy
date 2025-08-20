@@ -16,31 +16,35 @@ import numpy.typing as npt
 from cmdstanpy import _CMDSTAN_SAMPLING, _CMDSTAN_THIN, _CMDSTAN_WARMUP
 
 
-def parse_stan_csv_comments_and_draws(
+def parse_comments_header_and_draws(
     stan_csv: Union[str, os.PathLike, Iterator[bytes]],
-) -> Tuple[List[bytes], List[bytes]]:
+) -> Tuple[List[bytes], Optional[str], List[bytes]]:
     """Parses lines of a Stan CSV file into comment lines and draws lines, where
     a draws line is just a non-commented line.
 
     Returns a (comment_lines, draws_lines) tuple.
     """
 
-    def split_comments_and_draws(
+    def partition_csv(
         lines: Iterator[bytes],
-    ) -> Tuple[List[bytes], List[bytes]]:
-        comment_lines, draws_lines = [], []
+    ) -> Tuple[List[bytes], Optional[str], List[bytes]]:
+        comment_lines: List[bytes] = []
+        draws_lines: List[bytes] = []
+        header = None
         for line in lines:
             if line.startswith(b"#"):  # is comment line
                 comment_lines.append(line)
+            elif header is None:  # Assumes the header is the first non-comment
+                header = line.strip().decode()
             else:
                 draws_lines.append(line)
-        return comment_lines, draws_lines
+        return comment_lines, header, draws_lines
 
     if isinstance(stan_csv, (str, os.PathLike)):
         with open(stan_csv, "rb") as f:
-            return split_comments_and_draws(f)
+            return partition_csv(f)
     else:
-        return split_comments_and_draws(stan_csv)
+        return partition_csv(stan_csv)
 
 
 def filter_csv_bytes_by_columns(
@@ -58,13 +62,15 @@ def filter_csv_bytes_by_columns(
 
 
 def csv_bytes_list_to_numpy(
-    csv_bytes_list: List[bytes], includes_header: bool = True
+    csv_bytes_list: List[bytes],
 ) -> npt.NDArray[np.float64]:
     """Efficiently converts a list of bytes representing whose concatenation
-    represents a CSV file into a numpy array. Includes header specifies
-    whether the bytes contains an initial header line."""
+    represents a CSV file into a numpy array.
+
+    Returns a 2D numpy array with shape (n_rows, n_cols). If no data is found,
+    returns an empty array with shape (0, 0)."""
     if not csv_bytes_list:
-        return np.empty((0,))
+        return np.empty((0, 0))
     num_cols = csv_bytes_list[0].count(b",") + 1
     try:
         import polars as pl
@@ -73,7 +79,7 @@ def csv_bytes_list_to_numpy(
             out: npt.NDArray[np.float64] = (
                 pl.read_csv(
                     io.BytesIO(b"".join(csv_bytes_list)),
-                    has_header=includes_header,
+                    has_header=False,
                     schema_overrides=[pl.Float64] * num_cols,
                     infer_schema=False,
                 )
@@ -81,22 +87,18 @@ def csv_bytes_list_to_numpy(
                 .astype(np.float64)
             )
         except pl.exceptions.NoDataError:
-            return np.empty((0,))
+            return np.empty((0, 0))
     except ImportError:
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
             out = np.loadtxt(
                 csv_bytes_list,
-                skiprows=int(includes_header),
                 delimiter=",",
                 dtype=np.float64,
-                ndmin=1,
+                ndmin=2,
             )
-        if len(out.shape) == 1:
-            if out.shape[0] == 0:  # No data read
-                out = np.empty((0, num_cols))
-            else:
-                out = out.reshape(1, -1)
+        if out.shape[0] == 0:  # No data read
+            out = np.empty((0, 0))
 
     return out
 
@@ -133,9 +135,7 @@ def parse_hmc_adaptation_lines(
         elif b"diag_e" in line:
             diag_e_metric = True
     if matrix_lines:
-        mass_matrix = csv_bytes_list_to_numpy(
-            matrix_lines, includes_header=False
-        )
+        mass_matrix = csv_bytes_list_to_numpy(matrix_lines)
         if diag_e_metric and mass_matrix.shape[0] == 1:
             mass_matrix = mass_matrix[0]
     return step_size, mass_matrix
@@ -188,46 +188,30 @@ def parse_config(
     return out
 
 
-def extract_header_line(draws_lines: List[bytes]) -> str:
-    """Attempts to extract the header line from the draw lines list.
-
-    Returns the raw header line as a string"""
-    if not draws_lines:
-        raise ValueError("Attempting to parse header from empty list")
-
-    first_line = draws_lines[0]
-    if not first_line:
-        raise ValueError("Empty first line when attempting to parse header")
-    first_char = first_line[0]
-
-    if first_char in b"1234567890-":
-        raise ValueError("Header line appears to be numeric data")
-
-    return first_line.decode().strip()
-
-
 def parse_header(header: str) -> Tuple[str, ...]:
     """Returns munged variable names from a Stan csv header line"""
     return tuple(munge_varname(name) for name in header.split(","))
 
 
-def extract_config_and_header_info(
-    comment_lines: List[bytes], draws_lines: List[bytes]
+def construct_config_header_dict(
+    comment_lines: List[bytes], header: Optional[str]
 ) -> Dict[str, Union[str, int, float, Tuple[str, ...]]]:
     """Extracts config and header info from comment/draws lines parsed
     from a Stan CSV file."""
     config = parse_config(comment_lines)
-    raw_header = extract_header_line(draws_lines)
-    return {
-        **config,
-        **{"raw_header": raw_header, "column_names": parse_header(raw_header)},
-    }
+    out: Dict[str, Union[str, int, float, Tuple[str, ...]]] = {**config}
+    if header:
+        out["raw_header"] = header
+        out["column_names"] = parse_header(header)
+    return out
 
 
 def parse_variational_eta(comment_lines: List[bytes]) -> float:
     """Extracts the variational eta parameter from stancsv comment lines"""
     for i, line in enumerate(comment_lines):
-        if line.startswith(b"# Stepsize adaptation"):
+        if line.startswith(b"# Stepsize adaptation") and (
+            i + 1 < len(comment_lines)  # Ensure i + 1 is in bounds
+        ):
             eta_line = comment_lines[i + 1]
             break
     else:
@@ -240,18 +224,18 @@ def parse_variational_eta(comment_lines: List[bytes]) -> float:
 
 
 def extract_max_treedepth_and_divergence_counts(
-    draws_lines: List[bytes], max_treedepth: int, warmup_draws: int
+    header: str, draws_lines: List[bytes], max_treedepth: int, warmup_draws: int
 ) -> Tuple[int, int]:
     """Extracts the max treedepth and divergence counts from the draw lines
     of the MCMC stan csv output."""
     if len(draws_lines) <= 1:  # Empty draws
         return 0, 0
-    column_names = draws_lines[0].strip().split(b",")
+    column_names = header.split(",")
 
     try:
         indexes_to_keep = [
-            column_names.index(b"treedepth__"),
-            column_names.index(b"divergent__"),
+            column_names.index("treedepth__"),
+            column_names.index("divergent__"),
         ]
     except ValueError:
         # Throws if treedepth/divergent columns not recorded
@@ -260,24 +244,22 @@ def extract_max_treedepth_and_divergence_counts(
     sampling_draws = draws_lines[1 + warmup_draws :]
 
     filtered = filter_csv_bytes_by_columns(sampling_draws, indexes_to_keep)
-    arr = csv_bytes_list_to_numpy(filtered, includes_header=False).astype(int)
+    arr = csv_bytes_list_to_numpy(filtered).astype(int)
 
     num_max_treedepth = np.sum(arr[:, 0] == max_treedepth)
     num_divergences = np.sum(arr[:, 1])
     return num_max_treedepth, num_divergences
 
 
-def is_sneaky_fixed_param(header_line: bytes) -> bool:
+def is_sneaky_fixed_param(header: str) -> bool:
     """Returns True if the header line indicates that the sampler
     ran with the fixed_param sampler automatically, despite the
     algorithm listed as 'hmc'.
 
     See issue #805"""
-    num_dunder_cols = sum(
-        col.endswith(b"__") for col in header_line.split(b",")
-    )
+    num_dunder_cols = sum(col.endswith("__") for col in header.split(","))
 
-    return (num_dunder_cols < 7) and b"lp__" in header_line
+    return (num_dunder_cols < 7) and "lp__" in header
 
 
 def count_warmup_and_sampling_draws(
@@ -300,7 +282,9 @@ def count_warmup_and_sampling_draws(
                 if line.startswith(b"lp__"):
                     header_line_idx = i
                     if not is_fixed_param:
-                        is_fixed_param = is_sneaky_fixed_param(line)
+                        is_fixed_param = is_sneaky_fixed_param(
+                            line.strip().decode()
+                        )
                 continue
 
             if not is_fixed_param and adaptation_block_idx is None:
@@ -339,7 +323,9 @@ def count_warmup_and_sampling_draws(
         return determine_draw_counts(stan_csv)
 
 
-def raise_on_inconsistent_draws_shape(draw_lines: List[bytes]) -> None:
+def raise_on_inconsistent_draws_shape(
+    header: str, draw_lines: List[bytes]
+) -> None:
     """Throws a ValueError if any draws are found to have an inconsistent
     shape, i.e. too many/few columns compared to the header"""
 
@@ -350,9 +336,8 @@ def raise_on_inconsistent_draws_shape(draw_lines: List[bytes]) -> None:
     if not draw_lines:
         return
 
-    header, *draws = draw_lines
-    num_cols = column_count(header)
-    for i, draw in enumerate(draws, start=1):
+    num_cols = column_count(header.encode())
+    for i, draw in enumerate(draw_lines, start=1):
         if (draw_size := column_count(draw)) != num_cols:
             raise ValueError(
                 f"line {i}: bad draw, expecting {num_cols} items,"
@@ -488,18 +473,22 @@ def parse_sampler_metadata_from_csv(
 ) -> Dict[str, Union[int, float, str, Tuple[str, ...], Dict[str, float]]]:
     """Parses sampling metadata from a given Stan CSV path for a sample run"""
     try:
-        comments, draws = parse_stan_csv_comments_and_draws(path)
-        raise_on_inconsistent_draws_shape(draws)
-        config = extract_config_and_header_info(comments, draws)
+        comments, header, draws = parse_comments_header_and_draws(path)
+        if header is None:
+            raise ValueError("No header line found in stan csv")
+        raise_on_inconsistent_draws_shape(header, draws)
+        config = construct_config_header_dict(comments, header)
         num_warmup, num_sampling = count_warmup_and_sampling_draws(path)
         timings = parse_timing_lines(comments)
-        if (config['algorithm'] != 'fixed_param') and not is_sneaky_fixed_param(
-            draws[0]
+        if (
+            (config['algorithm'] != 'fixed_param')
+            and header
+            and not is_sneaky_fixed_param(header)
         ):
             raise_on_invalid_adaptation_block(comments)
             max_depth: int = config["max_depth"]  # type: ignore
             max_tree_hits, divs = extract_max_treedepth_and_divergence_counts(
-                draws, max_depth, num_warmup
+                header, draws, max_depth, num_warmup
             )
         else:
             max_tree_hits, divs = 0, 0

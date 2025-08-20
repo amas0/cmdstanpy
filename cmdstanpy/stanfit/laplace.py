@@ -86,7 +86,7 @@ class CmdStanLaplace:
         if self._draws.shape != (0,):
             return
 
-        _, draws = stancsv.parse_stan_csv_comments_and_draws(
+        *_, draws = stancsv.parse_comments_header_and_draws(
             self._runset.csv_files[0]
         )
         self._draws = stancsv.csv_bytes_list_to_numpy(draws)

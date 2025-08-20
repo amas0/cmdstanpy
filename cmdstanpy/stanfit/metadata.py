@@ -35,8 +35,8 @@ class InferenceMetadata:
     def from_csv(
         cls, stan_csv: Union[str, os.PathLike, Iterator[bytes]]
     ) -> 'InferenceMetadata':
-        comments, draws = stancsv.parse_stan_csv_comments_and_draws(stan_csv)
-        return cls(stancsv.extract_config_and_header_info(comments, draws))
+        comments, header, _ = stancsv.parse_comments_header_and_draws(stan_csv)
+        return cls(stancsv.construct_config_header_dict(comments, header))
 
     def __repr__(self) -> str:
         return 'Metadata:\n{}\n'.format(self._cmdstan_config)

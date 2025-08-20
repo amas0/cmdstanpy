@@ -16,7 +16,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
 
 
-def test_csv_bytes_to_numpy_no_header():
+def test_csv_bytes_to_numpy():
     lines = [
         b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
         b"-6.81411,0.983499,0.787025,1,1,0,6.8147,0.20649\n",
@@ -32,12 +32,12 @@ def test_csv_bytes_to_numpy_no_header():
         ],
         dtype=np.float64,
     )
-    arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
+    arr_out = stancsv.csv_bytes_list_to_numpy(lines)
     assert np.array_equal(arr_out, expected)
     assert arr_out[0].dtype == np.float64
 
 
-def test_csv_bytes_to_numpy_no_header_no_polars():
+def test_csv_bytes_to_numpy_no_polars():
     lines = [
         b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
         b"-6.81411,0.983499,0.787025,1,1,0,6.8147,0.20649\n",
@@ -54,33 +54,9 @@ def test_csv_bytes_to_numpy_no_header_no_polars():
         dtype=np.float64,
     )
     with without_import("polars", cmdstanpy.utils.stancsv):
-        arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
+        arr_out = stancsv.csv_bytes_list_to_numpy(lines)
         assert np.array_equal(arr_out, expected)
         assert arr_out[0].dtype == np.float64
-
-
-def test_csv_bytes_to_numpy_with_header():
-    lines = [
-        (
-            b"lp__,accept_stat__,stepsize__,treedepth__,"
-            b"n_leapfrog__,divergent__,energy__,theta\n"
-        ),
-        b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
-        b"-6.81411,0.983499,0.787025,1,1,0,6.8147,0.20649\n",
-        b"-6.85511,0.994945,0.787025,2,3,0,6.85536,0.310589\n",
-        b"-6.85511,0.812189,0.787025,1,1,0,7.16517,0.310589\n",
-    ]
-    expected = np.array(
-        [
-            [-6.76206, 1, 0.787025, 1, 1, 0, 6.81411, 0.229458],
-            [-6.81411, 0.983499, 0.787025, 1, 1, 0, 6.8147, 0.20649],
-            [-6.85511, 0.994945, 0.787025, 2, 3, 0, 6.85536, 0.310589],
-            [-6.85511, 0.812189, 0.787025, 1, 1, 0, 7.16517, 0.310589],
-        ],
-        dtype=np.float64,
-    )
-    arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=True)
-    assert np.array_equal(arr_out, expected)
 
 
 def test_csv_bytes_to_numpy_single_element():
@@ -93,7 +69,7 @@ def test_csv_bytes_to_numpy_single_element():
         ],
         dtype=np.float64,
     )
-    arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
+    arr_out = stancsv.csv_bytes_list_to_numpy(lines)
     assert np.array_equal(arr_out, expected)
 
 
@@ -108,72 +84,27 @@ def test_csv_bytes_to_numpy_single_element_no_polars():
         dtype=np.float64,
     )
     with without_import("polars", cmdstanpy.utils.stancsv):
-        arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=False)
-        assert np.array_equal(arr_out, expected)
-
-
-def test_csv_bytes_to_numpy_with_header_no_polars():
-    lines = [
-        (
-            b"lp__,accept_stat__,stepsize__,treedepth__,"
-            b"n_leapfrog__,divergent__,energy__,theta\n"
-        ),
-        b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
-        b"-6.81411,0.983499,0.787025,1,1,0,6.8147,0.20649\n",
-        b"-6.85511,0.994945,0.787025,2,3,0,6.85536,0.310589\n",
-        b"-6.85511,0.812189,0.787025,1,1,0,7.16517,0.310589\n",
-    ]
-    expected = np.array(
-        [
-            [-6.76206, 1, 0.787025, 1, 1, 0, 6.81411, 0.229458],
-            [-6.81411, 0.983499, 0.787025, 1, 1, 0, 6.8147, 0.20649],
-            [-6.85511, 0.994945, 0.787025, 2, 3, 0, 6.85536, 0.310589],
-            [-6.85511, 0.812189, 0.787025, 1, 1, 0, 7.16517, 0.310589],
-        ],
-        dtype=np.float64,
-    )
-    with without_import("polars", cmdstanpy.utils.stancsv):
-        arr_out = stancsv.csv_bytes_list_to_numpy(lines, includes_header=True)
+        arr_out = stancsv.csv_bytes_list_to_numpy(lines)
         assert np.array_equal(arr_out, expected)
 
 
 def test_csv_bytes_empty():
     lines = []
     arr = stancsv.csv_bytes_list_to_numpy(lines)
-    assert np.array_equal(arr, np.empty((0,)))
+    assert np.array_equal(arr, np.empty((0, 0)))
 
 
-def test_csv_bytes_to_numpy_header_no_draws():
-    lines = [
-        (
-            b"lp__,accept_stat__,stepsize__,treedepth__,"
-            b"n_leapfrog__,divergent__,energy__,theta\n"
-        ),
-    ]
-    arr = stancsv.csv_bytes_list_to_numpy(lines)
-    assert arr.shape == (0, 8)
-
-
-def test_csv_bytes_to_numpy_header_no_draws_no_polars():
-    lines = [
-        (
-            b"lp__,accept_stat__,stepsize__,treedepth__,"
-            b"n_leapfrog__,divergent__,energy__,theta\n"
-        ),
-    ]
-    with without_import("polars", cmdstanpy.utils.stancsv):
-        arr = stancsv.csv_bytes_list_to_numpy(lines)
-        assert arr.shape == (0, 8)
-
-
-def test_parse_comments_and_draws():
-    lines: List[bytes] = [b"# 1\n", b"2\n", b"3\n", b"# 4\n"]
-    comment_lines, draws_lines = stancsv.parse_stan_csv_comments_and_draws(
-        iter(lines)
-    )
+def test_parse_comments_header_and_draws():
+    lines: List[bytes] = [b"# 1\n", b"a\n", b"3\n", b"# 4\n"]
+    (
+        comment_lines,
+        header,
+        draws_lines,
+    ) = stancsv.parse_comments_header_and_draws(iter(lines))
 
     assert comment_lines == [b"# 1\n", b"# 4\n"]
-    assert draws_lines == [b"2\n", b"3\n"]
+    assert header == "a"
+    assert draws_lines == [b"3\n"]
 
 
 def test_parsing_adaptation_lines():
@@ -252,13 +183,9 @@ def test_csv_polars_and_numpy_equiv():
         b"-6.85511,0.994945,0.787025,2,3,0,6.85536,0.310589\n",
         b"-6.85511,0.812189,0.787025,1,1,0,7.16517,0.310589\n",
     ]
-    arr_out_polars = stancsv.csv_bytes_list_to_numpy(
-        lines, includes_header=False
-    )
+    arr_out_polars = stancsv.csv_bytes_list_to_numpy(lines)
     with without_import("polars", cmdstanpy.utils.stancsv):
-        arr_out_numpy = stancsv.csv_bytes_list_to_numpy(
-            lines, includes_header=False
-        )
+        arr_out_numpy = stancsv.csv_bytes_list_to_numpy(lines)
     assert np.array_equal(arr_out_polars, arr_out_numpy)
 
 
@@ -266,13 +193,9 @@ def test_csv_polars_and_numpy_equiv_one_line():
     lines = [
         b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
     ]
-    arr_out_polars = stancsv.csv_bytes_list_to_numpy(
-        lines, includes_header=False
-    )
+    arr_out_polars = stancsv.csv_bytes_list_to_numpy(lines)
     with without_import("polars", cmdstanpy.utils.stancsv):
-        arr_out_numpy = stancsv.csv_bytes_list_to_numpy(
-            lines, includes_header=False
-        )
+        arr_out_numpy = stancsv.csv_bytes_list_to_numpy(lines)
     assert np.array_equal(arr_out_polars, arr_out_numpy)
 
 
@@ -280,40 +203,42 @@ def test_csv_polars_and_numpy_equiv_one_element():
     lines = [
         b"-6.76206\n",
     ]
-    arr_out_polars = stancsv.csv_bytes_list_to_numpy(
-        lines, includes_header=False
-    )
+    arr_out_polars = stancsv.csv_bytes_list_to_numpy(lines)
     with without_import("polars", cmdstanpy.utils.stancsv):
-        arr_out_numpy = stancsv.csv_bytes_list_to_numpy(
-            lines, includes_header=False
-        )
+        arr_out_numpy = stancsv.csv_bytes_list_to_numpy(lines)
     assert np.array_equal(arr_out_polars, arr_out_numpy)
 
 
 def test_parse_stan_csv_from_file():
     csv_path = os.path.join(DATAFILES_PATH, "bernoulli_output_1.csv")
 
-    comment_lines, draws_lines = stancsv.parse_stan_csv_comments_and_draws(
-        csv_path
-    )
+    (
+        comment_lines,
+        header,
+        draws_lines,
+    ) = stancsv.parse_comments_header_and_draws(csv_path)
     assert all(ln.startswith(b"#") for ln in comment_lines)
+    assert header is not None and not header.startswith("#")
     assert all(not ln.startswith(b"#") for ln in draws_lines)
 
     (
         comment_lines_path,
+        header_path,
         draws_lines_path,
-    ) = stancsv.parse_stan_csv_comments_and_draws(Path(csv_path))
-    assert all(ln.startswith(b"#") for ln in comment_lines)
-    assert all(not ln.startswith(b"#") for ln in draws_lines)
+    ) = stancsv.parse_comments_header_and_draws(Path(csv_path))
+    assert all(ln.startswith(b"#") for ln in comment_lines_path)
+    assert header_path is not None and not header.startswith("#")
+    assert all(not ln.startswith(b"#") for ln in draws_lines_path)
 
     assert comment_lines == comment_lines_path
+    assert header == header_path
     assert draws_lines == draws_lines_path
 
 
 def test_config_parsing():
     csv_path = os.path.join(DATAFILES_PATH, "bernoulli_output_1.csv")
 
-    comment_lines, _ = stancsv.parse_stan_csv_comments_and_draws(csv_path)
+    comment_lines, *_ = stancsv.parse_comments_header_and_draws(csv_path)
     config = stancsv.parse_config(comment_lines)
 
     expected = {
@@ -362,16 +287,6 @@ def test_config_parsing_data_transforms():
     ]
     expected = {"bool_t": 1, "bool_f": 0, "float": 1.5, "int": 1}
     assert stancsv.parse_config(comments) == expected
-
-
-def test_extract_header_line():
-    assert stancsv.extract_header_line([b"a,b\n", b"1,2\n"]) == "a,b"
-    with pytest.raises(ValueError):
-        assert stancsv.extract_header_line([])
-    with pytest.raises(ValueError):
-        assert stancsv.extract_header_line([b""])
-    with pytest.raises(ValueError):
-        assert stancsv.extract_header_line([b"1,2\n"])
 
 
 def test_column_filter_basic():
@@ -424,8 +339,8 @@ def test_parse_header():
 
 def test_extract_config_and_header_info():
     comments = [b"# stan_version_major = 2\n"]
-    draws = [b"lp__,theta.1\n"]
-    out = stancsv.extract_config_and_header_info(comments, draws)
+    header = "lp__,theta.1"
+    out = stancsv.construct_config_header_dict(comments, header)
     assert out["stan_version_major"] == 2
     assert out["raw_header"] == "lp__,theta.1"
     assert out["column_names"] == ("lp__", "theta[1]")
@@ -433,7 +348,7 @@ def test_extract_config_and_header_info():
 
 def test_parse_variational_eta():
     csv_path = os.path.join(DATAFILES_PATH, "variational", "eta_big_output.csv")
-    comments, _ = stancsv.parse_stan_csv_comments_and_draws(csv_path)
+    comments, *_ = stancsv.parse_comments_header_and_draws(csv_path)
     eta = stancsv.parse_variational_eta(comments)
     assert eta == 100.0
 
@@ -453,11 +368,11 @@ def test_parse_variational_eta_no_block():
 
 
 def test_max_treedepth_and_divergence_counts():
+    header = (
+        "lp__,accept_stat__,stepsize__,treedepth__,"
+        "n_leapfrog__,divergent__,energy__,theta\n"
+    )
     draws = [
-        (
-            b"lp__,accept_stat__,stepsize__,treedepth__,"
-            b"n_leapfrog__,divergent__,energy__,theta\n"
-        ),
         b"-4.78686,0.986298,1.09169,1,3,0,5.29492,0.550024\n",
         b"-5.07942,0.676947,1.09169,10,3,0,6.44279,0.709113\n",
         b"-5.04922,1,1.09169,1,1,0,5.14176,0.702445\n",
@@ -467,16 +382,18 @@ def test_max_treedepth_and_divergence_counts():
         b"-5.13605,0.937837,1.09169,1,3,0,5.95811,0.720607\n",
         b"-4.80646,1,1.09169,2,3,0,5.0962,0.528418\n",
     ]
-    out = stancsv.extract_max_treedepth_and_divergence_counts(draws, 10, 0)
+    out = stancsv.extract_max_treedepth_and_divergence_counts(
+        header, draws, 10, 0
+    )
     assert out == (2, 1)
 
 
 def test_max_treedepth_and_divergence_counts_warmup_draws():
+    header = (
+        "lp__,accept_stat__,stepsize__,treedepth__,"
+        "n_leapfrog__,divergent__,energy__,theta\n"
+    )
     draws = [
-        (
-            b"lp__,accept_stat__,stepsize__,treedepth__,"
-            b"n_leapfrog__,divergent__,energy__,theta\n"
-        ),
         b"-4.78686,0.986298,1.09169,1,3,0,5.29492,0.550024\n",
         b"-5.07942,0.676947,1.09169,10,3,0,6.44279,0.709113\n",
         b"-5.04922,1,1.09169,1,1,0,5.14176,0.702445\n",
@@ -486,36 +403,39 @@ def test_max_treedepth_and_divergence_counts_warmup_draws():
         b"-5.13605,0.937837,1.09169,1,3,0,5.95811,0.720607\n",
         b"-4.80646,1,1.09169,2,3,0,5.0962,0.528418\n",
     ]
-    out = stancsv.extract_max_treedepth_and_divergence_counts(draws, 10, 2)
+    out = stancsv.extract_max_treedepth_and_divergence_counts(
+        header, draws, 10, 2
+    )
     assert out == (1, 1)
 
 
 def test_max_treedepth_and_divergence_counts_no_draws():
-    draws = [
-        (
-            b"lp__,accept_stat__,stepsize__,treedepth__,"
-            b"n_leapfrog__,divergent__,energy__,theta\n"
-        ),
-    ]
-    out = stancsv.extract_max_treedepth_and_divergence_counts(draws, 10, 0)
+    header = (
+        "lp__,accept_stat__,stepsize__,treedepth__,"
+        "n_leapfrog__,divergent__,energy__,theta\n"
+    )
+    draws = []
+    out = stancsv.extract_max_treedepth_and_divergence_counts(
+        header, draws, 10, 0
+    )
     assert out == (0, 0)
 
 
 def test_max_treedepth_and_divergence_invalid():
+    header = "lp__,accept_stat__,stepsize__,n_leapfrog__,energy__,theta\n"
     draws = [
-        b"lp__,accept_stat__,stepsize__,n_leapfrog__,energy__,theta\n",
         b"-4.78686,0.986298,1.09169,3,5.29492,0.550024\n",
     ]
     assert stancsv.extract_max_treedepth_and_divergence_counts(
-        draws, 10, 0
+        header, draws, 10, 0
     ) == (0, 0)
 
 
 def test_sneaky_fixed_param_check():
-    sneaky_header = b"lp__,accept_stat__,N,y_sim.1"
+    sneaky_header = "lp__,accept_stat__,N,y_sim.1"
     normal_header = (
-        b"lp__,accept_stat__,stepsize__,treedepth__,"
-        b"n_leapfrog__,divergent__,energy__,theta"
+        "lp__,accept_stat__,stepsize__,treedepth__,"
+        "n_leapfrog__,divergent__,energy__,theta"
     )
 
     assert stancsv.is_sneaky_fixed_param(sneaky_header)
@@ -587,19 +507,20 @@ def test_warmup_sampling_draw_counts_invalid():
 
 
 def test_inconsistent_draws_shape():
-    draws = [b"a,b\n", b"0,1,2\n"]
+    header = "a,b"
+    draws = [b"0,1,2\n"]
     with pytest.raises(ValueError):
-        stancsv.raise_on_inconsistent_draws_shape(draws)
+        stancsv.raise_on_inconsistent_draws_shape(header, draws)
 
 
 def test_inconsistent_draws_shape_empty():
     draws = []
-    stancsv.raise_on_inconsistent_draws_shape(draws)
+    stancsv.raise_on_inconsistent_draws_shape("", draws)
 
 
 def test_invalid_adaptation_block_good():
     csv_path = os.path.join(DATAFILES_PATH, "bernoulli_output_1.csv")
-    comments, _ = stancsv.parse_stan_csv_comments_and_draws(csv_path)
+    comments, *_ = stancsv.parse_comments_header_and_draws(csv_path)
     stancsv.raise_on_invalid_adaptation_block(comments)
 
 

@@ -29,12 +29,14 @@ class CmdStanVB:
             )
         self.runset = runset
 
-        comment_lines, draw_lines = stancsv.parse_stan_csv_comments_and_draws(
-            self.runset.csv_files[0]
-        )
+        (
+            comment_lines,
+            header,
+            draw_lines,
+        ) = stancsv.parse_comments_header_and_draws(self.runset.csv_files[0])
 
         self._metadata = InferenceMetadata(
-            stancsv.extract_config_and_header_info(comment_lines, draw_lines)
+            stancsv.construct_config_header_dict(comment_lines, header)
         )
         self._eta = stancsv.parse_variational_eta(comment_lines)
 

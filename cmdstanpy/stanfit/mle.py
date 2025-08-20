@@ -35,11 +35,13 @@ class CmdStanMLE:
         )  # make the typechecker happy
         self._save_iterations: bool = optimize_args.save_iterations
 
-        comment_lines, draws_lines = stancsv.parse_stan_csv_comments_and_draws(
-            self.runset.csv_files[0]
-        )
+        (
+            comment_lines,
+            header,
+            draws_lines,
+        ) = stancsv.parse_comments_header_and_draws(self.runset.csv_files[0])
         self._metadata = InferenceMetadata(
-            stancsv.extract_config_and_header_info(comment_lines, draws_lines)
+            stancsv.construct_config_header_dict(comment_lines, header)
         )
         all_draws = stancsv.csv_bytes_list_to_numpy(draws_lines)
         self._mle: np.ndarray = all_draws[-1]

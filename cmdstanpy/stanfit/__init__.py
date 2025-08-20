@@ -104,7 +104,7 @@ def from_csv(
             )
 
     try:
-        comments, _ = stancsv.parse_stan_csv_comments_and_draws(csvfiles[0])
+        comments, *_ = stancsv.parse_comments_header_and_draws(csvfiles[0])
         config_dict = stancsv.parse_config(comments)
     except (IOError, OSError, PermissionError) as e:
         raise ValueError('Cannot read CSV file: {}'.format(csvfiles[0])) from e
