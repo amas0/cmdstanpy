@@ -24,8 +24,8 @@ except ImportError:
     XARRAY_INSTALLED = False
 
 from cmdstanpy.cmdstan_args import Method
+from cmdstanpy.utils import stancsv
 from cmdstanpy.utils.data_munging import build_xarray_data
-from cmdstanpy.utils.stancsv import scan_generic_csv
 
 from .metadata import InferenceMetadata
 from .mle import CmdStanMLE
@@ -46,11 +46,8 @@ class CmdStanLaplace:
             )
         self._runset = runset
         self._mode = mode
-
         self._draws: np.ndarray = np.array(())
-
-        config = scan_generic_csv(runset.csv_files[0])
-        self._metadata = InferenceMetadata(config)
+        self._metadata = InferenceMetadata.from_csv(self._runset.csv_files[0])
 
     def create_inits(
         self, seed: Optional[int] = None, chains: int = 4
@@ -89,16 +86,16 @@ class CmdStanLaplace:
         if self._draws.shape != (0,):
             return
 
-        with open(self._runset.csv_files[0], 'r') as fd:
-            while (fd.readline()).startswith("#"):
-                pass
-            self._draws = np.loadtxt(
-                fd,
-                dtype=float,
-                ndmin=2,
-                delimiter=',',
-                comments="#",
+        csv_file = self._runset.csv_files[0]
+        try:
+            *_, draws = stancsv.parse_comments_header_and_draws(
+                self._runset.csv_files[0]
             )
+            self._draws = stancsv.csv_bytes_list_to_numpy(draws)
+        except Exception as exc:
+            raise ValueError(
+                f"An error occurred when parsing Stan csv {csv_file}"
+            ) from exc
 
     def stan_variable(self, var: str) -> np.ndarray:
         """
@@ -318,7 +315,7 @@ class CmdStanLaplace:
         and quantities of interest. Corresponds to Stan CSV file header row,
         with names munged to array notation, e.g. `beta[1]` not `beta.1`.
         """
-        return self._metadata.cmdstan_config['column_names']  # type: ignore
+        return self._metadata.column_names
 
     def save_csvfiles(self, dir: Optional[str] = None) -> None:
         """
