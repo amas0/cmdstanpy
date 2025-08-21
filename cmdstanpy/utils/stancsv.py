@@ -251,6 +251,7 @@ def extract_max_treedepth_and_divergence_counts(
     return num_max_treedepth, num_divergences
 
 
+# TODO: Remove after CmdStan 2.37 is the minimum version
 def is_sneaky_fixed_param(header: str) -> bool:
     """Returns True if the header line indicates that the sampler
     ran with the fixed_param sampler automatically, despite the
