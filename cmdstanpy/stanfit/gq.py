@@ -635,6 +635,7 @@ class CmdStanGQ(Generic[Fit]):
             except Exception as exc:
                 raise ValueError(
                     f"An error occurred when parsing Stan csv {csv_file}"
+                    f" for chain {chain}"
                 ) from exc
         self._draws = gq_sample
 
