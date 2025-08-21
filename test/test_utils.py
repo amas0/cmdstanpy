@@ -294,7 +294,6 @@ def test_check_sampler_csv_1() -> None:
     csv_good = os.path.join(DATAFILES_PATH, 'bernoulli_output_1.csv')
     dict = check_sampler_csv(
         path=csv_good,
-        is_fixed_param=False,
         iter_warmup=100,
         iter_sampling=10,
         thin=1,
@@ -384,7 +383,6 @@ def test_check_sampler_csv_thin() -> None:
     csv_file = bern_fit.runset.csv_files[0]
     dict = check_sampler_csv(
         path=csv_file,
-        is_fixed_param=False,
         iter_sampling=490,
         iter_warmup=490,
         thin=7,
@@ -399,7 +397,6 @@ def test_check_sampler_csv_thin() -> None:
     with raises_nested(ValueError, 'config error'):
         check_sampler_csv(
             path=csv_file,
-            is_fixed_param=False,
             iter_sampling=490,
             iter_warmup=490,
             thin=9,
@@ -407,7 +404,6 @@ def test_check_sampler_csv_thin() -> None:
     with raises_nested(ValueError, 'expected 490 draws, found 70'):
         check_sampler_csv(
             path=csv_file,
-            is_fixed_param=False,
             iter_sampling=490,
             iter_warmup=490,
         )
@@ -717,57 +713,3 @@ def test_munge_varnames() -> None:
 
     var = 'y.2.3:1.2:5:6'
     assert stancsv.munge_varname(var) == 'y[2,3].1[2].5.6'
-
-
-def test_scan_time_normal() -> None:
-    csv_content = (
-        "# Elapsed Time: 0.005 seconds (Warm-up)\n"
-        "#                0 seconds (Sampling)\n"
-        "#                0.005 seconds (Total)\n"
-    )
-    fd = io.StringIO(csv_content)
-    config_dict = {}
-    start_line = 0
-    final_line = stancsv.scan_time(fd, config_dict, start_line)
-    assert final_line == 3
-    expected = {'warmup': 0.005, 'sampling': 0.0, 'total': 0.005}
-    assert config_dict.get('time') == expected
-
-
-def test_scan_time_no_timing() -> None:
-    csv_content = (
-        "# merrily we roll along\n"
-        "# roll along\n"
-        "# very merrily we roll along\n"
-    )
-    fd = io.StringIO(csv_content)
-    config_dict = {}
-    start_line = 0
-    with pytest.raises(ValueError, match="Invalid time"):
-        stancsv.scan_time(fd, config_dict, start_line)
-
-
-def test_scan_time_invalid_value() -> None:
-    csv_content = (
-        "# Elapsed Time: abc seconds (Warm-up)\n"
-        "#                0.200 seconds (Sampling)\n"
-        "#                0.300 seconds (Total)\n"
-    )
-    fd = io.StringIO(csv_content)
-    config_dict = {}
-    start_line = 0
-    with pytest.raises(ValueError, match="Invalid time"):
-        stancsv.scan_time(fd, config_dict, start_line)
-
-
-def test_scan_time_invalid_string() -> None:
-    csv_content = (
-        "# Elapsed Time: 0.22 seconds (foo)\n"
-        "#                0.200 seconds (Sampling)\n"
-        "#                0.300 seconds (Total)\n"
-    )
-    fd = io.StringIO(csv_content)
-    config_dict = {}
-    start_line = 0
-    with pytest.raises(ValueError, match="Invalid time"):
-        stancsv.scan_time(fd, config_dict, start_line)

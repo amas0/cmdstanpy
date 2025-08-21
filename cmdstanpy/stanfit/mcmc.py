@@ -218,7 +218,7 @@ class CmdStanMCMC:
         and quantities of interest. Corresponds to Stan CSV file header row,
         with names munged to array notation, e.g. `beta[1]` not `beta.1`.
         """
-        return self._metadata.cmdstan_config['column_names']  # type: ignore
+        return self._metadata.column_names
 
     @property
     def metric_type(self) -> Optional[str]:
@@ -353,7 +353,6 @@ class CmdStanMCMC:
             if i == 0:
                 dzero = check_sampler_csv(
                     path=self.runset.csv_files[i],
-                    is_fixed_param=self._is_fixed_param,
                     iter_sampling=self._iter_sampling,
                     iter_warmup=self._iter_warmup,
                     save_warmup=self._save_warmup,
@@ -366,7 +365,6 @@ class CmdStanMCMC:
             else:
                 drest = check_sampler_csv(
                     path=self.runset.csv_files[i],
-                    is_fixed_param=self._is_fixed_param,
                     iter_sampling=self._iter_sampling,
                     iter_warmup=self._iter_warmup,
                     save_warmup=self._save_warmup,
@@ -452,14 +450,20 @@ class CmdStanMCMC:
         mass_matrix_per_chain = []
         for chain in range(self.chains):
             try:
-                comments, draws = stancsv.parse_stan_csv_comments_and_draws(
+                (
+                    comments,
+                    header,
+                    draws,
+                ) = stancsv.parse_comments_header_and_draws(
                     self.runset.csv_files[chain]
                 )
 
-                self._draws[:, chain, :] = stancsv.csv_bytes_list_to_numpy(
-                    draws
-                )
+                draws_np = stancsv.csv_bytes_list_to_numpy(draws)
+                if draws_np.shape[0] == 0:
+                    n_cols = header.count(",") + 1  # type: ignore
+                    draws_np = np.empty((0, n_cols))
 
+                self._draws[:, chain, :] = draws_np
                 if not self._is_fixed_param:
                     (
                         self._step_size[chain],
