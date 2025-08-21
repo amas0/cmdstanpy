@@ -626,10 +626,16 @@ class CmdStanGQ(Generic[Fit]):
             order='F',
         )
         for chain in range(self.chains):
-            *_, draws = stancsv.parse_comments_header_and_draws(
-                self.runset.csv_files[chain]
-            )
-            gq_sample[:, chain, :] = stancsv.csv_bytes_list_to_numpy(draws)
+            csv_file = self.runset.csv_files[chain]
+            try:
+                *_, draws = stancsv.parse_comments_header_and_draws(
+                    self.runset.csv_files[chain]
+                )
+                gq_sample[:, chain, :] = stancsv.csv_bytes_list_to_numpy(draws)
+            except Exception as exc:
+                raise ValueError(
+                    f"An error occurred when parsing Stan csv {csv_file}"
+                ) from exc
         self._draws = gq_sample
 
     def _draws_start(self, inc_warmup: bool) -> Tuple[int, int]:

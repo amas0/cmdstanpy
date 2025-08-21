@@ -35,8 +35,15 @@ class InferenceMetadata:
     def from_csv(
         cls, stan_csv: Union[str, os.PathLike, Iterator[bytes]]
     ) -> 'InferenceMetadata':
-        comments, header, _ = stancsv.parse_comments_header_and_draws(stan_csv)
-        return cls(stancsv.construct_config_header_dict(comments, header))
+        try:
+            comments, header, _ = stancsv.parse_comments_header_and_draws(
+                stan_csv
+            )
+            return cls(stancsv.construct_config_header_dict(comments, header))
+        except Exception as exc:
+            raise ValueError(
+                f"An error occurred when parsing Stan csv {stan_csv}"
+            ) from exc
 
     def __repr__(self) -> str:
         return 'Metadata:\n{}\n'.format(self._cmdstan_config)

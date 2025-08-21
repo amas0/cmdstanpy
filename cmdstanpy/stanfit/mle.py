@@ -35,15 +35,24 @@ class CmdStanMLE:
         )  # make the typechecker happy
         self._save_iterations: bool = optimize_args.save_iterations
 
-        (
-            comment_lines,
-            header,
-            draws_lines,
-        ) = stancsv.parse_comments_header_and_draws(self.runset.csv_files[0])
-        self._metadata = InferenceMetadata(
-            stancsv.construct_config_header_dict(comment_lines, header)
-        )
-        all_draws = stancsv.csv_bytes_list_to_numpy(draws_lines)
+        csv_file = self.runset.csv_files[0]
+        try:
+            (
+                comment_lines,
+                header,
+                draws_lines,
+            ) = stancsv.parse_comments_header_and_draws(
+                self.runset.csv_files[0]
+            )
+            self._metadata = InferenceMetadata(
+                stancsv.construct_config_header_dict(comment_lines, header)
+            )
+            all_draws = stancsv.csv_bytes_list_to_numpy(draws_lines)
+
+        except Exception as exc:
+            raise ValueError(
+                f"An error occurred when parsing Stan csv {csv_file}"
+            ) from exc
         self._mle: np.ndarray = all_draws[-1]
         if self._save_iterations:
             self._all_iters: np.ndarray = all_draws

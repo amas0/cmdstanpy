@@ -78,10 +78,16 @@ class CmdStanPathfinder:
         if self._draws.shape != (0,):
             return
 
-        *_, draws = stancsv.parse_comments_header_and_draws(
-            self._runset.csv_files[0]
-        )
-        self._draws = stancsv.csv_bytes_list_to_numpy(draws)
+        csv_file = self._runset.csv_files[0]
+        try:
+            *_, draws = stancsv.parse_comments_header_and_draws(
+                self._runset.csv_files[0]
+            )
+            self._draws = stancsv.csv_bytes_list_to_numpy(draws)
+        except Exception as exc:
+            raise ValueError(
+                f"An error occurred when parsing Stan csv {csv_file}"
+            ) from exc
 
     def stan_variable(self, var: str) -> np.ndarray:
         """

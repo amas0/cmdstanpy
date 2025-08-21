@@ -29,18 +29,27 @@ class CmdStanVB:
             )
         self.runset = runset
 
-        (
-            comment_lines,
-            header,
-            draw_lines,
-        ) = stancsv.parse_comments_header_and_draws(self.runset.csv_files[0])
+        csv_file = self.runset.csv_files[0]
+        try:
+            (
+                comment_lines,
+                header,
+                draw_lines,
+            ) = stancsv.parse_comments_header_and_draws(
+                self.runset.csv_files[0]
+            )
 
-        self._metadata = InferenceMetadata(
-            stancsv.construct_config_header_dict(comment_lines, header)
-        )
-        self._eta = stancsv.parse_variational_eta(comment_lines)
+            self._metadata = InferenceMetadata(
+                stancsv.construct_config_header_dict(comment_lines, header)
+            )
+            self._eta = stancsv.parse_variational_eta(comment_lines)
 
-        draws_np = stancsv.csv_bytes_list_to_numpy(draw_lines)
+            draws_np = stancsv.csv_bytes_list_to_numpy(draw_lines)
+
+        except Exception as exc:
+            raise ValueError(
+                f"An error occurred when parsing Stan csv {csv_file}"
+            ) from exc
         self._variational_mean: np.ndarray = draws_np[0]
         self._variational_sample: np.ndarray = draws_np[1:]
 
