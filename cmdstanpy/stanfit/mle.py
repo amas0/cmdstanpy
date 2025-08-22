@@ -1,7 +1,7 @@
 """Container for the result of running optimization"""
 
 from collections import OrderedDict
-from typing import Dict, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -30,9 +30,7 @@ class CmdStanMLE:
         # info from runset to be exposed
         self.converged = runset._check_retcodes()
         optimize_args = self.runset._args.method_args
-        assert isinstance(
-            optimize_args, OptimizeArgs
-        )  # make the typechecker happy
+        assert isinstance(optimize_args, OptimizeArgs)  # make the typechecker happy
         self._save_iterations: bool = optimize_args.save_iterations
 
         csv_file = self.runset.csv_files[0]
@@ -41,9 +39,7 @@ class CmdStanMLE:
                 comment_lines,
                 header,
                 draws_lines,
-            ) = stancsv.parse_comments_header_and_draws(
-                self.runset.csv_files[0]
-            )
+            ) = stancsv.parse_comments_header_and_draws(self.runset.csv_files[0])
             self._metadata = InferenceMetadata(
                 stancsv.construct_config_header_dict(comment_lines, header)
             )
@@ -59,7 +55,7 @@ class CmdStanMLE:
 
     def create_inits(
         self, seed: Optional[int] = None, chains: int = 4
-    ) -> Dict[str, np.ndarray]:
+    ) -> dict[str, np.ndarray]:
         """
         Create initial values for the parameters of the model
         from the MLE.
@@ -77,9 +73,7 @@ class CmdStanMLE:
         """
         # pylint: disable=unused-argument
 
-        return {
-            name: np.array(val) for name, val in self.stan_variables().items()
-        }
+        return {name: np.array(val) for name, val in self.stan_variables().items()}
 
     def __repr__(self) -> str:
         repr = 'CmdStanMLE: model={}{}'.format(
@@ -106,7 +100,7 @@ class CmdStanMLE:
             raise AttributeError(*e.args)
 
     @property
-    def column_names(self) -> Tuple[str, ...]:
+    def column_names(self) -> tuple[str, ...]:
         """
         Names of estimated quantities, includes joint log probability,
         and all parameters, transformed parameters, and generated quantities.
@@ -130,9 +124,7 @@ class CmdStanMLE:
         as well as all Stan program variables.
         """
         if not self.converged:
-            get_logger().warning(
-                'Invalid estimate, optimization failed to converge.'
-            )
+            get_logger().warning('Invalid estimate, optimization failed to converge.')
         return self._mle
 
     @property
@@ -150,9 +142,7 @@ class CmdStanMLE:
             )
             return None
         if not self.converged:
-            get_logger().warning(
-                'Invalid estimate, optimization failed to converge.'
-            )
+            get_logger().warning('Invalid estimate, optimization failed to converge.')
         return self._all_iters
 
     @property
@@ -163,9 +153,7 @@ class CmdStanMLE:
         as well as all Stan program variables.
         """
         if not self.runset._check_retcodes():
-            get_logger().warning(
-                'Invalid estimate, optimization failed to converge.'
-            )
+            get_logger().warning('Invalid estimate, optimization failed to converge.')
         return pd.DataFrame([self._mle], columns=self.column_names)
 
     @property
@@ -183,21 +171,17 @@ class CmdStanMLE:
             )
             return None
         if not self.converged:
-            get_logger().warning(
-                'Invalid estimate, optimization failed to converge.'
-            )
+            get_logger().warning('Invalid estimate, optimization failed to converge.')
         return pd.DataFrame(self._all_iters, columns=self.column_names)
 
     @property
-    def optimized_params_dict(self) -> Dict[str, np.float64]:
+    def optimized_params_dict(self) -> dict[str, np.float64]:
         """
         Returns all estimates from the optimizer, including `lp__` as a
         Python Dict.  Only returns estimate from final iteration.
         """
         if not self.runset._check_retcodes():
-            get_logger().warning(
-                'Invalid estimate, optimization failed to converge.'
-            )
+            get_logger().warning('Invalid estimate, optimization failed to converge.')
         return OrderedDict(zip(self.column_names, self._mle))
 
     def stan_variable(
@@ -242,18 +226,14 @@ class CmdStanMLE:
                 'Rerun the optimize method with "save_iterations=True".'
             )
         if warn and not self.runset._check_retcodes():
-            get_logger().warning(
-                'Invalid estimate, optimization failed to converge.'
-            )
+            get_logger().warning('Invalid estimate, optimization failed to converge.')
         if inc_iterations and self._save_iterations:
             data = self._all_iters
         else:
             data = self._mle
 
         try:
-            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(
-                data
-            )
+            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(data)
             # TODO(2.0) remove
             if out.shape == () or out.shape == (1,):
                 get_logger().warning(
@@ -267,13 +247,12 @@ class CmdStanMLE:
             # pylint: disable=raise-missing-from
             raise ValueError(
                 f'Unknown variable name: {var}\n'
-                'Available variables are '
-                + ", ".join(self._metadata.stan_vars.keys())
+                'Available variables are ' + ", ".join(self._metadata.stan_vars.keys())
             )
 
     def stan_variables(
         self, inc_iterations: bool = False
-    ) -> Dict[str, Union[np.ndarray, float]]:
+    ) -> dict[str, Union[np.ndarray, float]]:
         """
         Return a dictionary mapping Stan program variables names
         to the corresponding numpy.ndarray containing the inferred values.
@@ -294,9 +273,7 @@ class CmdStanMLE:
         CmdStanLaplace.stan_variables
         """
         if not self.runset._check_retcodes():
-            get_logger().warning(
-                'Invalid estimate, optimization failed to converge.'
-            )
+            get_logger().warning('Invalid estimate, optimization failed to converge.')
         result = {}
         for name in self._metadata.stan_vars:
             result[name] = self.stan_variable(

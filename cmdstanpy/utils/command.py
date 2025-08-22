@@ -1,17 +1,18 @@
 """
 Run commands and handle returncodes
 """
+
 import os
 import subprocess
 import sys
-from typing import Callable, List, Optional, TextIO
+from typing import Callable, Optional, TextIO
 
 from .filesystem import pushd
 from .logging import get_logger
 
 
 def do_command(
-    cmd: List[str],
+    cmd: list[str],
     cwd: Optional[str] = None,
     *,
     fd_out: Optional[TextIO] = sys.stdout,

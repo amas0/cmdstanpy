@@ -1,10 +1,11 @@
 """
 CmdStan arguments
 """
+
 import os
 from enum import Enum, auto
 from time import time
-from typing import Any, Dict, List, Mapping, Optional, Union
+from typing import Any, Mapping, Optional, Union
 
 import numpy as np
 from numpy.random import default_rng
@@ -65,9 +66,9 @@ class SamplerArgs:
         thin: Optional[int] = None,
         max_treedepth: Optional[int] = None,
         metric: Union[
-            str, Dict[str, Any], List[str], List[Dict[str, Any]], None
+            str, dict[str, Any], list[str], list[dict[str, Any]], None
         ] = None,
-        step_size: Union[float, List[float], None] = None,
+        step_size: Union[float, list[float], None] = None,
         adapt_engaged: bool = True,
         adapt_delta: Optional[float] = None,
         adapt_init_phase: Optional[int] = None,
@@ -84,7 +85,7 @@ class SamplerArgs:
         self.max_treedepth = max_treedepth
         self.metric = metric
         self.metric_type: Optional[str] = None
-        self.metric_file: Union[str, List[str], None] = None
+        self.metric_file: Union[str, list[str], None] = None
         self.step_size = step_size
         self.adapt_engaged = adapt_engaged
         self.adapt_delta = adapt_delta
@@ -104,9 +105,7 @@ class SamplerArgs:
         * length of per-chain lists equals specified # of chains
         """
         if not isinstance(chains, (int, np.integer)) or chains < 1:
-            raise ValueError(
-                'Sampler expects number of chains to be greater than 0.'
-            )
+            raise ValueError('Sampler expects number of chains to be greater than 0.')
         if not (
             self.adapt_delta is None
             and self.adapt_init_phase is None
@@ -118,17 +117,13 @@ class SamplerArgs:
                 if self.adapt_delta is not None:
                     msg = '{}, adapt_delta: {}'.format(msg, self.adapt_delta)
                 if self.adapt_init_phase is not None:
-                    msg = '{}, adapt_init_phase: {}'.format(
-                        msg, self.adapt_init_phase
-                    )
+                    msg = '{}, adapt_init_phase: {}'.format(msg, self.adapt_init_phase)
                 if self.adapt_metric_window is not None:
                     msg = '{}, adapt_metric_window: {}'.format(
                         msg, self.adapt_metric_window
                     )
                 if self.adapt_step_size is not None:
-                    msg = '{}, adapt_step_size: {}'.format(
-                        msg, self.adapt_step_size
-                    )
+                    msg = '{}, adapt_step_size: {}'.format(msg, self.adapt_step_size)
                 raise ValueError(msg)
 
         if self.iter_warmup is not None:
@@ -156,13 +151,12 @@ class SamplerArgs:
         positive_int(self.max_treedepth, 'max_treedepth')
 
         if self.step_size is not None:
-            if isinstance(
-                self.step_size, (float, int, np.integer, np.floating)
-            ):
+            if isinstance(self.step_size, (float, int, np.integer, np.floating)):
                 if self.step_size <= 0:
                     raise ValueError(
-                        'Argument "step_size" must be > 0, '
-                        'found {}.'.format(self.step_size)
+                        'Argument "step_size" must be > 0, found {}.'.format(
+                            self.step_size
+                        )
                     )
             else:
                 if len(self.step_size) != chains:
@@ -195,9 +189,7 @@ class SamplerArgs:
                     self.metric_file = self.metric
             elif isinstance(self.metric, dict):
                 if 'inv_metric' not in self.metric:
-                    raise ValueError(
-                        'Entry "inv_metric" not found in metric dict.'
-                    )
+                    raise ValueError('Entry "inv_metric" not found in metric dict.')
                 dims = list(np.asarray(self.metric['inv_metric']).shape)
                 if len(dims) == 1:
                     self.metric_type = 'diag_e'
@@ -217,29 +209,23 @@ class SamplerArgs:
                         )
                     )
                 if all(isinstance(elem, dict) for elem in self.metric):
-                    metric_files: List[str] = []
+                    metric_files: list[str] = []
                     for i, metric in enumerate(self.metric):
-                        metric_dict: Dict[str, Any] = metric  # type: ignore
+                        metric_dict: dict[str, Any] = metric  # type: ignore
                         if 'inv_metric' not in metric_dict:
                             raise ValueError(
                                 'Entry "inv_metric" not found in metric dict '
                                 'for chain {}.'.format(i + 1)
                             )
                         if i == 0:
-                            dims = list(
-                                np.asarray(metric_dict['inv_metric']).shape
-                            )
+                            dims = list(np.asarray(metric_dict['inv_metric']).shape)
                         else:
-                            dims2 = list(
-                                np.asarray(metric_dict['inv_metric']).shape
-                            )
+                            dims2 = list(np.asarray(metric_dict['inv_metric']).shape)
                             if dims != dims2:
                                 raise ValueError(
                                     'Found inconsistent "inv_metric" entry '
                                     'for chain {}: entry has dims '
-                                    '{}, expected {}.'.format(
-                                        i + 1, dims, dims2
-                                    )
+                                    '{}, expected {}.'.format(i + 1, dims, dims2)
                                 )
                         dict_file = create_named_text_file(
                             dir=_TMPDIR, prefix="metric", suffix=".json"
@@ -263,15 +249,13 @@ class SamplerArgs:
                             dims2 = read_metric(metric)
                             if len(dims) != len(dims2):
                                 raise ValueError(
-                                    'Metrics files {}, {},'
-                                    ' inconsistent metrics'.format(
+                                    'Metrics files {}, {}, inconsistent metrics'.format(
                                         self.metric[0], metric
                                     )
                                 )
                             if dims != dims2:
                                 raise ValueError(
-                                    'Metrics files {}, {},'
-                                    ' inconsistent metrics'.format(
+                                    'Metrics files {}, {}, inconsistent metrics'.format(
                                         self.metric[0], metric
                                     )
                                 )
@@ -284,9 +268,7 @@ class SamplerArgs:
                 else:
                     raise ValueError(
                         'Argument "metric" must be a list of pathnames or '
-                        'Python dicts, found list of {}.'.format(
-                            type(self.metric[0])
-                        )
+                        'Python dicts, found list of {}.'.format(type(self.metric[0]))
                     )
             else:
                 raise ValueError(
@@ -299,8 +281,9 @@ class SamplerArgs:
         if self.adapt_delta is not None:
             if not 0 < self.adapt_delta < 1:
                 raise ValueError(
-                    'Argument "adapt_delta" must be between 0 and 1,'
-                    ' found {}'.format(self.adapt_delta)
+                    'Argument "adapt_delta" must be between 0 and 1, found {}'.format(
+                        self.adapt_delta
+                    )
                 )
         if self.adapt_init_phase is not None:
             if self.adapt_init_phase < 0 or not isinstance(
@@ -343,7 +326,7 @@ class SamplerArgs:
                 'When fixed_param=True, cannot specify adaptation parameters.'
             )
 
-    def compose(self, idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, idx: int, cmd: list[str]) -> list[str]:
         """
         Compose CmdStan command for method-specific non-default arguments.
         """
@@ -454,9 +437,7 @@ class OptimizeArgs:
                     )
         if self.algorithm.lower() != 'lbfgs':
             if self.history_size is not None:
-                raise ValueError(
-                    'history_size requires that algorithm be set to lbfgs'
-                )
+                raise ValueError('history_size requires that algorithm be set to lbfgs')
 
         positive_float(self.init_alpha, 'init_alpha')
         positive_int(self.iter, 'iter')
@@ -467,7 +448,7 @@ class OptimizeArgs:
         positive_float(self.tol_param, 'tol_param')
         positive_int(self.history_size, 'history_size')
 
-    def compose(self, _idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, _idx: int, cmd: list[str]) -> list[str]:
         """compose command string for CmdStan for non-default arg values."""
         cmd.append('method=optimize')
         if self.algorithm:
@@ -511,7 +492,7 @@ class LaplaceArgs:
             raise ValueError(f'Invalid path for mode file: {self.mode}')
         positive_int(self.draws, 'draws')
 
-    def compose(self, _idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, _idx: int, cmd: list[str]) -> list[str]:
         """compose command string for CmdStan for non-default arg values."""
         cmd.append('method=laplace')
         cmd.append(f'mode={self.mode}')
@@ -579,7 +560,7 @@ class PathfinderArgs:
         positive_int(self.num_draws, 'num_draws')
         positive_int(self.num_elbo_draws, 'num_elbo_draws')
 
-    def compose(self, _idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, _idx: int, cmd: list[str]) -> list[str]:
         """compose command string for CmdStan for non-default arg values."""
         cmd.append('method=pathfinder')
 
@@ -624,12 +605,13 @@ class PathfinderArgs:
 class GenerateQuantitiesArgs:
     """Arguments needed for generate_quantities method."""
 
-    def __init__(self, csv_files: List[str]) -> None:
+    def __init__(self, csv_files: list[str]) -> None:
         """Initialize object."""
         self.sample_csv_files = csv_files
 
     def validate(
-        self, chains: Optional[int] = None  # pylint: disable=unused-argument
+        self,
+        chains: Optional[int] = None,  # pylint: disable=unused-argument
     ) -> None:
         """
         Check arguments correctness and consistency.
@@ -638,11 +620,9 @@ class GenerateQuantitiesArgs:
         """
         for csv in self.sample_csv_files:
             if not os.path.exists(csv):
-                raise ValueError(
-                    'Invalid path for sample csv file: {}'.format(csv)
-                )
+                raise ValueError('Invalid path for sample csv file: {}'.format(csv))
 
-    def compose(self, idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, idx: int, cmd: list[str]) -> list[str]:
         """
         Compose CmdStan command for method-specific non-default arguments.
         """
@@ -681,15 +661,13 @@ class VariationalArgs:
         self.output_samples = output_samples
 
     def validate(
-        self, chains: Optional[int] = None  # pylint: disable=unused-argument
+        self,
+        chains: Optional[int] = None,  # pylint: disable=unused-argument
     ) -> None:
         """
         Check arguments correctness and consistency.
         """
-        if (
-            self.algorithm is not None
-            and self.algorithm not in self.VARIATIONAL_ALGOS
-        ):
+        if self.algorithm is not None and self.algorithm not in self.VARIATIONAL_ALGOS:
             raise ValueError(
                 'Please specify variational algorithms as one of [{}]'.format(
                     ', '.join(self.VARIATIONAL_ALGOS)
@@ -705,7 +683,7 @@ class VariationalArgs:
         positive_int(self.output_samples, 'output_samples')
 
     # pylint: disable=unused-argument
-    def compose(self, idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, idx: int, cmd: list[str]) -> list[str]:
         """
         Compose CmdStan command for method-specific non-default arguments.
         """
@@ -747,7 +725,7 @@ class CmdStanArgs:
         self,
         model_name: str,
         model_exe: OptionalPath,
-        chain_ids: Optional[List[int]],
+        chain_ids: Optional[list[int]],
         method_args: Union[
             SamplerArgs,
             OptimizeArgs,
@@ -757,8 +735,8 @@ class CmdStanArgs:
             PathfinderArgs,
         ],
         data: Union[Mapping[str, Any], str, None] = None,
-        seed: Union[int, List[int], None] = None,
-        inits: Union[int, float, str, List[str], None] = None,
+        seed: Union[int, list[int], None] = None,
+        inits: Union[int, float, str, list[str], None] = None,
         output_dir: OptionalPath = None,
         sig_figs: Optional[int] = None,
         save_latent_dynamics: bool = False,
@@ -816,19 +794,16 @@ class CmdStanArgs:
                 if chain_id < 1:
                     raise ValueError('invalid chain_id {}'.format(chain_id))
         if self.output_dir is not None:
-            self.output_dir = os.path.realpath(
-                os.path.expanduser(self.output_dir)
-            )
+            self.output_dir = os.path.realpath(os.path.expanduser(self.output_dir))
             if not os.path.exists(self.output_dir):
                 try:
                     os.makedirs(self.output_dir)
-                    get_logger().info(
-                        'created output directory: %s', self.output_dir
-                    )
+                    get_logger().info('created output directory: %s', self.output_dir)
                 except (RuntimeError, PermissionError) as exc:
                     raise ValueError(
-                        'Invalid path for output files, '
-                        'no such dir: {}.'.format(self.output_dir)
+                        'Invalid path for output files, no such dir: {}.'.format(
+                            self.output_dir
+                        )
                     ) from exc
             if not os.path.isdir(self.output_dir):
                 raise ValueError(
@@ -843,14 +818,12 @@ class CmdStanArgs:
                 os.remove(testpath)  # cleanup
             except Exception as exc:
                 raise ValueError(
-                    'Invalid path for output files,'
-                    ' cannot write to dir: {}.'.format(self.output_dir)
+                    'Invalid path for output files, cannot write to dir: {}.'.format(
+                        self.output_dir
+                    )
                 ) from exc
         if self.refresh is not None:
-            if (
-                not isinstance(self.refresh, (int, np.integer))
-                or self.refresh < 1
-            ):
+            if not isinstance(self.refresh, (int, np.integer)) or self.refresh < 1:
                 raise ValueError(
                     'Argument "refresh" must be a positive integer value, '
                     'found {}.'.format(self.refresh)
@@ -922,9 +895,7 @@ class CmdStanArgs:
             if isinstance(self.inits, (float, int, np.floating, np.integer)):
                 if self.inits < 0:
                     raise ValueError(
-                        'Argument "inits" must be > 0, found {}'.format(
-                            self.inits
-                        )
+                        'Argument "inits" must be > 0, found {}'.format(self.inits)
                     )
             elif isinstance(self.inits, str):
                 if not (
@@ -959,11 +930,11 @@ class CmdStanArgs:
         *,
         diagnostic_file: Optional[str] = None,
         profile_file: Optional[str] = None,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Compose CmdStan command for non-default arguments.
         """
-        cmd: List[str] = []
+        cmd: list[str] = []
         if idx is not None and self.chain_ids is not None:
             if idx < 0 or idx > len(self.chain_ids) - 1:
                 raise ValueError(

@@ -1,7 +1,8 @@
 """
 Common functions for reshaping numpy arrays
 """
-from typing import Hashable, MutableMapping, Tuple
+
+from typing import Hashable, MutableMapping
 
 import numpy as np
 import stanio
@@ -27,7 +28,7 @@ def flatten_chains(draws_array: np.ndarray) -> np.ndarray:
 
 
 def build_xarray_data(
-    data: MutableMapping[Hashable, Tuple[Tuple[str, ...], np.ndarray]],
+    data: MutableMapping[Hashable, tuple[tuple[str, ...], np.ndarray]],
     var: stanio.Variable,
     drawset: np.ndarray,
 ) -> None:
@@ -35,7 +36,7 @@ def build_xarray_data(
     Adds Stan variable name, labels, and values to a dictionary
     that will be used to construct an xarray DataSet.
     """
-    var_dims: Tuple[str, ...] = ('draw', 'chain')
+    var_dims: tuple[str, ...] = ('draw', 'chain')
     var_dims += tuple(f"{var.name}_dim_{i}" for i in range(len(var.dimensions)))
 
     data[var.name] = (

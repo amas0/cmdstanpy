@@ -2,7 +2,7 @@
 Container for the result of running Pathfinder.
 """
 
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 
@@ -31,7 +31,7 @@ class CmdStanPathfinder:
 
     def create_inits(
         self, seed: Optional[int] = None, chains: int = 4
-    ) -> Union[List[Dict[str, np.ndarray]], Dict[str, np.ndarray]]:
+    ) -> Union[list[dict[str, np.ndarray]], dict[str, np.ndarray]]:
         """
         Create initial values for the parameters of the model
         by randomly selecting draws from the Pathfinder approximation.
@@ -111,19 +111,16 @@ class CmdStanPathfinder:
         """
         self._assemble_draws()
         try:
-            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(
-                self._draws
-            )
+            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(self._draws)
             return out
         except KeyError:
             # pylint: disable=raise-missing-from
             raise ValueError(
                 f'Unknown variable name: {var}\n'
-                'Available variables are '
-                + ", ".join(self._metadata.stan_vars.keys())
+                'Available variables are ' + ", ".join(self._metadata.stan_vars.keys())
             )
 
-    def stan_variables(self) -> Dict[str, np.ndarray]:
+    def stan_variables(self) -> dict[str, np.ndarray]:
         """
         Return a dictionary mapping Stan program variables names
         to the corresponding numpy.ndarray containing the inferred values.
@@ -142,7 +139,7 @@ class CmdStanPathfinder:
             result[name] = self.stan_variable(name)
         return result
 
-    def method_variables(self) -> Dict[str, np.ndarray]:
+    def method_variables(self) -> dict[str, np.ndarray]:
         """
         Returns a dictionary of all sampler variables, i.e., all
         output column names ending in `__`.  Assumes that all variables
@@ -193,7 +190,7 @@ class CmdStanPathfinder:
         return self._metadata
 
     @property
-    def column_names(self) -> Tuple[str, ...]:
+    def column_names(self) -> tuple[str, ...]:
         """
         Names of all outputs from the sampler, comprising sampler parameters
         and all components of all model parameters, transformed parameters,
@@ -210,10 +207,8 @@ class CmdStanPathfinder:
         """
         return (  # type: ignore
             self._metadata.cmdstan_config.get("num_paths", 4) > 1
-            and self._metadata.cmdstan_config.get('psis_resample', 1)
-            in (1, 'true')
-            and self._metadata.cmdstan_config.get('calculate_lp', 1)
-            in (1, 'true')
+            and self._metadata.cmdstan_config.get('psis_resample', 1) in (1, 'true')
+            and self._metadata.cmdstan_config.get('calculate_lp', 1) in (1, 'true')
         )
 
     def save_csvfiles(self, dir: Optional[str] = None) -> None:

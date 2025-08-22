@@ -12,6 +12,7 @@ Optional command line arguments:
    -m --no-make : don't install mingw32-make (Windows RTools 4.0 only)
    --progress : flag, when specified show progress bar for RTools download
 """
+
 import argparse
 import os
 import platform
@@ -21,7 +22,7 @@ import sys
 import urllib.request
 from collections import OrderedDict
 from time import sleep
-from typing import Any, Dict, List
+from typing import Any
 
 from cmdstanpy import _DOT_CMDSTAN
 from cmdstanpy.utils import pushd, validate_dir, wrap_url_progress_hook
@@ -44,7 +45,7 @@ def usage() -> None:
     )
 
 
-def get_config(dir: str, silent: bool) -> List[str]:
+def get_config(dir: str, silent: bool) -> list[str]:
     """Assemble config info."""
     config = []
     if platform.system() == 'Windows':
@@ -243,7 +244,9 @@ def get_url(version: str) -> str:
         if version == '4.0':
             # pylint: disable=line-too-long
             if IS_64BITS:
-                url = 'https://cran.r-project.org/bin/windows/Rtools/rtools40-x86_64.exe'  # noqa: disable=E501
+                url = (
+                    'https://cran.r-project.org/bin/windows/Rtools/rtools40-x86_64.exe'  # noqa: disable=E501
+                )
             else:
                 url = 'https://cran.r-project.org/bin/windows/Rtools/rtools40-i686.exe'  # noqa: disable=E501
         elif version == '3.5':
@@ -260,7 +263,7 @@ def get_toolchain_version(name: str, version: str) -> str:
     return toolchain_folder
 
 
-def run_rtools_install(args: Dict[str, Any]) -> None:
+def run_rtools_install(args: dict[str, Any]) -> None:
     """Main."""
     if platform.system() not in {'Windows'}:
         raise NotImplementedError(
@@ -308,9 +311,7 @@ def run_rtools_install(args: Dict[str, Any]) -> None:
         else:
             if os.path.exists(toolchain_folder):
                 shutil.rmtree(toolchain_folder, ignore_errors=False)
-            retrieve_toolchain(
-                toolchain_folder + EXTENSION, url, progress=progress
-            )
+            retrieve_toolchain(toolchain_folder + EXTENSION, url, progress=progress)
             install_version(
                 toolchain_folder,
                 toolchain_folder + EXTENSION,
@@ -324,16 +325,14 @@ def run_rtools_install(args: Dict[str, Any]) -> None:
             and (version in ('4.0', '4', '40'))
         ):
             if os.path.exists(
-                os.path.join(
-                    toolchain_folder, 'mingw64', 'bin', 'mingw32-make.exe'
-                )
+                os.path.join(toolchain_folder, 'mingw64', 'bin', 'mingw32-make.exe')
             ):
                 print('mingw32-make.exe already installed')
             else:
                 install_mingw32_make(toolchain_folder, verbose)
 
 
-def parse_cmdline_args() -> Dict[str, Any]:
+def parse_cmdline_args() -> dict[str, Any]:
     parser = argparse.ArgumentParser()
     parser.add_argument('--version', '-v', help="version, defaults to latest")
     parser.add_argument(

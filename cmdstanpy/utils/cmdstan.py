@@ -7,7 +7,7 @@ import platform
 import subprocess
 import sys
 from collections import OrderedDict
-from typing import Callable, Dict, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 
 from tqdm.auto import tqdm
 
@@ -65,9 +65,7 @@ def validate_dir(install_dir: str) -> None:
         try:
             os.makedirs(install_dir)
         except (IOError, OSError, PermissionError) as e:
-            raise ValueError(
-                'Cannot create directory: {}'.format(install_dir)
-            ) from e
+            raise ValueError('Cannot create directory: {}'.format(install_dir)) from e
     else:
         if not os.path.isdir(install_dir):
             raise ValueError(
@@ -198,7 +196,7 @@ def cmdstan_path() -> str:
     return os.path.normpath(cmdstan)
 
 
-def cmdstan_version() -> Optional[Tuple[int, ...]]:
+def cmdstan_version() -> Optional[tuple[int, ...]]:
     """
     Parses version string out of CmdStan makefile variable CMDSTAN_VERSION,
     returns Tuple(Major, minor).
@@ -233,8 +231,7 @@ def cmdstan_version() -> Optional[Tuple[int, ...]]:
     splits = version.split('.')
     if len(splits) != 3:
         get_logger().info(
-            'Cannot parse version, expected "<major>.<minor>.<patch>", '
-            'found: "%s".',
+            'Cannot parse version, expected "<major>.<minor>.<patch>", found: "%s".',
             version,
         )
         return None
@@ -242,7 +239,7 @@ def cmdstan_version() -> Optional[Tuple[int, ...]]:
 
 
 def cmdstan_version_before(
-    major: int, minor: int, info: Optional[Dict[str, str]] = None
+    major: int, minor: int, info: Optional[dict[str, str]] = None
 ) -> bool:
     """
     Check that CmdStan version is less than Major.minor version.
@@ -265,23 +262,19 @@ def cmdstan_version_before(
             'Cannot determine whether version is before %d.%d.', major, minor
         )
         return False
-    if cur_version[0] < major or (
-        cur_version[0] == major and cur_version[1] < minor
-    ):
+    if cur_version[0] < major or (cur_version[0] == major and cur_version[1] < minor):
         return True
     return False
 
 
 def cxx_toolchain_path(
     version: Optional[str] = None, install_dir: Optional[str] = None
-) -> Tuple[str, ...]:
+) -> tuple[str, ...]:
     """
     Validate, then activate C++ toolchain directory path.
     """
     if platform.system() != 'Windows':
-        raise RuntimeError(
-            'Functionality is currently only supported on Windows'
-        )
+        raise RuntimeError('Functionality is currently only supported on Windows')
     if version is not None and not isinstance(version, str):
         raise TypeError('Format version number as a string')
     logger = get_logger()
@@ -548,9 +541,7 @@ def wrap_url_progress_hook() -> Optional[Callable[[int, int, int], None]]:
         leave=False,
     )
 
-    def download_progress_hook(
-        count: int, block_size: int, total_size: int
-    ) -> None:
+    def download_progress_hook(count: int, block_size: int, total_size: int) -> None:
         if pbar.total is None:
             pbar.total = total_size
             pbar.reset()
