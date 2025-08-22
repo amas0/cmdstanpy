@@ -5,14 +5,7 @@ Container for the result of running the sample (MCMC) method
 import math
 import os
 from io import StringIO
-from typing import (
-    Any,
-    Hashable,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Union,
-)
+from typing import Any, Hashable, MutableMapping, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -63,15 +56,16 @@ class CmdStanMCMC:
         """Initialize object."""
         if not runset.method == Method.SAMPLE:
             raise ValueError(
-                'Wrong runset method, expecting sample runset, found method {}'.format(
-                    runset.method
-                )
+                'Wrong runset method, expecting sample runset, '
+                'found method {}'.format(runset.method)
             )
         self.runset = runset
 
         # info from runset to be exposed
         sampler_args = self.runset._args.method_args
-        assert isinstance(sampler_args, SamplerArgs)  # make the typechecker happy
+        assert isinstance(
+            sampler_args, SamplerArgs
+        )  # make the typechecker happy
         self._iter_sampling: int = _CMDSTAN_SAMPLING
         if sampler_args.iter_sampling is not None:
             self._iter_sampling = sampler_args.iter_sampling
@@ -91,7 +85,9 @@ class CmdStanMCMC:
         self._metric: np.ndarray = np.array(())
         self._step_size: np.ndarray = np.array(())
         self._divergences: np.ndarray = np.zeros(self.runset.chains, dtype=int)
-        self._max_treedepths: np.ndarray = np.zeros(self.runset.chains, dtype=int)
+        self._max_treedepths: np.ndarray = np.zeros(
+            self.runset.chains, dtype=int
+        )
         self._chain_time: list[dict[str, float]] = []
 
         # info from CSV header and initial and final comment blocks
@@ -122,7 +118,9 @@ class CmdStanMCMC:
         rng = np.random.default_rng(seed)
         n_draws, n_chains = self._draws.shape[:2]
         draw_idxs = rng.choice(n_draws, size=chains, replace=False)
-        chain_idxs = rng.choice(n_chains, size=chains, replace=(n_chains <= chains))
+        chain_idxs = rng.choice(
+            n_chains, size=chains, replace=(n_chains <= chains)
+        )
         if chains == 1:
             draw = self._draws[draw_idxs[0], chain_idxs[0]]
             return {
@@ -503,7 +501,9 @@ class CmdStanMCMC:
                     ' non-empty list from (1, 99), inclusive.'
                 )
             cur_pct = pct
-        percentiles_str = f"--percentiles= {','.join(str(x) for x in percentiles)}"
+        percentiles_str = (
+            f"--percentiles= {','.join(str(x) for x in percentiles)}"
+        )
 
         if not isinstance(sig_figs, int) or sig_figs < 1 or sig_figs > 18:
             raise ValueError(
@@ -519,7 +519,9 @@ class CmdStanMCMC:
                 csv_sig_figs,
             )
         sig_figs_str = f'--sig_figs={sig_figs}'
-        cmd_path = os.path.join(cmdstan_path(), 'bin', 'stansummary' + EXTENSION)
+        cmd_path = os.path.join(
+            cmdstan_path(), 'bin', 'stansummary' + EXTENSION
+        )
         tmp_csv_file = 'stansummary-{}-'.format(self.runset._args.model_name)
         tmp_csv_path = create_named_text_file(
             dir=_TMPDIR, prefix=tmp_csv_file, suffix='.csv', name_only=True
@@ -547,7 +549,9 @@ class CmdStanMCMC:
         mask = (
             [not x.endswith('__') for x in summary_data.index]
             if self._is_fixed_param
-            else [x == 'lp__' or not x.endswith('__') for x in summary_data.index]
+            else [
+                x == 'lp__' or not x.endswith('__') for x in summary_data.index
+            ]
         )
         summary_data.index.name = None
         return summary_data[mask]
@@ -616,7 +620,9 @@ class CmdStanMCMC:
                     cols.append(var)
                 elif var in self._metadata.stan_vars:
                     info = self._metadata.stan_vars[var]
-                    cols.extend(self.column_names[info.start_idx : info.end_idx])
+                    cols.extend(
+                        self.column_names[info.start_idx : info.end_idx]
+                    )
                 elif var in ['chain__', 'iter__', 'draw__']:
                     cols.append(var)
                 else:
@@ -633,10 +639,14 @@ class CmdStanMCMC:
             .T
         )
         iter_col = (
-            np.tile(np.arange(1, n_draws + 1), n_chains).reshape(1, n_chains, n_draws).T
+            np.tile(np.arange(1, n_draws + 1), n_chains)
+            .reshape(1, n_chains, n_draws)
+            .T
         )
         draw_col = (
-            np.arange(1, (n_draws * n_chains) + 1).reshape(1, n_chains, n_draws).T
+            np.arange(1, (n_draws * n_chains) + 1)
+            .reshape(1, n_chains, n_draws)
+            .T
         )
         draws = np.concatenate([chains_col, iter_col, draw_col, draws], axis=2)
 
@@ -759,13 +769,16 @@ class CmdStanMCMC:
         """
         try:
             draws = self.draws(inc_warmup=inc_warmup, concat_chains=True)
-            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(draws)
+            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(
+                draws
+            )
             return out
         except KeyError:
             # pylint: disable=raise-missing-from
             raise ValueError(
                 f'Unknown variable name: {var}\n'
-                'Available variables are ' + ", ".join(self._metadata.stan_vars.keys())
+                'Available variables are '
+                + ", ".join(self._metadata.stan_vars.keys())
             )
 
     def stan_variables(self) -> dict[str, np.ndarray]:

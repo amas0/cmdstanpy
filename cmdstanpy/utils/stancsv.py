@@ -146,7 +146,9 @@ def extract_key_val_pairs(
 ) -> Iterator[tuple[str, str]]:
     """Yields cleaned key = val pairs from stan csv comments.
     Removes '(Default)' text from values if remove_default_text is True."""
-    cleaned_lines = (line.decode().lstrip("# ").strip() for line in comment_lines)
+    cleaned_lines = (
+        line.decode().lstrip("# ").strip() for line in comment_lines
+    )
     for line in cleaned_lines:
         split_on_eq = line.split(" = ")
         # Only want lines with key = value
@@ -281,7 +283,9 @@ def count_warmup_and_sampling_draws(
                 if line.startswith(b"lp__"):
                     header_line_idx = i
                     if not is_fixed_param:
-                        is_fixed_param = is_sneaky_fixed_param(line.strip().decode())
+                        is_fixed_param = is_sneaky_fixed_param(
+                            line.strip().decode()
+                        )
                 continue
 
             if not is_fixed_param and adaptation_block_idx is None:
@@ -300,7 +304,9 @@ def count_warmup_and_sampling_draws(
                 break
         else:
             # Will raise if lines exhausts without all blocks being identified
-            raise ValueError("Unable to count warmup and sampling draws from Stan csv")
+            raise ValueError(
+                "Unable to count warmup and sampling draws from Stan csv"
+            )
 
         if is_fixed_param:
             num_warmup = 0
@@ -318,7 +324,9 @@ def count_warmup_and_sampling_draws(
         return determine_draw_counts(stan_csv)
 
 
-def raise_on_inconsistent_draws_shape(header: str, draw_lines: list[bytes]) -> None:
+def raise_on_inconsistent_draws_shape(
+    header: str, draw_lines: list[bytes]
+) -> None:
     """Throws a ValueError if any draws are found to have an inconsistent
     shape, i.e. too many/few columns compared to the header"""
 
@@ -333,7 +341,8 @@ def raise_on_inconsistent_draws_shape(header: str, draw_lines: list[bytes]) -> N
     for i, draw in enumerate(draw_lines, start=1):
         if (draw_size := column_count(draw)) != num_cols:
             raise ValueError(
-                f"line {i}: bad draw, expecting {num_cols} items, found {draw_size}"
+                f"line {i}: bad draw, expecting {num_cols} items, "
+                f"found {draw_size}"
             )
 
 
@@ -382,7 +391,9 @@ def raise_on_invalid_adaptation_block(comment_lines: list[bytes]) -> None:
         (metric == "diag_e" and line.startswith(b"# Diagonal elements of "))
         or (metric == "dense_e" and line.startswith(b"# Elements of inverse"))
     ):
-        raise ValueError(f"line {num}: invalid or missing mass matrix specification")
+        raise ValueError(
+            f"line {num}: invalid or missing mass matrix specification"
+        )
 
     # Validating mass matrix shape
     _, line = next(ln_iter)
@@ -432,7 +443,8 @@ def check_sampler_csv(
     if thin > _CMDSTAN_THIN:
         if 'thin' not in meta:
             raise ValueError(
-                f'Bad Stan CSV file {path}, config error, expected thin = {thin}'
+                f'Bad Stan CSV file {path}, config error, '
+                f'expected thin = {thin}'
             )
         if meta['thin'] != thin:
             raise ValueError(
@@ -449,7 +461,8 @@ def check_sampler_csv(
     if save_warmup:
         if not ('save_warmup' in meta and meta['save_warmup'] == 1):
             raise ValueError(
-                f'Bad Stan CSV file {path}, config error, expected save_warmup = 1'
+                f'Bad Stan CSV file {path}, config error, expected '
+                'save_warmup = 1'
             )
         if meta['draws_warmup'] != draws_warmup:
             raise ValueError(

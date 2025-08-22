@@ -223,11 +223,15 @@ class CmdStanGQ(Generic[Fit]):
             cols_1 = self.previous_fit.column_names
             cols_2 = self.column_names
             dups = [
-                item for item, count in Counter(cols_1 + cols_2).items() if count > 1
+                item
+                for item, count in Counter(cols_1 + cols_2).items()
+                if count > 1
             ]
             drop_cols: list[int] = []
             for dup in dups:
-                drop_cols.extend(self.previous_fit._metadata.stan_vars[dup].columns())
+                drop_cols.extend(
+                    self.previous_fit._metadata.stan_vars[dup].columns()
+                )
 
         start_idx, _ = self._draws_start(inc_warmup)
         previous_draws = self._previous_draws(True)
@@ -317,11 +321,17 @@ class CmdStanGQ(Generic[Fit]):
             for var in vars_list:
                 if var in self._metadata.stan_vars:
                     info = self._metadata.stan_vars[var]
-                    gq_cols.extend(self.column_names[info.start_idx : info.end_idx])
-                elif inc_sample and var in self.previous_fit._metadata.stan_vars:
+                    gq_cols.extend(
+                        self.column_names[info.start_idx : info.end_idx]
+                    )
+                elif (
+                    inc_sample and var in self.previous_fit._metadata.stan_vars
+                ):
                     info = self.previous_fit._metadata.stan_vars[var]
                     mcmc_vars.extend(
-                        self.previous_fit.column_names[info.start_idx : info.end_idx]
+                        self.previous_fit.column_names[
+                            info.start_idx : info.end_idx
+                        ]
                     )
                 elif var in ['chain__', 'iter__', 'draw__']:
                     gq_cols.append(var)
@@ -342,10 +352,14 @@ class CmdStanGQ(Generic[Fit]):
             .T
         )
         iter_col = (
-            np.tile(np.arange(1, n_draws + 1), n_chains).reshape(1, n_chains, n_draws).T
+            np.tile(np.arange(1, n_draws + 1), n_chains)
+            .reshape(1, n_chains, n_draws)
+            .T
         )
         draw_col = (
-            np.arange(1, (n_draws * n_chains) + 1).reshape(1, n_chains, n_draws).T
+            np.arange(1, (n_draws * n_chains) + 1)
+            .reshape(1, n_chains, n_draws)
+            .T
         )
         draws = np.concatenate([chains_col, iter_col, draw_col, draws], axis=2)
 
@@ -369,7 +383,9 @@ class CmdStanGQ(Generic[Fit]):
             cols_1 = list(previous_draws_pd.columns)
             cols_2 = list(draws_pd.columns)
             dups = [
-                item for item, count in Counter(cols_1 + cols_2).items() if count > 1
+                item
+                for item, count in Counter(cols_1 + cols_2).items()
+                if count > 1
             ]
             return pd.concat(
                 [
@@ -389,7 +405,8 @@ class CmdStanGQ(Generic[Fit]):
         vars: Union[str, list[str], None] = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
-    ) -> NoReturn: ...
+    ) -> NoReturn:
+        ...
 
     @overload
     def draws_xr(
@@ -397,7 +414,8 @@ class CmdStanGQ(Generic[Fit]):
         vars: Union[str, list[str], None] = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
-    ) -> "xr.Dataset": ...
+    ) -> "xr.Dataset":
+        ...
 
     def draws_xr(
         self,
@@ -441,7 +459,9 @@ class CmdStanGQ(Generic[Fit]):
                 vars_list = vars
             for var in vars_list:
                 if var not in self._metadata.stan_vars:
-                    if inc_sample and (var in self.previous_fit._metadata.stan_vars):
+                    if inc_sample and (
+                        var in self.previous_fit._metadata.stan_vars
+                    ):
                         mcmc_vars_list.append(var)
                         dup_vars.append(var)
                     else:
@@ -543,7 +563,8 @@ class CmdStanGQ(Generic[Fit]):
         if not (var in model_var_names or var in gq_var_names):
             raise ValueError(
                 f'Unknown variable name: {var}\n'
-                'Available variables are ' + ", ".join(model_var_names | gq_var_names)
+                'Available variables are '
+                + ", ".join(model_var_names | gq_var_names)
             )
         if var not in gq_var_names:
             # TODO(2.0) atleast1d may not be needed
@@ -664,7 +685,9 @@ class CmdStanGQ(Generic[Fit]):
                 )[:, None]
             return p_fit.variational_sample[:, None]
 
-    def _previous_draws_pd(self, vars: list[str], inc_warmup: bool) -> pd.DataFrame:
+    def _previous_draws_pd(
+        self, vars: list[str], inc_warmup: bool
+    ) -> pd.DataFrame:
         if vars:
             sel: Union[list[str], slice] = vars
         else:

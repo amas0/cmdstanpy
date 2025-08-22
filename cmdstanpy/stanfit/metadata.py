@@ -24,15 +24,21 @@ class InferenceMetadata:
 
         vars = stanio.parse_header(config['raw_header'])  # type: ignore
 
-        self._method_vars = {k: v for (k, v) in vars.items() if k.endswith('__')}
-        self._stan_vars = {k: v for (k, v) in vars.items() if not k.endswith('__')}
+        self._method_vars = {
+            k: v for (k, v) in vars.items() if k.endswith('__')
+        }
+        self._stan_vars = {
+            k: v for (k, v) in vars.items() if not k.endswith('__')
+        }
 
     @classmethod
     def from_csv(
         cls, stan_csv: Union[str, os.PathLike, Iterator[bytes]]
     ) -> 'InferenceMetadata':
         try:
-            comments, header, _ = stancsv.parse_comments_header_and_draws(stan_csv)
+            comments, header, _ = stancsv.parse_comments_header_and_draws(
+                stan_csv
+            )
             return cls(stancsv.construct_config_header_dict(comments, header))
         except Exception as exc:
             raise ValueError(

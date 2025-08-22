@@ -244,9 +244,7 @@ def get_url(version: str) -> str:
         if version == '4.0':
             # pylint: disable=line-too-long
             if IS_64BITS:
-                url = (
-                    'https://cran.r-project.org/bin/windows/Rtools/rtools40-x86_64.exe'  # noqa: disable=E501
-                )
+                url = 'https://cran.r-project.org/bin/windows/Rtools/rtools40-x86_64.exe'  # noqa: disable=E501
             else:
                 url = 'https://cran.r-project.org/bin/windows/Rtools/rtools40-i686.exe'  # noqa: disable=E501
         elif version == '3.5':
@@ -311,7 +309,9 @@ def run_rtools_install(args: dict[str, Any]) -> None:
         else:
             if os.path.exists(toolchain_folder):
                 shutil.rmtree(toolchain_folder, ignore_errors=False)
-            retrieve_toolchain(toolchain_folder + EXTENSION, url, progress=progress)
+            retrieve_toolchain(
+                toolchain_folder + EXTENSION, url, progress=progress
+            )
             install_version(
                 toolchain_folder,
                 toolchain_folder + EXTENSION,
@@ -325,7 +325,9 @@ def run_rtools_install(args: dict[str, Any]) -> None:
             and (version in ('4.0', '4', '40'))
         ):
             if os.path.exists(
-                os.path.join(toolchain_folder, 'mingw64', 'bin', 'mingw32-make.exe')
+                os.path.join(
+                    toolchain_folder, 'mingw64', 'bin', 'mingw32-make.exe'
+                )
             ):
                 print('mingw32-make.exe already installed')
             else:

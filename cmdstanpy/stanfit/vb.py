@@ -35,7 +35,9 @@ class CmdStanVB:
                 comment_lines,
                 header,
                 draw_lines,
-            ) = stancsv.parse_comments_header_and_draws(self.runset.csv_files[0])
+            ) = stancsv.parse_comments_header_and_draws(
+                self.runset.csv_files[0]
+            )
 
             self._metadata = InferenceMetadata(
                 stancsv.construct_config_header_dict(comment_lines, header)
@@ -68,7 +70,9 @@ class CmdStanVB:
         ``inits`` argument of :meth:`CmdStanModel.sample`.
         """
         rng = np.random.default_rng(seed)
-        idxs = rng.choice(self.variational_sample.shape[0], size=chains, replace=False)
+        idxs = rng.choice(
+            self.variational_sample.shape[0], size=chains, replace=False
+        )
         if chains == 1:
             draw = self.variational_sample[idxs[0]]
             return {
@@ -212,7 +216,9 @@ class CmdStanVB:
             draws = self._variational_sample
 
         try:
-            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(draws)
+            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(
+                draws
+            )
             # TODO(2.0): remove
             if out.shape == () or out.shape == (1,):
                 if mean:
@@ -228,7 +234,8 @@ class CmdStanVB:
             # pylint: disable=raise-missing-from
             raise ValueError(
                 f'Unknown variable name: {var}\n'
-                'Available variables are ' + ", ".join(self._metadata.stan_vars.keys())
+                'Available variables are '
+                + ", ".join(self._metadata.stan_vars.keys())
             )
 
     def stan_variables(

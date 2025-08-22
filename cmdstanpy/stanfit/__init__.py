@@ -38,7 +38,9 @@ __all__ = [
 def from_csv(
     path: Union[str, list[str], os.PathLike, None] = None,
     method: Optional[str] = None,
-) -> Union[CmdStanMCMC, CmdStanMLE, CmdStanVB, CmdStanPathfinder, CmdStanLaplace, None]:
+) -> Union[
+    CmdStanMCMC, CmdStanMLE, CmdStanVB, CmdStanPathfinder, CmdStanLaplace, None
+]:
     """
     Instantiate a CmdStan object from a the Stan CSV files from a CmdStan run.
     CSV files are specified from either a list of Stan CSV files or a single
@@ -76,9 +78,8 @@ def from_csv(
         if splits[0] is not None:
             if not (os.path.exists(splits[0]) and os.path.isdir(splits[0])):
                 raise ValueError(
-                    'Invalid path specification, {}  unknown directory: {}'.format(
-                        path, splits[0]
-                    )
+                    'Invalid path specification, {}  unknown '
+                    'directory: {}'.format(path, splits[0])
                 )
         csvfiles = glob.glob(path)
     elif isinstance(path, (str, os.PathLike)):
@@ -111,7 +112,9 @@ def from_csv(
     if method is not None and method != config_dict['method']:
         raise ValueError(
             'Expecting Stan CSV output files from method {}, '
-            ' found outputs from method {}'.format(method, config_dict['method'])
+            ' found outputs from method {}'.format(
+                method, config_dict['method']
+            )
         )
     model: str = config_dict['model']  # type: ignore
     try:
@@ -153,7 +156,9 @@ def from_csv(
                         fixed_param=True,
                     )
                 except ValueError as e:
-                    raise ValueError('Invalid or corrupt Stan CSV output file, ') from e
+                    raise ValueError(
+                        'Invalid or corrupt Stan CSV output file, '
+                    ) from e
 
             cmdstan_args = CmdStanArgs(
                 model_name=model,
@@ -171,7 +176,9 @@ def from_csv(
         elif config_dict['method'] == 'optimize':
             if 'algorithm' not in config_dict:
                 raise ValueError(
-                    "Cannot find optimization algorithm in file {}.".format(csvfiles[0])
+                    "Cannot find optimization algorithm in file {}.".format(
+                        csvfiles[0]
+                    )
                 )
             algorithm: str = config_dict['algorithm']  # type: ignore
             save_iterations = config_dict['save_iterations'] == 1
@@ -196,7 +203,9 @@ def from_csv(
         elif config_dict['method'] == 'variational':
             if 'algorithm' not in config_dict:
                 raise ValueError(
-                    "Cannot find variational algorithm in file {}.".format(csvfiles[0])
+                    "Cannot find variational algorithm in file {}.".format(
+                        csvfiles[0]
+                    )
                 )
             variational_args = VariationalArgs(
                 algorithm=config_dict['algorithm'],  # type: ignore

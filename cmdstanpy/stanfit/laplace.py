@@ -2,13 +2,7 @@
 Container for the result of running a laplace approximation.
 """
 
-from typing import (
-    Any,
-    Hashable,
-    MutableMapping,
-    Optional,
-    Union,
-)
+from typing import Any, Hashable, MutableMapping, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -38,9 +32,8 @@ class CmdStanLaplace:
         """Initialize object."""
         if not runset.method == Method.LAPLACE:
             raise ValueError(
-                'Wrong runset method, expecting laplace runset, found method {}'.format(
-                    runset.method
-                )
+                'Wrong runset method, expecting laplace runset, '
+                'found method {}'.format(runset.method)
             )
         self._runset = runset
         self._mode = mode
@@ -116,13 +109,16 @@ class CmdStanLaplace:
         """
         self._assemble_draws()
         try:
-            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(self._draws)
+            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(
+                self._draws
+            )
             return out
         except KeyError:
             # pylint: disable=raise-missing-from
             raise ValueError(
                 f'Unknown variable name: {var}\n'
-                'Available variables are ' + ", ".join(self._metadata.stan_vars.keys())
+                'Available variables are '
+                + ", ".join(self._metadata.stan_vars.keys())
             )
 
     def stan_variables(self) -> dict[str, np.ndarray]:
@@ -188,7 +184,9 @@ class CmdStanLaplace:
                     cols.append(var)
                 elif var in self._metadata.stan_vars:
                     info = self._metadata.stan_vars[var]
-                    cols.extend(self.column_names[info.start_idx : info.end_idx])
+                    cols.extend(
+                        self.column_names[info.start_idx : info.end_idx]
+                    )
                 else:
                     raise ValueError(f'Unknown variable: {var}')
 
@@ -267,7 +265,9 @@ class CmdStanLaplace:
         return self._metadata
 
     def __repr__(self) -> str:
-        mode = '\n'.join(['\t' + line for line in repr(self.mode).splitlines()])[1:]
+        mode = '\n'.join(
+            ['\t' + line for line in repr(self.mode).splitlines()]
+        )[1:]
         rep = 'CmdStanLaplace: model={} \nmode=({})\n{}'.format(
             self._runset.model,
             mode,

@@ -65,7 +65,9 @@ def validate_dir(install_dir: str) -> None:
         try:
             os.makedirs(install_dir)
         except (IOError, OSError, PermissionError) as e:
-            raise ValueError('Cannot create directory: {}'.format(install_dir)) from e
+            raise ValueError(
+                'Cannot create directory: {}'.format(install_dir)
+            ) from e
     else:
         if not os.path.isdir(install_dir):
             raise ValueError(
@@ -231,7 +233,8 @@ def cmdstan_version() -> Optional[tuple[int, ...]]:
     splits = version.split('.')
     if len(splits) != 3:
         get_logger().info(
-            'Cannot parse version, expected "<major>.<minor>.<patch>", found: "%s".',
+            'Cannot parse version, expected "<major>.<minor>.<patch>", '
+            'found: "%s".',
             version,
         )
         return None
@@ -262,7 +265,9 @@ def cmdstan_version_before(
             'Cannot determine whether version is before %d.%d.', major, minor
         )
         return False
-    if cur_version[0] < major or (cur_version[0] == major and cur_version[1] < minor):
+    if cur_version[0] < major or (
+        cur_version[0] == major and cur_version[1] < minor
+    ):
         return True
     return False
 
@@ -274,7 +279,9 @@ def cxx_toolchain_path(
     Validate, then activate C++ toolchain directory path.
     """
     if platform.system() != 'Windows':
-        raise RuntimeError('Functionality is currently only supported on Windows')
+        raise RuntimeError(
+            'Functionality is currently only supported on Windows'
+        )
     if version is not None and not isinstance(version, str):
         raise TypeError('Format version number as a string')
     logger = get_logger()
@@ -541,7 +548,9 @@ def wrap_url_progress_hook() -> Optional[Callable[[int, int, int], None]]:
         leave=False,
     )
 
-    def download_progress_hook(count: int, block_size: int, total_size: int) -> None:
+    def download_progress_hook(
+        count: int, block_size: int, total_size: int
+    ) -> None:
         if pbar.total is None:
             pbar.total = total_size
             pbar.reset()

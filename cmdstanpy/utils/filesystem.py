@@ -69,7 +69,9 @@ def windows_short_path(path: str) -> str:
             output_buf_size = needed
 
     short_path = (
-        os.path.join(short_base_path, file_name) if file_name else short_base_path
+        os.path.join(short_base_path, file_name)
+        if file_name
+        else short_base_path
     )
     return short_path
 
@@ -165,7 +167,9 @@ def _temp_multiinput(
 
 @contextlib.contextmanager
 def temp_inits(
-    inits: Union[str, os.PathLike, Mapping[str, Any], float, int, list[Any], None],
+    inits: Union[
+        str, os.PathLike, Mapping[str, Any], float, int, list[Any], None
+    ],
     *,
     allow_multiple: bool = True,
     id: int = 1,

@@ -111,13 +111,16 @@ class CmdStanPathfinder:
         """
         self._assemble_draws()
         try:
-            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(self._draws)
+            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(
+                self._draws
+            )
             return out
         except KeyError:
             # pylint: disable=raise-missing-from
             raise ValueError(
                 f'Unknown variable name: {var}\n'
-                'Available variables are ' + ", ".join(self._metadata.stan_vars.keys())
+                'Available variables are '
+                + ", ".join(self._metadata.stan_vars.keys())
             )
 
     def stan_variables(self) -> dict[str, np.ndarray]:
@@ -207,8 +210,10 @@ class CmdStanPathfinder:
         """
         return (  # type: ignore
             self._metadata.cmdstan_config.get("num_paths", 4) > 1
-            and self._metadata.cmdstan_config.get('psis_resample', 1) in (1, 'true')
-            and self._metadata.cmdstan_config.get('calculate_lp', 1) in (1, 'true')
+            and self._metadata.cmdstan_config.get('psis_resample', 1)
+            in (1, 'true')
+            and self._metadata.cmdstan_config.get('calculate_lp', 1)
+            in (1, 'true')
         )
 
     def save_csvfiles(self, dir: Optional[str] = None) -> None:

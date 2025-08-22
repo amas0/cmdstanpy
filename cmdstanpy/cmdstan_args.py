@@ -105,7 +105,9 @@ class SamplerArgs:
         * length of per-chain lists equals specified # of chains
         """
         if not isinstance(chains, (int, np.integer)) or chains < 1:
-            raise ValueError('Sampler expects number of chains to be greater than 0.')
+            raise ValueError(
+                'Sampler expects number of chains to be greater than 0.'
+            )
         if not (
             self.adapt_delta is None
             and self.adapt_init_phase is None
@@ -117,13 +119,17 @@ class SamplerArgs:
                 if self.adapt_delta is not None:
                     msg = '{}, adapt_delta: {}'.format(msg, self.adapt_delta)
                 if self.adapt_init_phase is not None:
-                    msg = '{}, adapt_init_phase: {}'.format(msg, self.adapt_init_phase)
+                    msg = '{}, adapt_init_phase: {}'.format(
+                        msg, self.adapt_init_phase
+                    )
                 if self.adapt_metric_window is not None:
                     msg = '{}, adapt_metric_window: {}'.format(
                         msg, self.adapt_metric_window
                     )
                 if self.adapt_step_size is not None:
-                    msg = '{}, adapt_step_size: {}'.format(msg, self.adapt_step_size)
+                    msg = '{}, adapt_step_size: {}'.format(
+                        msg, self.adapt_step_size
+                    )
                 raise ValueError(msg)
 
         if self.iter_warmup is not None:
@@ -151,7 +157,9 @@ class SamplerArgs:
         positive_int(self.max_treedepth, 'max_treedepth')
 
         if self.step_size is not None:
-            if isinstance(self.step_size, (float, int, np.integer, np.floating)):
+            if isinstance(
+                self.step_size, (float, int, np.integer, np.floating)
+            ):
                 if self.step_size <= 0:
                     raise ValueError(
                         'Argument "step_size" must be > 0, found {}.'.format(
@@ -189,7 +197,9 @@ class SamplerArgs:
                     self.metric_file = self.metric
             elif isinstance(self.metric, dict):
                 if 'inv_metric' not in self.metric:
-                    raise ValueError('Entry "inv_metric" not found in metric dict.')
+                    raise ValueError(
+                        'Entry "inv_metric" not found in metric dict.'
+                    )
                 dims = list(np.asarray(self.metric['inv_metric']).shape)
                 if len(dims) == 1:
                     self.metric_type = 'diag_e'
@@ -218,14 +228,20 @@ class SamplerArgs:
                                 'for chain {}.'.format(i + 1)
                             )
                         if i == 0:
-                            dims = list(np.asarray(metric_dict['inv_metric']).shape)
+                            dims = list(
+                                np.asarray(metric_dict['inv_metric']).shape
+                            )
                         else:
-                            dims2 = list(np.asarray(metric_dict['inv_metric']).shape)
+                            dims2 = list(
+                                np.asarray(metric_dict['inv_metric']).shape
+                            )
                             if dims != dims2:
                                 raise ValueError(
                                     'Found inconsistent "inv_metric" entry '
                                     'for chain {}: entry has dims '
-                                    '{}, expected {}.'.format(i + 1, dims, dims2)
+                                    '{}, expected {}.'.format(
+                                        i + 1, dims, dims2
+                                    )
                                 )
                         dict_file = create_named_text_file(
                             dir=_TMPDIR, prefix="metric", suffix=".json"
@@ -249,13 +265,15 @@ class SamplerArgs:
                             dims2 = read_metric(metric)
                             if len(dims) != len(dims2):
                                 raise ValueError(
-                                    'Metrics files {}, {}, inconsistent metrics'.format(
+                                    'Metrics files {}, {},'
+                                    ' inconsistent metrics'.format(
                                         self.metric[0], metric
                                     )
                                 )
                             if dims != dims2:
                                 raise ValueError(
-                                    'Metrics files {}, {}, inconsistent metrics'.format(
+                                    'Metrics files {}, {},'
+                                    ' inconsistent metrics'.format(
                                         self.metric[0], metric
                                     )
                                 )
@@ -268,7 +286,9 @@ class SamplerArgs:
                 else:
                     raise ValueError(
                         'Argument "metric" must be a list of pathnames or '
-                        'Python dicts, found list of {}.'.format(type(self.metric[0]))
+                        'Python dicts, found list of {}.'.format(
+                            type(self.metric[0])
+                        )
                     )
             else:
                 raise ValueError(
@@ -281,9 +301,8 @@ class SamplerArgs:
         if self.adapt_delta is not None:
             if not 0 < self.adapt_delta < 1:
                 raise ValueError(
-                    'Argument "adapt_delta" must be between 0 and 1, found {}'.format(
-                        self.adapt_delta
-                    )
+                    'Argument "adapt_delta" must be between 0 and 1,'
+                    ' found {}'.format(self.adapt_delta)
                 )
         if self.adapt_init_phase is not None:
             if self.adapt_init_phase < 0 or not isinstance(
@@ -437,7 +456,9 @@ class OptimizeArgs:
                     )
         if self.algorithm.lower() != 'lbfgs':
             if self.history_size is not None:
-                raise ValueError('history_size requires that algorithm be set to lbfgs')
+                raise ValueError(
+                    'history_size requires that algorithm be set to lbfgs'
+                )
 
         positive_float(self.init_alpha, 'init_alpha')
         positive_int(self.iter, 'iter')
@@ -620,7 +641,9 @@ class GenerateQuantitiesArgs:
         """
         for csv in self.sample_csv_files:
             if not os.path.exists(csv):
-                raise ValueError('Invalid path for sample csv file: {}'.format(csv))
+                raise ValueError(
+                    'Invalid path for sample csv file: {}'.format(csv)
+                )
 
     def compose(self, idx: int, cmd: list[str]) -> list[str]:
         """
@@ -667,7 +690,10 @@ class VariationalArgs:
         """
         Check arguments correctness and consistency.
         """
-        if self.algorithm is not None and self.algorithm not in self.VARIATIONAL_ALGOS:
+        if (
+            self.algorithm is not None
+            and self.algorithm not in self.VARIATIONAL_ALGOS
+        ):
             raise ValueError(
                 'Please specify variational algorithms as one of [{}]'.format(
                     ', '.join(self.VARIATIONAL_ALGOS)
@@ -794,16 +820,19 @@ class CmdStanArgs:
                 if chain_id < 1:
                     raise ValueError('invalid chain_id {}'.format(chain_id))
         if self.output_dir is not None:
-            self.output_dir = os.path.realpath(os.path.expanduser(self.output_dir))
+            self.output_dir = os.path.realpath(
+                os.path.expanduser(self.output_dir)
+            )
             if not os.path.exists(self.output_dir):
                 try:
                     os.makedirs(self.output_dir)
-                    get_logger().info('created output directory: %s', self.output_dir)
+                    get_logger().info(
+                        'created output directory: %s', self.output_dir
+                    )
                 except (RuntimeError, PermissionError) as exc:
                     raise ValueError(
-                        'Invalid path for output files, no such dir: {}.'.format(
-                            self.output_dir
-                        )
+                        'Invalid path for output files, '
+                        'no such dir: {}.'.format(self.output_dir)
                     ) from exc
             if not os.path.isdir(self.output_dir):
                 raise ValueError(
@@ -818,12 +847,14 @@ class CmdStanArgs:
                 os.remove(testpath)  # cleanup
             except Exception as exc:
                 raise ValueError(
-                    'Invalid path for output files, cannot write to dir: {}.'.format(
-                        self.output_dir
-                    )
+                    'Invalid path for output files,'
+                    ' cannot write to dir: {}.'.format(self.output_dir)
                 ) from exc
         if self.refresh is not None:
-            if not isinstance(self.refresh, (int, np.integer)) or self.refresh < 1:
+            if (
+                not isinstance(self.refresh, (int, np.integer))
+                or self.refresh < 1
+            ):
                 raise ValueError(
                     'Argument "refresh" must be a positive integer value, '
                     'found {}.'.format(self.refresh)
@@ -895,7 +926,9 @@ class CmdStanArgs:
             if isinstance(self.inits, (float, int, np.floating, np.integer)):
                 if self.inits < 0:
                     raise ValueError(
-                        'Argument "inits" must be > 0, found {}'.format(self.inits)
+                        'Argument "inits" must be > 0, found {}'.format(
+                            self.inits
+                        )
                     )
             elif isinstance(self.inits, str):
                 if not (

@@ -110,7 +110,9 @@ def latest_version() -> str:
                 print('retry ({}/5)'.format(i + 1))
                 sleep(1)
                 continue
-            raise CmdStanRetrieveError('Cannot connect to CmdStan github repo.') from e
+            raise CmdStanRetrieveError(
+                'Cannot connect to CmdStan github repo.'
+            ) from e
     content = json.loads(response.decode('utf-8'))
     tag = content['tag_name']
     match = re.search(r'v?(.+)', tag)
@@ -286,18 +288,26 @@ def build(verbose: bool = False, progress: bool = True, cores: int = 1) -> None:
         raise CmdStanInstallError(f'Command "make build" failed\n{str(e)}')
     if not os.path.exists(os.path.join('bin', 'stansummary' + EXTENSION)):
         raise CmdStanInstallError(
-            f'bin/stansummary{EXTENSION} not found, please rebuild or report a bug!'
+            f'bin/stansummary{EXTENSION} not found, please rebuild or '
+            'report a bug!'
         )
     if not os.path.exists(os.path.join('bin', 'diagnose' + EXTENSION)):
         raise CmdStanInstallError(
-            f'bin/stansummary{EXTENSION} not found, please rebuild or report a bug!'
+            f'bin/stansummary{EXTENSION} not found, please rebuild or '
+            'report a bug!'
         )
 
     if is_windows():
         # Add tbb to the $PATH on Windows
-        libtbb = os.path.join(os.getcwd(), 'stan', 'lib', 'stan_math', 'lib', 'tbb')
+        libtbb = os.path.join(
+            os.getcwd(), 'stan', 'lib', 'stan_math', 'lib', 'tbb'
+        )
         os.environ['PATH'] = ';'.join(
-            list(OrderedDict.fromkeys([libtbb] + os.environ.get('PATH', '').split(';')))
+            list(
+                OrderedDict.fromkeys(
+                    [libtbb] + os.environ.get('PATH', '').split(';')
+                )
+            )
         )
 
 
@@ -408,9 +418,8 @@ def install_version(
         )
         if overwrite and os.path.exists('.'):
             print(
-                'Overwrite requested, remove existing build of version {}'.format(
-                    cmdstan_version
-                )
+                'Overwrite requested, remove existing build '
+                'of version {}'.format(cmdstan_version)
             )
             clean_all(verbose)
             print('Rebuilding version {}'.format(cmdstan_version))
@@ -477,9 +486,9 @@ def retrieve_version(version: str, progress: bool = True) -> None:
     for i in range(6):  # always retry to allow for transient URLErrors
         try:
             if progress and progbar.allow_show_progress():
-                progress_hook: Optional[Callable[[int, int, int], None]] = (
-                    wrap_url_progress_hook()
-                )
+                progress_hook: Optional[
+                    Callable[[int, int, int], None]
+                ] = wrap_url_progress_hook()
             else:
                 progress_hook = None
             file_tmp, _ = urllib.request.urlretrieve(
@@ -488,13 +497,14 @@ def retrieve_version(version: str, progress: bool = True) -> None:
             break
         except urllib.error.HTTPError as e:
             raise CmdStanRetrieveError(
-                'HTTPError: {}\nVersion {} not available from github.com.'.format(
-                    e.code, version
-                )
+                'HTTPError: {}\nVersion {} not available from '
+                'github.com.'.format(e.code, version)
             ) from e
         except urllib.error.URLError as e:
             print(
-                'Failed to download CmdStan version {} from github.com'.format(version)
+                'Failed to download CmdStan version {} from github.com'.format(
+                    version
+                )
             )
             print(e)
             if i < 5:
@@ -640,7 +650,8 @@ def parse_cmdline_args() -> dict[str, Any]:
         '--interactive',
         '-i',
         action='store_true',
-        help="Ignore other arguments and run the installation in " + "interactive mode",
+        help="Ignore other arguments and run the installation in "
+        + "interactive mode",
     )
     parser.add_argument(
         '--version',

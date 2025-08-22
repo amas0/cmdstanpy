@@ -184,7 +184,9 @@ class CmdStanModel:
                 raise ValueError('no such file {}'.format(self._stan_file))
             _, filename = os.path.split(stan_file)
             if len(filename) < 6 or not filename.endswith('.stan'):
-                raise ValueError('invalid stan filename {}'.format(self._stan_file))
+                raise ValueError(
+                    'invalid stan filename {}'.format(self._stan_file)
+                )
             if not self._name:
                 self._name, _ = os.path.splitext(filename)
 
@@ -196,7 +198,9 @@ class CmdStanModel:
                 self._compiler_options.add_include_path(path)
 
             # try to detect models w/out parameters, needed for sampler
-            if (not cmdstan_version_before(2, 27)) and cmdstan_version_before(2, 36):
+            if (not cmdstan_version_before(2, 27)) and cmdstan_version_before(
+                2, 36
+            ):
                 try:
                     model_info = self.src_info()
                     if 'parameters' in model_info:
@@ -378,7 +382,9 @@ class CmdStanModel:
             with open(self._stan_file, 'r') as fd:
                 code = fd.read()
         except IOError:
-            get_logger().error('Cannot read file Stan file: %s', self._stan_file)
+            get_logger().error(
+                'Cannot read file Stan file: %s', self._stan_file
+            )
         return code
 
     # TODO(2.0): remove
@@ -897,7 +903,9 @@ class CmdStanModel:
             chains = 4
         if chains < 1:
             raise ValueError(
-                'Chains must be a positive integer value, found {}.'.format(chains)
+                'Chains must be a positive integer value, found {}.'.format(
+                    chains
+                )
             )
 
         if parallel_chains is None:
@@ -912,9 +920,8 @@ class CmdStanModel:
             parallel_chains = chains
         elif parallel_chains < 1:
             raise ValueError(
-                'Argument parallel_chains must be a positive integer, found {}.'.format(
-                    parallel_chains
-                )
+                'Argument parallel_chains must be a positive '
+                'integer, found {}.'.format(parallel_chains)
             )
         if threads_per_chain is None:
             threads_per_chain = 1
@@ -969,9 +976,8 @@ class CmdStanModel:
             if isinstance(chain_ids, int):
                 if chain_ids < 1:
                     raise ValueError(
-                        'Chain_id must be a positive integer value, found {}.'.format(
-                            chain_ids
-                        )
+                        'Chain_id must be a positive integer value, '
+                        'found {}.'.format(chain_ids)
                     )
                 chain_ids = [i + chain_ids for i in range(chains)]
             else:
@@ -1020,8 +1026,7 @@ class CmdStanModel:
             cmdstan_inits: Union[str, list[str], int, float, None]
             if one_process_per_chain and isinstance(inits, list):  # legacy
                 cmdstan_inits = [
-                    f"{_inits[:-5]}_{i}.json"
-                    for i in chain_ids  # type: ignore
+                    f"{_inits[:-5]}_{i}.json" for i in chain_ids  # type: ignore
                 ]
             else:
                 cmdstan_inits = _inits
@@ -1230,7 +1235,9 @@ class CmdStanModel:
             fit_csv_files = previous_fit.runset.csv_files
         elif isinstance(previous_fit, list):
             if len(previous_fit) < 1:
-                raise ValueError('Expecting list of Stan CSV files, found empty list')
+                raise ValueError(
+                    'Expecting list of Stan CSV files, found empty list'
+                )
             try:
                 fit_csv_files = previous_fit
                 fit_object = from_csv(fit_csv_files)  # type: ignore
@@ -1276,7 +1283,9 @@ class CmdStanModel:
             chains = 1
             chain_ids = [1]
 
-        generate_quantities_args = GenerateQuantitiesArgs(csv_files=fit_csv_files)
+        generate_quantities_args = GenerateQuantitiesArgs(
+            csv_files=fit_csv_files
+        )
         generate_quantities_args.validate(chains)
         with temp_single_json(data) as _data:
             args = CmdStanArgs(
@@ -1523,7 +1532,9 @@ class CmdStanModel:
             transcript_file = runset.stdout_files[dummy_chain_id]
             with open(transcript_file, 'r') as transcript:
                 contents = transcript.read()
-            pat = re.compile(r'stan::variational::normal_meanfield::calc_grad:', re.M)
+            pat = re.compile(
+                r'stan::variational::normal_meanfield::calc_grad:', re.M
+            )
             if len(re.findall(pat, contents)) > 0:
                 if grad_samples is None:
                     grad_samples = 10
@@ -1690,7 +1701,8 @@ class CmdStanModel:
         exe_info = self.exe_info()
         if cmdstan_version_before(2, 33, exe_info):
             raise ValueError(
-                "Method 'pathfinder' not available for CmdStan versions before 2.33"
+                "Method 'pathfinder' not available for CmdStan versions "
+                "before 2.33"
             )
 
         if (not psis_resample or not calculate_lp) and cmdstan_version_before(
@@ -1702,7 +1714,10 @@ class CmdStanModel:
             )
 
         if num_threads is not None:
-            if num_threads != 1 and exe_info.get('STAN_THREADS', '').lower() != 'true':
+            if (
+                num_threads != 1
+                and exe_info.get('STAN_THREADS', '').lower() != 'true'
+            ):
                 raise ValueError(
                     "Model must be compiled with 'STAN_THREADS=true' to use"
                     " 'num_threads' argument"
@@ -1807,9 +1822,13 @@ class CmdStanModel:
 
         if cmdstan_version_before(2, 31, self.exe_info()):
             raise ValueError(
-                "Method 'log_prob' not available for CmdStan versions before 2.31"
+                "Method 'log_prob' not available for CmdStan versions "
+                "before 2.31"
             )
-        with temp_single_json(data) as _data, temp_single_json(params) as _params:
+        with (
+            temp_single_json(data) as _data,
+            temp_single_json(params) as _params,
+        ):
             cmd = [
                 str(self.exe_file),
                 "log_prob",
@@ -1828,7 +1847,9 @@ class CmdStanModel:
 
             get_logger().debug("Cmd: %s", str(cmd))
 
-            proc = subprocess.run(cmd, capture_output=True, check=False, text=True)
+            proc = subprocess.run(
+                cmd, capture_output=True, check=False, text=True
+            )
             if proc.returncode:
                 get_logger().error(
                     "'log_prob' command failed!\nstdout:%s\nstderr:%s",
@@ -1836,7 +1857,8 @@ class CmdStanModel:
                     proc.stderr,
                 )
                 raise RuntimeError(
-                    "Method 'log_prob' failed with return code " + str(proc.returncode)
+                    "Method 'log_prob' failed with return code "
+                    + str(proc.returncode)
                 )
 
             result = pd.read_csv(output, comment="#")
@@ -1916,10 +1938,13 @@ class CmdStanModel:
         """
         if cmdstan_version_before(2, 32, self.exe_info()):
             raise ValueError(
-                "Method 'laplace_sample' not available for CmdStan versions before 2.32"
+                "Method 'laplace_sample' not available for CmdStan versions "
+                "before 2.32"
             )
         if opt_args is not None and mode is not None:
-            raise ValueError("Cannot specify both 'opt_args' and 'mode' arguments")
+            raise ValueError(
+                "Cannot specify both 'opt_args' and 'mode' arguments"
+            )
         if mode is None:
             optimize_args = {
                 "seed": seed,
@@ -1950,7 +1975,9 @@ class CmdStanModel:
             cmdstan_mode = mode
 
         if cmdstan_mode.runset.method != Method.OPTIMIZE:
-            raise ValueError("Mode must be a CmdStanMLE or a path to an optimize CSV")
+            raise ValueError(
+                "Mode must be a CmdStanMLE or a path to an optimize CSV"
+            )
 
         mode_jacobian = (
             cmdstan_mode.runset._args.method_args.jacobian  # type: ignore
@@ -1962,7 +1989,9 @@ class CmdStanModel:
                 f"but optimize was run with jacobian={mode_jacobian}"
             )
 
-        laplace_args = LaplaceArgs(cmdstan_mode.runset.csv_files[0], draws, jacobian)
+        laplace_args = LaplaceArgs(
+            cmdstan_mode.runset.csv_files[0], draws, jacobian
+        )
 
         with temp_single_json(data) as _data:
             args = CmdStanArgs(
@@ -2208,7 +2237,9 @@ class CmdStanModel:
 
             get_logger().debug("Cmd: %s", str(cmd))
 
-            proc = subprocess.run(cmd, capture_output=True, check=False, text=True)
+            proc = subprocess.run(
+                cmd, capture_output=True, check=False, text=True
+            )
             if proc.returncode:
                 get_logger().error(
                     "'diagnose' command failed!\nstdout:%s\nstderr:%s",

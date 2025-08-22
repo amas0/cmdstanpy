@@ -53,10 +53,14 @@ class RunSet:
             self._output_dir = args.output_dir
         else:
             # make a per-run subdirectory of our master temp directory
-            self._output_dir = tempfile.mkdtemp(prefix=args.model_name, dir=_TMPDIR)
+            self._output_dir = tempfile.mkdtemp(
+                prefix=args.model_name, dir=_TMPDIR
+            )
 
         # output files prefix: ``<model_name>-<YYYYMMDDHHMM>_<chain_id>``
-        self._base_outfile = f'{args.model_name}-{datetime.now().strftime(time_fmt)}'
+        self._base_outfile = (
+            f'{args.model_name}-{datetime.now().strftime(time_fmt)}'
+        )
         # per-process outputs
         self._stdout_files = [''] * self._num_procs
         self._profile_files = [''] * self._num_procs  # optional
@@ -70,7 +74,9 @@ class RunSet:
         else:
             self._stdout_files[0] = self.file_path("-stdout.txt")
             if args.save_profile:
-                self._profile_files[0] = self.file_path(".csv", extra="-profile")
+                self._profile_files[0] = self.file_path(
+                    ".csv", extra="-profile"
+                )
 
         # per-chain output files
         self._csv_files: list[str] = [''] * chains
@@ -79,7 +85,9 @@ class RunSet:
         if chains == 1:
             self._csv_files[0] = self.file_path(".csv")
             if args.save_latent_dynamics:
-                self._diagnostic_files[0] = self.file_path(".csv", extra="-diagnostic")
+                self._diagnostic_files[0] = self.file_path(
+                    ".csv", extra="-diagnostic"
+                )
         else:
             for i in range(chains):
                 self._csv_files[i] = self.file_path(".csv", id=chain_ids[i])
@@ -101,8 +109,12 @@ class RunSet:
                 repr, self._diagnostic_files[0]
             )
         if self._args.save_profile:
-            repr = '{}\n profile_file:\n\t{}'.format(repr, self._profile_files[0])
-        repr = '{}\n console_msgs (if any):\n\t{}'.format(repr, self._stdout_files[0])
+            repr = '{}\n profile_file:\n\t{}'.format(
+                repr, self._profile_files[0]
+            )
+        repr = '{}\n console_msgs (if any):\n\t{}'.format(
+            repr, self._stdout_files[0]
+        )
         return repr
 
     @property
@@ -205,7 +217,9 @@ class RunSet:
     ) -> str:
         if id is not None:
             suffix = f"_{id}{suffix}"
-        file = os.path.join(self._output_dir, f"{self._base_outfile}{extra}{suffix}")
+        file = os.path.join(
+            self._output_dir, f"{self._base_outfile}{extra}{suffix}"
+        )
         return file
 
     def _retcode(self, idx: int) -> int:
@@ -265,11 +279,15 @@ class RunSet:
 
         for i in range(self.chains):
             if not os.path.exists(self._csv_files[i]):
-                raise ValueError('Cannot access CSV file {}'.format(self._csv_files[i]))
+                raise ValueError(
+                    'Cannot access CSV file {}'.format(self._csv_files[i])
+                )
 
             to_path = os.path.join(dir, os.path.basename(self._csv_files[i]))
             if os.path.exists(to_path):
-                raise ValueError('File exists, not overwriting: {}'.format(to_path))
+                raise ValueError(
+                    'File exists, not overwriting: {}'.format(to_path)
+                )
             try:
                 get_logger().debug(
                     'saving tmpfile: "%s" as: "%s"', self._csv_files[i], to_path
@@ -277,10 +295,13 @@ class RunSet:
                 shutil.move(self._csv_files[i], to_path)
                 self._csv_files[i] = to_path
             except (IOError, OSError, PermissionError) as e:
-                raise ValueError('Cannot save to file: {}'.format(to_path)) from e
+                raise ValueError(
+                    'Cannot save to file: {}'.format(to_path)
+                ) from e
 
     def raise_for_timeouts(self) -> None:
         if any(self._timeout_flags):
             raise TimeoutError(
-                f"{sum(self._timeout_flags)} of {self.num_procs} processes timed out"
+                f"{sum(self._timeout_flags)} of {self.num_procs} "
+                "processes timed out"
             )

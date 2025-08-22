@@ -165,7 +165,8 @@ class CompilerOptions:
                     del self._stanc_options[deprecated]
                 else:
                     get_logger().warning(
-                        'compiler option "%s" is deprecated and should not be used',
+                        'compiler option "%s" is deprecated and should '
+                        'not be used',
                         deprecated,
                     )
         for key, val in self._stanc_options.items():
@@ -224,7 +225,8 @@ class CompilerOptions:
                 val = self._cpp_options[key]
                 if not isinstance(val, int) or val < 0:
                     raise ValueError(
-                        f'{key} must be a non-negative integer value, found {val}.'
+                        f'{key} must be a non-negative integer '
+                        f'value, found {val}.'
                     )
 
     def validate_user_header(self) -> None:
@@ -234,7 +236,8 @@ class CompilerOptions:
         """
         if self._user_header != "":
             if not (
-                os.path.exists(self._user_header) and os.path.isfile(self._user_header)
+                os.path.exists(self._user_header)
+                and os.path.isfile(self._user_header)
             ):
                 raise ValueError(
                     f"User header file {self._user_header} cannot be found"
@@ -272,7 +275,9 @@ class CompilerOptions:
             else:
                 for key, val in new_opts.stanc_options.items():
                     if key == 'include-paths':
-                        if isinstance(val, Iterable) and not isinstance(val, str):
+                        if isinstance(val, Iterable) and not isinstance(
+                            val, str
+                        ):
                             for path in val:
                                 self.add_include_path(str(path))
                         else:
@@ -337,7 +342,9 @@ class CompilerOptions:
         return opts
 
 
-def src_info(stan_file: str, compiler_options: CompilerOptions) -> dict[str, Any]:
+def src_info(
+    stan_file: str, compiler_options: CompilerOptions
+) -> dict[str, Any]:
     """
     Get source info for Stan program file.
 
@@ -525,7 +532,9 @@ def format_stan_file(
                 else:
                     raise ValueError(
                         "Invalid arguments passed for current CmdStan"
-                        + " version({})\n".format(cmdstan_version() or "Unknown")
+                        + " version({})\n".format(
+                            cmdstan_version() or "Unknown"
+                        )
                         + "--canonicalize requires 2.29 or higher"
                     )
             else:
