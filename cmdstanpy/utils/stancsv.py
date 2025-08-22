@@ -498,7 +498,7 @@ def parse_sampler_metadata_from_csv(
         "ct_max_treedepth": max_tree_hits,
         "time": {key_renames[k]: v for k, v in timings.items()},
     }
-    return {**config, **addtl}
+    return config | addtl
 
 
 def munge_varname(name: str) -> str:
