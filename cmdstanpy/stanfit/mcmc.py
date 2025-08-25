@@ -5,17 +5,7 @@ Container for the result of running the sample (MCMC) method
 import math
 import os
 from io import StringIO
-from typing import (
-    Any,
-    Dict,
-    Hashable,
-    List,
-    MutableMapping,
-    Optional,
-    Sequence,
-    Tuple,
-    Union,
-)
+from typing import Any, Hashable, MutableMapping, Optional, Sequence, Union
 
 import numpy as np
 import pandas as pd
@@ -98,7 +88,7 @@ class CmdStanMCMC:
         self._max_treedepths: np.ndarray = np.zeros(
             self.runset.chains, dtype=int
         )
-        self._chain_time: List[Dict[str, float]] = []
+        self._chain_time: list[dict[str, float]] = []
 
         # info from CSV header and initial and final comment blocks
         config = self._validate_csv_files()
@@ -108,7 +98,7 @@ class CmdStanMCMC:
 
     def create_inits(
         self, seed: Optional[int] = None, chains: int = 4
-    ) -> Union[List[Dict[str, np.ndarray]], Dict[str, np.ndarray]]:
+    ) -> Union[list[dict[str, np.ndarray]], dict[str, np.ndarray]]:
         """
         Create initial values for the parameters of the model by
         randomly selecting draws from the MCMC samples. If the samples
@@ -184,7 +174,7 @@ class CmdStanMCMC:
         return self.runset.chains
 
     @property
-    def chain_ids(self) -> List[int]:
+    def chain_ids(self) -> list[int]:
         """Chain ids."""
         return self.runset.chain_ids
 
@@ -211,7 +201,7 @@ class CmdStanMCMC:
         return self._metadata
 
     @property
-    def column_names(self) -> Tuple[str, ...]:
+    def column_names(self) -> tuple[str, ...]:
         """
         Names of all outputs from the sampler, comprising sampler parameters
         and all components of all model parameters, transformed parameters,
@@ -283,7 +273,7 @@ class CmdStanMCMC:
         return self._max_treedepths if not self._is_fixed_param else None
 
     @property
-    def time(self) -> List[Dict[str, float]]:
+    def time(self) -> list[dict[str, float]]:
         """
         List of per-chain time info scraped from CSV file.
         Each chain has dict with keys "warmup", "sampling", "total".
@@ -332,7 +322,7 @@ class CmdStanMCMC:
             return flatten_chains(self._draws[start_idx:, :, :])
         return self._draws[start_idx:, :, :]
 
-    def _validate_csv_files(self) -> Dict[str, Any]:
+    def _validate_csv_files(self) -> dict[str, Any]:
         """
         Checks that Stan CSV output files for all chains are consistent
         and returns dict containing config and column names.
@@ -407,13 +397,13 @@ class CmdStanMCMC:
                     diagnostics.append(
                         f'Chain {i + 1} had {self._divergences[i]} '
                         'divergent transitions '
-                        f'({((self._divergences[i]/ct_iters)*100):.1f}%)'
+                        f'({((self._divergences[i] / ct_iters) * 100):.1f}%)'
                     )
                 if self._max_treedepths[i] > 0:
                     diagnostics.append(
                         f'Chain {i + 1} had {self._max_treedepths[i]} '
                         'iterations at max treedepth '
-                        f'({((self._max_treedepths[i]/ct_iters)*100):.1f}%)'
+                        f'({((self._max_treedepths[i] / ct_iters) * 100):.1f}%)'
                     )
             diagnostics.append(
                 'Use the "diagnose()" method on the CmdStanMCMC object'
@@ -588,7 +578,7 @@ class CmdStanMCMC:
 
     def draws_pd(
         self,
-        vars: Union[List[str], str, None] = None,
+        vars: Union[list[str], str, None] = None,
         inc_warmup: bool = False,
     ) -> pd.DataFrame:
         """
@@ -666,7 +656,7 @@ class CmdStanMCMC:
         )[cols]
 
     def draws_xr(
-        self, vars: Union[str, List[str], None] = None, inc_warmup: bool = False
+        self, vars: Union[str, list[str], None] = None, inc_warmup: bool = False
     ) -> "xr.Dataset":
         """
         Returns the sampler draws as a xarray Dataset.
@@ -791,7 +781,7 @@ class CmdStanMCMC:
                 + ", ".join(self._metadata.stan_vars.keys())
             )
 
-    def stan_variables(self) -> Dict[str, np.ndarray]:
+    def stan_variables(self) -> dict[str, np.ndarray]:
         """
         Return a dictionary mapping Stan program variables names
         to the corresponding numpy.ndarray containing the inferred values.
@@ -810,7 +800,7 @@ class CmdStanMCMC:
             result[name] = self.stan_variable(name)
         return result
 
-    def method_variables(self) -> Dict[str, np.ndarray]:
+    def method_variables(self) -> dict[str, np.ndarray]:
         """
         Returns a dictionary of all sampler variables, i.e., all
         output column names ending in `__`.  Assumes that all variables

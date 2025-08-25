@@ -8,7 +8,7 @@ import math
 import os
 import re
 import warnings
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Iterator, Optional, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -18,7 +18,7 @@ from cmdstanpy import _CMDSTAN_SAMPLING, _CMDSTAN_THIN, _CMDSTAN_WARMUP
 
 def parse_comments_header_and_draws(
     stan_csv: Union[str, os.PathLike, Iterator[bytes]],
-) -> Tuple[List[bytes], Optional[str], List[bytes]]:
+) -> tuple[list[bytes], Optional[str], list[bytes]]:
     """Parses lines of a Stan CSV file into comment lines, the header line,
     and draws lines.
 
@@ -27,9 +27,9 @@ def parse_comments_header_and_draws(
 
     def partition_csv(
         lines: Iterator[bytes],
-    ) -> Tuple[List[bytes], Optional[str], List[bytes]]:
-        comment_lines: List[bytes] = []
-        draws_lines: List[bytes] = []
+    ) -> tuple[list[bytes], Optional[str], list[bytes]]:
+        comment_lines: list[bytes] = []
+        draws_lines: list[bytes] = []
         header = None
         for line in lines:
             if line.startswith(b"#"):  # is comment line
@@ -48,8 +48,8 @@ def parse_comments_header_and_draws(
 
 
 def filter_csv_bytes_by_columns(
-    csv_bytes_list: List[bytes], indexes_to_keep: List[int]
-) -> List[bytes]:
+    csv_bytes_list: list[bytes], indexes_to_keep: list[int]
+) -> list[bytes]:
     """Given the list of bytes representing the lines of a CSV file
     and the indexes of columns to keep, will return a new list of bytes
     containing only those columns in the index order provided. Assumes
@@ -62,7 +62,7 @@ def filter_csv_bytes_by_columns(
 
 
 def csv_bytes_list_to_numpy(
-    csv_bytes_list: List[bytes],
+    csv_bytes_list: list[bytes],
 ) -> npt.NDArray[np.float64]:
     """Efficiently converts a list of bytes representing whose concatenation
     represents a CSV file into a numpy array.
@@ -104,8 +104,8 @@ def csv_bytes_list_to_numpy(
 
 
 def parse_hmc_adaptation_lines(
-    comment_lines: List[bytes],
-) -> Tuple[Optional[float], Optional[npt.NDArray[np.float64]]]:
+    comment_lines: list[bytes],
+) -> tuple[Optional[float], Optional[npt.NDArray[np.float64]]]:
     """Extracts step size/mass matrix information from the Stan CSV comment
     lines by parsing the adaptation section. If the diag_e metric is used,
     the returned mass matrix will be a 1D array of the diagnoal elements,
@@ -142,8 +142,8 @@ def parse_hmc_adaptation_lines(
 
 
 def extract_key_val_pairs(
-    comment_lines: List[bytes], remove_default_text: bool = True
-) -> Iterator[Tuple[str, str]]:
+    comment_lines: list[bytes], remove_default_text: bool = True
+) -> Iterator[tuple[str, str]]:
     """Yields cleaned key = val pairs from stan csv comments.
     Removes '(Default)' text from values if remove_default_text is True."""
     cleaned_lines = (
@@ -162,11 +162,11 @@ def extract_key_val_pairs(
 
 
 def parse_config(
-    comment_lines: List[bytes],
-) -> Dict[str, Union[str, int, float]]:
+    comment_lines: list[bytes],
+) -> dict[str, Union[str, int, float]]:
     """Extracts the key=value config settings from Stan CSV comment
     lines and returns a dictionary."""
-    out: Dict[str, Union[str, int, float]] = {}
+    out: dict[str, Union[str, int, float]] = {}
     for key, val in extract_key_val_pairs(comment_lines):
         if key == 'file':
             if not val.endswith('csv'):
@@ -188,25 +188,25 @@ def parse_config(
     return out
 
 
-def parse_header(header: str) -> Tuple[str, ...]:
+def parse_header(header: str) -> tuple[str, ...]:
     """Returns munged variable names from a Stan csv header line"""
     return tuple(munge_varname(name) for name in header.split(","))
 
 
 def construct_config_header_dict(
-    comment_lines: List[bytes], header: Optional[str]
-) -> Dict[str, Union[str, int, float, Tuple[str, ...]]]:
+    comment_lines: list[bytes], header: Optional[str]
+) -> dict[str, Union[str, int, float, tuple[str, ...]]]:
     """Extracts config and header info from comment/draws lines parsed
     from a Stan CSV file."""
     config = parse_config(comment_lines)
-    out: Dict[str, Union[str, int, float, Tuple[str, ...]]] = {**config}
+    out: dict[str, Union[str, int, float, tuple[str, ...]]] = {**config}
     if header:
         out["raw_header"] = header
         out["column_names"] = parse_header(header)
     return out
 
 
-def parse_variational_eta(comment_lines: List[bytes]) -> float:
+def parse_variational_eta(comment_lines: list[bytes]) -> float:
     """Extracts the variational eta parameter from stancsv comment lines"""
     for i, line in enumerate(comment_lines):
         if line.startswith(b"# Stepsize adaptation") and (
@@ -224,8 +224,8 @@ def parse_variational_eta(comment_lines: List[bytes]) -> float:
 
 
 def extract_max_treedepth_and_divergence_counts(
-    header: str, draws_lines: List[bytes], max_treedepth: int, warmup_draws: int
-) -> Tuple[int, int]:
+    header: str, draws_lines: list[bytes], max_treedepth: int, warmup_draws: int
+) -> tuple[int, int]:
     """Extracts the max treedepth and divergence counts from the header
     and draw lines of the MCMC stan csv output."""
     if len(draws_lines) <= 1:  # Empty draws
@@ -265,12 +265,12 @@ def is_sneaky_fixed_param(header: str) -> bool:
 
 def count_warmup_and_sampling_draws(
     stan_csv: Union[str, os.PathLike, Iterator[bytes]],
-) -> Tuple[int, int]:
+) -> tuple[int, int]:
     """Scans through a Stan CSV file to count the number of lines in the
     warmup/sampling blocks to determine counts for warmup and sampling draws.
     """
 
-    def determine_draw_counts(lines: Iterator[bytes]) -> Tuple[int, int]:
+    def determine_draw_counts(lines: Iterator[bytes]) -> tuple[int, int]:
         is_fixed_param = False
         header_line_idx = None
         adaptation_block_idx = None
@@ -325,7 +325,7 @@ def count_warmup_and_sampling_draws(
 
 
 def raise_on_inconsistent_draws_shape(
-    header: str, draw_lines: List[bytes]
+    header: str, draw_lines: list[bytes]
 ) -> None:
     """Throws a ValueError if any draws are found to have an inconsistent
     shape, i.e. too many/few columns compared to the header"""
@@ -341,12 +341,12 @@ def raise_on_inconsistent_draws_shape(
     for i, draw in enumerate(draw_lines, start=1):
         if (draw_size := column_count(draw)) != num_cols:
             raise ValueError(
-                f"line {i}: bad draw, expecting {num_cols} items,"
-                f" found {draw_size}"
+                f"line {i}: bad draw, expecting {num_cols} items, "
+                f"found {draw_size}"
             )
 
 
-def raise_on_invalid_adaptation_block(comment_lines: List[bytes]) -> None:
+def raise_on_invalid_adaptation_block(comment_lines: list[bytes]) -> None:
     """Throws ValueErrors if the parsed adaptation block is invalid, e.g.
     the metric information is not present, consistent with the rest of
     the file, or the step size info cannot be processed."""
@@ -373,8 +373,7 @@ def raise_on_invalid_adaptation_block(comment_lines: List[bytes]) -> None:
     num, line = next(ln_iter)
     if not line.startswith(b"# Step size"):
         raise ValueError(
-            f"line {num}: expecting step size, "
-            f"found:\n\t \"{line.decode()}\""
+            f"line {num}: expecting step size, found:\n\t \"{line.decode()}\""
         )
     _, step_size = line.split(b" = ")
     try:
@@ -409,12 +408,12 @@ def raise_on_invalid_adaptation_block(comment_lines: List[bytes]) -> None:
 
 
 def parse_timing_lines(
-    comment_lines: List[bytes],
-) -> Dict[str, float]:
+    comment_lines: list[bytes],
+) -> dict[str, float]:
     """Parse the timing lines into a dictionary with key corresponding
     to the phase, e.g. Warm-up, Sampling, Total, and value the elapsed seconds
     """
-    out: Dict[str, float] = {}
+    out: dict[str, float] = {}
 
     cleaned_lines = (ln.lstrip(b"# ") for ln in comment_lines)
     in_timing_block = False
@@ -438,7 +437,7 @@ def check_sampler_csv(
     iter_warmup: int = _CMDSTAN_WARMUP,
     save_warmup: bool = False,
     thin: int = _CMDSTAN_THIN,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """Capture essential config, shape from stan_csv file."""
     meta = parse_sampler_metadata_from_csv(path)
     if thin > _CMDSTAN_THIN:
@@ -462,8 +461,8 @@ def check_sampler_csv(
     if save_warmup:
         if not ('save_warmup' in meta and meta['save_warmup'] == 1):
             raise ValueError(
-                f'Bad Stan CSV file {path}, '
-                'config error, expected save_warmup = 1'
+                f'Bad Stan CSV file {path}, config error, expected '
+                'save_warmup = 1'
             )
         if meta['draws_warmup'] != draws_warmup:
             raise ValueError(
@@ -475,7 +474,7 @@ def check_sampler_csv(
 
 def parse_sampler_metadata_from_csv(
     path: Union[str, os.PathLike],
-) -> Dict[str, Union[int, float, str, Tuple[str, ...], Dict[str, float]]]:
+) -> dict[str, Union[int, float, str, tuple[str, ...], dict[str, float]]]:
     """Parses sampling metadata from a given Stan CSV path for a sample run"""
     try:
         comments, header, draws = parse_comments_header_and_draws(path)
@@ -505,14 +504,14 @@ def parse_sampler_metadata_from_csv(
         "Sampling": "sampling",
         "Total": "total",
     }
-    addtl: Dict[str, Union[int, Dict[str, float]]] = {
+    addtl: dict[str, Union[int, dict[str, float]]] = {
         "draws_warmup": num_warmup,
         "draws_sampling": num_sampling,
         "ct_divergences": divs,
         "ct_max_treedepth": max_tree_hits,
         "time": {key_renames[k]: v for k, v in timings.items()},
     }
-    return {**config, **addtl}
+    return config | addtl
 
 
 def munge_varname(name: str) -> str:
@@ -531,7 +530,7 @@ def munge_varname(name: str) -> str:
     return '.'.join(tuple_parts)
 
 
-def read_metric(path: str) -> List[int]:
+def read_metric(path: str) -> list[int]:
     """
     Read metric file in JSON or Rdump format.
     Return dimensions of entry "inv_metric".
@@ -544,20 +543,18 @@ def read_metric(path: str) -> List[int]:
             return list(dims_np.shape)
         else:
             raise ValueError(
-                'metric file {}, bad or missing'
-                ' entry "inv_metric"'.format(path)
+                'metric file {}, bad or missing entry "inv_metric"'.format(path)
             )
     else:
         dims = list(read_rdump_metric(path))
         if dims is None:
             raise ValueError(
-                'metric file {}, bad or missing'
-                ' entry "inv_metric"'.format(path)
+                'metric file {}, bad or missing entry "inv_metric"'.format(path)
             )
         return dims
 
 
-def read_rdump_metric(path: str) -> List[int]:
+def read_rdump_metric(path: str) -> list[int]:
     """
     Find dimensions of variable named 'inv_metric' in Rdump data file.
     """
@@ -572,7 +569,7 @@ def read_rdump_metric(path: str) -> List[int]:
     return list(metric_dict['inv_metric'].shape)
 
 
-def rload(fname: str) -> Optional[Dict[str, Union[int, float, np.ndarray]]]:
+def rload(fname: str) -> Optional[dict[str, Union[int, float, np.ndarray]]]:
     """Parse data and parameter variable values from an R dump format file.
     This parser only supports the subset of R dump data as described
     in the "Dump Data Format" section of the CmdStan manual, i.e.,

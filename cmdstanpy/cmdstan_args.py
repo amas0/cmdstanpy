@@ -1,10 +1,11 @@
 """
 CmdStan arguments
 """
+
 import os
 from enum import Enum, auto
 from time import time
-from typing import Any, Dict, List, Mapping, Optional, Union
+from typing import Any, Mapping, Optional, Union
 
 import numpy as np
 from numpy.random import default_rng
@@ -65,9 +66,9 @@ class SamplerArgs:
         thin: Optional[int] = None,
         max_treedepth: Optional[int] = None,
         metric: Union[
-            str, Dict[str, Any], List[str], List[Dict[str, Any]], None
+            str, dict[str, Any], list[str], list[dict[str, Any]], None
         ] = None,
-        step_size: Union[float, List[float], None] = None,
+        step_size: Union[float, list[float], None] = None,
         adapt_engaged: bool = True,
         adapt_delta: Optional[float] = None,
         adapt_init_phase: Optional[int] = None,
@@ -84,7 +85,7 @@ class SamplerArgs:
         self.max_treedepth = max_treedepth
         self.metric = metric
         self.metric_type: Optional[str] = None
-        self.metric_file: Union[str, List[str], None] = None
+        self.metric_file: Union[str, list[str], None] = None
         self.step_size = step_size
         self.adapt_engaged = adapt_engaged
         self.adapt_delta = adapt_delta
@@ -161,8 +162,9 @@ class SamplerArgs:
             ):
                 if self.step_size <= 0:
                     raise ValueError(
-                        'Argument "step_size" must be > 0, '
-                        'found {}.'.format(self.step_size)
+                        'Argument "step_size" must be > 0, found {}.'.format(
+                            self.step_size
+                        )
                     )
             else:
                 if len(self.step_size) != chains:
@@ -217,9 +219,9 @@ class SamplerArgs:
                         )
                     )
                 if all(isinstance(elem, dict) for elem in self.metric):
-                    metric_files: List[str] = []
+                    metric_files: list[str] = []
                     for i, metric in enumerate(self.metric):
-                        metric_dict: Dict[str, Any] = metric  # type: ignore
+                        metric_dict: dict[str, Any] = metric  # type: ignore
                         if 'inv_metric' not in metric_dict:
                             raise ValueError(
                                 'Entry "inv_metric" not found in metric dict '
@@ -343,7 +345,7 @@ class SamplerArgs:
                 'When fixed_param=True, cannot specify adaptation parameters.'
             )
 
-    def compose(self, idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, idx: int, cmd: list[str]) -> list[str]:
         """
         Compose CmdStan command for method-specific non-default arguments.
         """
@@ -467,7 +469,7 @@ class OptimizeArgs:
         positive_float(self.tol_param, 'tol_param')
         positive_int(self.history_size, 'history_size')
 
-    def compose(self, _idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, _idx: int, cmd: list[str]) -> list[str]:
         """compose command string for CmdStan for non-default arg values."""
         cmd.append('method=optimize')
         if self.algorithm:
@@ -511,7 +513,7 @@ class LaplaceArgs:
             raise ValueError(f'Invalid path for mode file: {self.mode}')
         positive_int(self.draws, 'draws')
 
-    def compose(self, _idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, _idx: int, cmd: list[str]) -> list[str]:
         """compose command string for CmdStan for non-default arg values."""
         cmd.append('method=laplace')
         cmd.append(f'mode={self.mode}')
@@ -579,7 +581,7 @@ class PathfinderArgs:
         positive_int(self.num_draws, 'num_draws')
         positive_int(self.num_elbo_draws, 'num_elbo_draws')
 
-    def compose(self, _idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, _idx: int, cmd: list[str]) -> list[str]:
         """compose command string for CmdStan for non-default arg values."""
         cmd.append('method=pathfinder')
 
@@ -624,12 +626,13 @@ class PathfinderArgs:
 class GenerateQuantitiesArgs:
     """Arguments needed for generate_quantities method."""
 
-    def __init__(self, csv_files: List[str]) -> None:
+    def __init__(self, csv_files: list[str]) -> None:
         """Initialize object."""
         self.sample_csv_files = csv_files
 
     def validate(
-        self, chains: Optional[int] = None  # pylint: disable=unused-argument
+        self,
+        chains: Optional[int] = None,  # pylint: disable=unused-argument
     ) -> None:
         """
         Check arguments correctness and consistency.
@@ -642,7 +645,7 @@ class GenerateQuantitiesArgs:
                     'Invalid path for sample csv file: {}'.format(csv)
                 )
 
-    def compose(self, idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, idx: int, cmd: list[str]) -> list[str]:
         """
         Compose CmdStan command for method-specific non-default arguments.
         """
@@ -681,7 +684,8 @@ class VariationalArgs:
         self.output_samples = output_samples
 
     def validate(
-        self, chains: Optional[int] = None  # pylint: disable=unused-argument
+        self,
+        chains: Optional[int] = None,  # pylint: disable=unused-argument
     ) -> None:
         """
         Check arguments correctness and consistency.
@@ -705,7 +709,7 @@ class VariationalArgs:
         positive_int(self.output_samples, 'output_samples')
 
     # pylint: disable=unused-argument
-    def compose(self, idx: int, cmd: List[str]) -> List[str]:
+    def compose(self, idx: int, cmd: list[str]) -> list[str]:
         """
         Compose CmdStan command for method-specific non-default arguments.
         """
@@ -747,7 +751,7 @@ class CmdStanArgs:
         self,
         model_name: str,
         model_exe: OptionalPath,
-        chain_ids: Optional[List[int]],
+        chain_ids: Optional[list[int]],
         method_args: Union[
             SamplerArgs,
             OptimizeArgs,
@@ -757,8 +761,8 @@ class CmdStanArgs:
             PathfinderArgs,
         ],
         data: Union[Mapping[str, Any], str, None] = None,
-        seed: Union[int, List[int], None] = None,
-        inits: Union[int, float, str, List[str], None] = None,
+        seed: Union[int, list[int], None] = None,
+        inits: Union[int, float, str, list[str], None] = None,
         output_dir: OptionalPath = None,
         sig_figs: Optional[int] = None,
         save_latent_dynamics: bool = False,
@@ -959,11 +963,11 @@ class CmdStanArgs:
         *,
         diagnostic_file: Optional[str] = None,
         profile_file: Optional[str] = None,
-    ) -> List[str]:
+    ) -> list[str]:
         """
         Compose CmdStan command for non-default arguments.
         """
-        cmd: List[str] = []
+        cmd: list[str] = []
         if idx is not None and self.chain_ids is not None:
             if idx < 0 or idx > len(self.chain_ids) - 1:
                 raise ValueError(

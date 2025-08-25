@@ -37,13 +37,13 @@ from .stanfit import (
 from .utils import (
     cmdstan_path,
     cmdstan_version,
+    disable_logging,
+    enable_logging,
     install_cmdstan,
     set_cmdstan_path,
     set_make_env,
     show_versions,
     write_stan_json,
-    enable_logging,
-    disable_logging,
 )
 
 __all__ = [

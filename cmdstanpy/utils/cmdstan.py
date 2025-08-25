@@ -7,7 +7,7 @@ import platform
 import subprocess
 import sys
 from collections import OrderedDict
-from typing import Callable, Dict, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 
 from tqdm.auto import tqdm
 
@@ -198,7 +198,7 @@ def cmdstan_path() -> str:
     return os.path.normpath(cmdstan)
 
 
-def cmdstan_version() -> Optional[Tuple[int, ...]]:
+def cmdstan_version() -> Optional[tuple[int, ...]]:
     """
     Parses version string out of CmdStan makefile variable CMDSTAN_VERSION,
     returns Tuple(Major, minor).
@@ -242,7 +242,7 @@ def cmdstan_version() -> Optional[Tuple[int, ...]]:
 
 
 def cmdstan_version_before(
-    major: int, minor: int, info: Optional[Dict[str, str]] = None
+    major: int, minor: int, info: Optional[dict[str, str]] = None
 ) -> bool:
     """
     Check that CmdStan version is less than Major.minor version.
@@ -274,7 +274,7 @@ def cmdstan_version_before(
 
 def cxx_toolchain_path(
     version: Optional[str] = None, install_dir: Optional[str] = None
-) -> Tuple[str, ...]:
+) -> tuple[str, ...]:
     """
     Validate, then activate C++ toolchain directory path.
     """

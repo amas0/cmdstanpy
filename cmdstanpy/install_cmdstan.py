@@ -17,6 +17,7 @@ Optional command line arguments:
    --cores: int, number of cores to use when building, defaults to 1
    -c, --compiler : flag, add C++ compiler to path (Windows only)
 """
+
 import argparse
 import json
 import os
@@ -30,7 +31,7 @@ import urllib.request
 from collections import OrderedDict
 from pathlib import Path
 from time import sleep
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 from tqdm.auto import tqdm
 
@@ -85,7 +86,7 @@ MAKE = os.getenv('MAKE', 'make' if not is_windows() else 'mingw32-make')
 EXTENSION = '.exe' if is_windows() else ''
 
 
-def get_headers() -> Dict[str, str]:
+def get_headers() -> dict[str, str]:
     """Create headers dictionary."""
     headers = {}
     GITHUB_PAT = os.environ.get("GITHUB_PAT")  # pylint:disable=invalid-name
@@ -287,13 +288,13 @@ def build(verbose: bool = False, progress: bool = True, cores: int = 1) -> None:
         raise CmdStanInstallError(f'Command "make build" failed\n{str(e)}')
     if not os.path.exists(os.path.join('bin', 'stansummary' + EXTENSION)):
         raise CmdStanInstallError(
-            f'bin/stansummary{EXTENSION} not found'
-            ', please rebuild or report a bug!'
+            f'bin/stansummary{EXTENSION} not found, please rebuild or '
+            'report a bug!'
         )
     if not os.path.exists(os.path.join('bin', 'diagnose' + EXTENSION)):
         raise CmdStanInstallError(
-            f'bin/stansummary{EXTENSION} not found'
-            ', please rebuild or report a bug!'
+            f'bin/stansummary{EXTENSION} not found, please rebuild or '
+            'report a bug!'
         )
 
     if is_windows():
@@ -417,8 +418,8 @@ def install_version(
         )
         if overwrite and os.path.exists('.'):
             print(
-                'Overwrite requested, remove existing build of version '
-                '{}'.format(cmdstan_version)
+                'Overwrite requested, remove existing build '
+                'of version {}'.format(cmdstan_version)
             )
             clean_all(verbose)
             print('Rebuilding version {}'.format(cmdstan_version))
@@ -496,10 +497,8 @@ def retrieve_version(version: str, progress: bool = True) -> None:
             break
         except urllib.error.HTTPError as e:
             raise CmdStanRetrieveError(
-                'HTTPError: {}\n'
-                'Version {} not available from github.com.'.format(
-                    e.code, version
-                )
+                'HTTPError: {}\nVersion {} not available from '
+                'github.com.'.format(e.code, version)
             ) from e
         except urllib.error.URLError as e:
             print(
@@ -645,7 +644,7 @@ def run_install(args: Union[InteractiveSettings, InstallationSettings]) -> None:
             compile_example(args.verbose)
 
 
-def parse_cmdline_args() -> Dict[str, Any]:
+def parse_cmdline_args() -> dict[str, Any]:
     parser = argparse.ArgumentParser("install_cmdstan")
     parser.add_argument(
         '--interactive',

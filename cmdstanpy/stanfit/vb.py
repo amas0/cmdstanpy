@@ -1,7 +1,7 @@
 """Container for the results of running autodiff variational inference"""
 
 from collections import OrderedDict
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -55,7 +55,7 @@ class CmdStanVB:
 
     def create_inits(
         self, seed: Optional[int] = None, chains: int = 4
-    ) -> Union[List[Dict[str, np.ndarray]], Dict[str, np.ndarray]]:
+    ) -> Union[list[dict[str, np.ndarray]], dict[str, np.ndarray]]:
         """
         Create initial values for the parameters of the model
         by randomly selecting draws from the variational approximation
@@ -120,7 +120,7 @@ class CmdStanVB:
         return len(self.column_names)
 
     @property
-    def column_names(self) -> Tuple[str, ...]:
+    def column_names(self) -> tuple[str, ...]:
         """
         Names of information items returned by sampler for each draw.
         Includes approximation information and names of model parameters
@@ -150,7 +150,7 @@ class CmdStanVB:
         return pd.DataFrame([self._variational_mean], columns=self.column_names)
 
     @property
-    def variational_params_dict(self) -> Dict[str, np.ndarray]:
+    def variational_params_dict(self) -> dict[str, np.ndarray]:
         """Returns inferred parameter means as Dict."""
         return OrderedDict(zip(self.column_names, self._variational_mean))
 
@@ -240,7 +240,7 @@ class CmdStanVB:
 
     def stan_variables(
         self, *, mean: Optional[bool] = None
-    ) -> Dict[str, Union[np.ndarray, float]]:
+    ) -> dict[str, Union[np.ndarray, float]]:
         """
         Return a dictionary mapping Stan program variables names
         to the corresponding numpy.ndarray containing the inferred values.
