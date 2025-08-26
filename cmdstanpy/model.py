@@ -310,6 +310,16 @@ class CmdStanModel:
             return {}
         return compilation.src_info(str(self.stan_file), self._compiler_options)
 
+    def supports_config_json(self) -> bool:
+        """Returns True if the model was compiled with Stan version >= 2.34,
+        which supports saving the config in JSON format"""
+        exe_info = self.exe_info()
+        if not exe_info:  # Empty imples < 2.27
+            return False
+        major = int(exe_info['stan_version_major'])
+        minor = int(exe_info['stan_version_minor'])
+        return (major, minor) >= (2, 34)
+
     # TODO(2.0) remove
     def format(
         self,
@@ -630,6 +640,7 @@ class CmdStanModel:
                 output_dir=output_dir,
                 sig_figs=sig_figs,
                 save_profile=save_profile,
+                save_config=self.supports_config_json(),
                 method_args=optimize_args,
                 refresh=refresh,
             )
@@ -1042,6 +1053,7 @@ class CmdStanModel:
                 sig_figs=sig_figs,
                 save_latent_dynamics=save_latent_dynamics,
                 save_profile=save_profile,
+                save_config=self.supports_config_json(),
                 method_args=sampler_args,
                 refresh=refresh,
             )
@@ -1297,6 +1309,7 @@ class CmdStanModel:
                 output_dir=gq_output_dir,
                 sig_figs=sig_figs,
                 method_args=generate_quantities_args,
+                save_config=self.supports_config_json(),
                 refresh=refresh,
             )
             runset = RunSet(
@@ -1496,6 +1509,7 @@ class CmdStanModel:
                 sig_figs=sig_figs,
                 save_latent_dynamics=save_latent_dynamics,
                 save_profile=save_profile,
+                save_config=self.supports_config_json(),
                 method_args=variational_args,
                 refresh=refresh,
             )
@@ -1761,6 +1775,7 @@ class CmdStanModel:
                 output_dir=output_dir,
                 sig_figs=sig_figs,
                 save_profile=save_profile,
+                save_config=self.supports_config_json(),
                 method_args=pathfinder_args,
                 refresh=refresh,
             )
@@ -2003,6 +2018,7 @@ class CmdStanModel:
                 output_dir=output_dir,
                 sig_figs=sig_figs,
                 save_profile=save_profile,
+                save_config=self.supports_config_json(),
                 method_args=laplace_args,
                 refresh=refresh,
             )

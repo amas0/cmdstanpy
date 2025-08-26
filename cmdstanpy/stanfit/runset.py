@@ -64,6 +64,7 @@ class RunSet:
         # per-process outputs
         self._stdout_files = [''] * self._num_procs
         self._profile_files = [''] * self._num_procs  # optional
+        self._config_files = [''] * self._num_procs
         if one_process_per_chain:
             for i in range(chains):
                 self._stdout_files[i] = self.file_path("-stdout.txt", id=i)
@@ -71,12 +72,18 @@ class RunSet:
                     self._profile_files[i] = self.file_path(
                         ".csv", extra="-profile", id=chain_ids[i]
                     )
+                if args.save_config:
+                    self._config_files[i] = self.file_path(
+                        "_config.json", id=chain_ids[i] if chains > 1 else None
+                    )
         else:
             self._stdout_files[0] = self.file_path("-stdout.txt")
             if args.save_profile:
                 self._profile_files[0] = self.file_path(
                     ".csv", extra="-profile"
                 )
+            if args.save_config:
+                self._config_files[0] = self.file_path("_config.json")
 
         # per-chain output files
         self._csv_files: list[str] = [''] * chains
@@ -112,6 +119,8 @@ class RunSet:
             repr = '{}\n profile_file:\n\t{}'.format(
                 repr, self._profile_files[0]
             )
+        if self._args.save_config:
+            repr = '{}\n config_file:\n\t{}'.format(repr, self._config_files[0])
         repr = '{}\n console_msgs (if any):\n\t{}'.format(
             repr, self._stdout_files[0]
         )
@@ -162,23 +171,29 @@ class RunSet:
             return self._args.compose_command(
                 idx,
                 csv_file=self.csv_files[idx],
-                diagnostic_file=self.diagnostic_files[idx]
-                if self._args.save_latent_dynamics
-                else None,
-                profile_file=self.profile_files[idx]
-                if self._args.save_profile
-                else None,
+                diagnostic_file=(
+                    self.diagnostic_files[idx]
+                    if self._args.save_latent_dynamics
+                    else None
+                ),
+                profile_file=(
+                    self.profile_files[idx] if self._args.save_profile else None
+                ),
             )
         else:
             return self._args.compose_command(
                 idx,
                 csv_file=self.file_path('.csv'),
-                diagnostic_file=self.file_path(".csv", extra="-diagnostic")
-                if self._args.save_latent_dynamics
-                else None,
-                profile_file=self.file_path(".csv", extra="-profile")
-                if self._args.save_profile
-                else None,
+                diagnostic_file=(
+                    self.file_path(".csv", extra="-diagnostic")
+                    if self._args.save_latent_dynamics
+                    else None
+                ),
+                profile_file=(
+                    self.file_path(".csv", extra="-profile")
+                    if self._args.save_profile
+                    else None
+                ),
             )
 
     @property
@@ -210,6 +225,11 @@ class RunSet:
     def profile_files(self) -> list[str]:
         """List of paths to CmdStan profiler files."""
         return self._profile_files
+
+    @property
+    def config_files(self) -> list[str]:
+        """Paths to CmdStan config file, if exists."""
+        return self._config_files
 
     # pylint: disable=invalid-name
     def file_path(

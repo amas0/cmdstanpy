@@ -767,6 +767,7 @@ class CmdStanArgs:
         sig_figs: Optional[int] = None,
         save_latent_dynamics: bool = False,
         save_profile: bool = False,
+        save_config: bool = False,
         refresh: Optional[int] = None,
     ) -> None:
         """Initialize object."""
@@ -780,6 +781,7 @@ class CmdStanArgs:
         self.sig_figs = sig_figs
         self.save_latent_dynamics = save_latent_dynamics
         self.save_profile = save_profile
+        self.save_config = save_config
         self.refresh = refresh
         self.method_args = method_args
         if isinstance(method_args, SamplerArgs):
@@ -1005,5 +1007,7 @@ class CmdStanArgs:
             cmd.append(f'refresh={self.refresh}')
         if self.sig_figs is not None:
             cmd.append(f'sig_figs={self.sig_figs}')
+        if self.save_config:
+            cmd.append("save_cmdstan_config=true")
         cmd = self.method_args.compose(idx, cmd)
         return cmd
