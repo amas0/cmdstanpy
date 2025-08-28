@@ -24,6 +24,7 @@ from typing import (
     Union,
 )
 
+import numpy as np
 import pandas as pd
 from tqdm.auto import tqdm
 
@@ -55,7 +56,12 @@ from cmdstanpy.utils import (
     get_logger,
     returncode_msg,
 )
-from cmdstanpy.utils.filesystem import temp_inits, temp_single_json
+from cmdstanpy.utils.filesystem import (
+    temp_inits,
+    temp_metrics,
+    temp_single_json,
+)
+from cmdstanpy.utils.stancsv import try_deduce_metric_type
 
 from . import progress as progbar
 
@@ -697,6 +703,13 @@ class CmdStanModel:
         timeout: Optional[float] = None,
         *,
         force_one_process_per_chain: Optional[bool] = None,
+        inv_metric: Union[
+            str,
+            np.ndarray,
+            Mapping[str, Any],
+            list[Union[str, np.ndarray, Mapping[str, Any]]],
+            None,
+        ] = None,
     ) -> CmdStanMCMC:
         """
         Run or more chains of the NUTS-HMC sampler to produce a set of draws
@@ -785,29 +798,25 @@ class CmdStanModel:
         :param max_treedepth: Maximum depth of trees evaluated by NUTS sampler
             per iteration.
 
-        :param metric: Specification of the mass matrix, either as a
-            vector consisting of the diagonal elements of the covariance
-            matrix ('diag' or 'diag_e') or the full covariance matrix
-            ('dense' or 'dense_e').
+        :param metric: Specify the type of the inverse mass matrix. Options are
+            'diag' or 'diag_e' for diagonal matrix, 'dense' or 'dense_e'
+            for a dense matrix, or 'unit_e' an identity mass matrix. To provide
+            an initial value for the inverse mass matrix, use the ``inv_metric``
+            argument.
 
-            If the value of the metric argument is a string other than
-            'diag', 'diag_e', 'dense', or 'dense_e', it must be
-            a valid filepath to a JSON or Rdump file which contains an entry
-            'inv_metric' whose value is either the diagonal vector or
-            the full covariance matrix.
+        :param inv_metric: Provide an initial value for the inverse
+            mass matrix.
 
-            If the value of the metric argument is a list of paths, its
-            length must match the number of chains and all paths must be
-            unique.
-
-            If the value of the metric argument is a Python dict object, it
-            must contain an entry 'inv_metric' which specifies either the
-            diagnoal or dense matrix.
-
-            If the value of the metric argument is a list of Python dicts,
-            its length must match the number of chains and all dicts must
-            containan entry 'inv_metric' and all 'inv_metric' entries must
-            have the same shape.
+            Valid options include:
+             - a string, which must be a valid filepath to a JSON or
+               Rdump file which contains an entry 'inv_metric' whose value
+               is either a diagonal vector or dense matrix.
+             - a numpy array containing either the diagonal vector or dense
+               matrix.
+             - a dictionary containing an entry 'inv_metric' whose value
+                is either a diagonal vector or dense matrix.
+             - a list of any of the above, of length num_chains, with
+               the same shape of metric in each entry.
 
         :param step_size: Initial step size for HMC sampler.  The value is
             either a single number or a list of numbers which will be used
@@ -1001,35 +1010,79 @@ class CmdStanModel:
                             'Chain_id must be a non-negative integer value,'
                             ' found {}.'.format(chain_id)
                         )
+        if metric is not None and metric not in (
+            'diag',
+            'dense',
+            'unit_e',
+            'diag_e',
+            'dense_e',
+        ):
+            get_logger().warning(
+                "Providing anything other than metric type for"
+                " 'metric' is deprecated and will be removed"
+                " in the next major release."
+                " Please provide such information via"
+                " 'inv_metric' argument."
+            )
+            if inv_metric is not None:
+                raise ValueError(
+                    "Cannot provide both (deprecated) non-metric-type 'metric'"
+                    " argument and 'inv_metric' argument."
+                )
+            inv_metric = metric  # type: ignore # for backwards compatibility
+            metric = None
 
-        sampler_args = SamplerArgs(
-            num_chains=1 if one_process_per_chain else chains,
-            iter_warmup=iter_warmup,
-            iter_sampling=iter_sampling,
-            save_warmup=save_warmup,
-            thin=thin,
-            max_treedepth=max_treedepth,
-            metric=metric,
-            step_size=step_size,
-            adapt_engaged=adapt_engaged,
-            adapt_delta=adapt_delta,
-            adapt_init_phase=adapt_init_phase,
-            adapt_metric_window=adapt_metric_window,
-            adapt_step_size=adapt_step_size,
-            fixed_param=fixed_param,
-        )
+        if metric is None and inv_metric is not None:
+            metric = try_deduce_metric_type(inv_metric)
+
+        if isinstance(inv_metric, list):
+            if not len(inv_metric) == chains:
+                raise ValueError(
+                    'Number of metric files must match number of chains,'
+                    ' found {} metric files for {} chains.'.format(
+                        len(inv_metric), chains
+                    )
+                )
 
         with (
             temp_single_json(data) as _data,
             temp_inits(inits, id=chain_ids[0]) as _inits,
+            temp_metrics(inv_metric, id=chain_ids[0]) as _inv_metric,
         ):
             cmdstan_inits: Union[str, list[str], int, float, None]
+            cmdstan_metrics: Union[str, list[str], None]
+
             if one_process_per_chain and isinstance(inits, list):  # legacy
                 cmdstan_inits = [
                     f"{_inits[:-5]}_{i}.json" for i in chain_ids  # type: ignore
                 ]
             else:
                 cmdstan_inits = _inits
+            if one_process_per_chain and isinstance(inv_metric, list):  # legacy
+                cmdstan_metrics = [
+                    f"{_inv_metric[:-5]}_{i}.json"  # type: ignore
+                    for i in chain_ids
+                ]
+            else:
+                cmdstan_metrics = _inv_metric
+
+            sampler_args = SamplerArgs(
+                num_chains=1 if one_process_per_chain else chains,
+                iter_warmup=iter_warmup,
+                iter_sampling=iter_sampling,
+                save_warmup=save_warmup,
+                thin=thin,
+                max_treedepth=max_treedepth,
+                metric_type=metric,  # type: ignore
+                metric_file=cmdstan_metrics,
+                step_size=step_size,
+                adapt_engaged=adapt_engaged,
+                adapt_delta=adapt_delta,
+                adapt_init_phase=adapt_init_phase,
+                adapt_metric_window=adapt_metric_window,
+                adapt_step_size=adapt_step_size,
+                fixed_param=fixed_param,
+            )
 
             args = CmdStanArgs(
                 self._name,

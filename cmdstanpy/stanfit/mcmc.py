@@ -223,19 +223,27 @@ class CmdStanMCMC:
             else None
         )
 
+    # TODO(2.0): remove
     @property
     def metric(self) -> Optional[np.ndarray]:
+        """Deprecated. Use ``.inv_metric`` instead."""
+        get_logger().warning(
+            'The "metric" property is deprecated, use "inv_metric" instead. '
+            'This will be the same quantity, but with a more accurate name.'
+        )
+        return self.inv_metric
+
+    @property
+    def inv_metric(self) -> Optional[np.ndarray]:
         """
-        Metric used by sampler for each chain.
-        When sampler algorithm 'fixed_param' is specified, metric is None.
+        Inverse mass matrix used by sampler for each chain.
+        Returns a ``nchains x nparams`` array when metric_type is 'diag_e',
+        a ``nchains x nparams x nparams`` array when metric_type is 'dense_e',
+        or ``None`` when metric_type is 'unit_e' or algorithm is 'fixed_param'.
         """
-        if self._is_fixed_param:
+        if self._is_fixed_param or self.metric_type == 'unit_e':
             return None
-        if self._metadata.cmdstan_config['metric'] == 'unit_e':
-            get_logger().info(
-                'Unit diagnonal metric, inverse mass matrix size unknown.'
-            )
-            return None
+
         self._assemble_draws()
         return self._metric
 

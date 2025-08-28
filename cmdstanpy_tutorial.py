@@ -37,7 +37,7 @@ print(fit.draws().shape)
 
 print(fit.step_size)
 print(fit.metric_type)
-print(fit.metric)
+print(fit.inv_metric)
 
 # #### Summarize the results
 

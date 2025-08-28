@@ -10,6 +10,8 @@ import shutil
 import tempfile
 from typing import Any, Iterator, Mapping, Optional, Union
 
+import numpy as np
+
 from cmdstanpy import _TMPDIR
 
 from .json import write_stan_json
@@ -163,6 +165,36 @@ def _temp_multiinput(
                     os.remove(file)
     else:
         yield from _temp_single_json(input)
+
+
+@contextlib.contextmanager
+def temp_metrics(
+    metrics: Union[
+        str, os.PathLike, Mapping[str, Any], np.ndarray, list[Any], None
+    ],
+    *,
+    id: int = 1,
+) -> Iterator[Union[str, None]]:
+    if isinstance(metrics, dict):
+        if 'inv_metric' not in metrics:
+            raise ValueError('Entry "inv_metric" not found in metric dict.')
+    if isinstance(metrics, np.ndarray):
+        metrics = {"inv_metric": metrics}
+
+    if isinstance(metrics, list):
+        metrics_processed = []
+        for init in metrics:
+            if isinstance(init, np.ndarray):
+                metrics_processed.append({"inv_metric": init})
+            else:
+                metrics_processed.append(init)
+                if isinstance(metrics_processed, dict):
+                    if 'inv_metric' not in metrics_processed:
+                        raise ValueError(
+                            'Entry "inv_metric" not found in metric dict.'
+                        )
+        metrics = metrics_processed
+    yield from _temp_multiinput(metrics, base=id)
 
 
 @contextlib.contextmanager

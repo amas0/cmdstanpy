@@ -89,7 +89,7 @@ def test_bernoulli_good(stanfile: str):
     assert bern_fit.draws().shape == (100, 2, len(BERNOULLI_COLS))
     assert bern_fit.metric_type == 'diag_e'
     assert bern_fit.step_size.shape == (2,)
-    assert bern_fit.metric.shape == (2, 1)
+    assert bern_fit.inv_metric.shape == (2, 1)
 
     assert bern_fit.draws(concat_chains=True).shape == (
         200,
@@ -125,7 +125,7 @@ def test_bernoulli_good(stanfile: str):
     assert bern_sample.shape == (100, 2, len(BERNOULLI_COLS))
     assert bern_fit.metric_type == 'dense_e'
     assert bern_fit.step_size.shape == (2,)
-    assert bern_fit.metric.shape == (2, 1, 1)
+    assert bern_fit.inv_metric.shape == (2, 1, 1)
 
     bern_fit = bern_model.sample(
         data=jdata,
@@ -186,9 +186,7 @@ def test_bernoulli_good(stanfile: str):
 
 
 @pytest.mark.parametrize("stanfile", ["bernoulli.stan"])
-def test_bernoulli_unit_e(
-    stanfile: str, caplog: pytest.LogCaptureFixture
-) -> None:
+def test_bernoulli_unit_e(stanfile: str) -> None:
     stan = os.path.join(DATAFILES_PATH, stanfile)
     bern_model = CmdStanModel(stan_file=stan)
 
@@ -204,19 +202,9 @@ def test_bernoulli_unit_e(
         show_progress=False,
     )
     assert bern_fit.metric_type == 'unit_e'
-    assert bern_fit.metric is None
+    assert bern_fit.inv_metric is None
     assert bern_fit.step_size.shape == (2,)
-    with caplog.at_level(logging.INFO):
-        logging.getLogger()
-        assert bern_fit.metric is None
-    check_present(
-        caplog,
-        (
-            'cmdstanpy',
-            'INFO',
-            'Unit diagnonal metric, inverse mass matrix size unknown.',
-        ),
-    )
+
     assert bern_fit.draws().shape == (100, 2, len(BERNOULLI_COLS))
 
 
@@ -535,7 +523,7 @@ def test_fixed_param_good() -> None:
     )
     assert datagen_fit.runset._args.method == Method.SAMPLE
     assert datagen_fit.metric_type is None
-    assert datagen_fit.metric is None
+    assert datagen_fit.inv_metric is None
     assert datagen_fit.step_size is None
     assert datagen_fit.divergences is None
     assert datagen_fit.max_treedepths is None
@@ -638,7 +626,7 @@ def test_fixed_param_good() -> None:
     assert datagen_fit.column_names == tuple(column_names)
     assert datagen_fit.num_draws_sampling == 100
     assert datagen_fit.draws().shape == (100, 1, len(column_names))
-    assert datagen_fit.metric is None
+    assert datagen_fit.inv_metric is None
     assert datagen_fit.metric_type is None
     assert datagen_fit.step_size is None
 
@@ -860,7 +848,7 @@ def test_validate_big_run() -> None:
     assert fit.column_names == tuple(column_names)
     assert fit.metric_type == 'diag_e'
     assert fit.step_size.shape == (2,)
-    assert fit.metric.shape == (2, 2095)
+    assert fit.inv_metric.shape == (2, 2095)
     assert fit.draws().shape == (1000, 2, 2102)
     assert fit.draws_pd(vars=['phi']).shape == (2000, 2095)
     with raises_nested(ValueError, r'Unknown variable: gamma'):
@@ -1003,53 +991,99 @@ def test_from_csv_no_param_hmc() -> None:
     assert no_parameters_sample.draws_pd().shape == (100, 93)
 
 
-def test_custom_metric() -> None:
+@pytest.mark.parametrize('force_one_process_per_chain', [True, False])
+def test_custom_metric(force_one_process_per_chain: bool) -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
     bern_model = CmdStanModel(stan_file=stan)
     jmetric = os.path.join(DATAFILES_PATH, 'bernoulli.metric.json')
-    # just test that it runs without error
-    bern_model.sample(
-        data=jdata,
-        chains=2,
-        parallel_chains=2,
-        seed=12345,
-        iter_warmup=100,
-        iter_sampling=200,
-        metric=jmetric,
-    )
     jmetric2 = os.path.join(DATAFILES_PATH, 'bernoulli.metric-2.json')
-    bern_model.sample(
-        data=jdata,
-        chains=2,
-        parallel_chains=2,
-        seed=12345,
-        iter_warmup=100,
-        iter_sampling=200,
-        metric=[jmetric, jmetric2],
-    )
     # read json in as dict
     with open(jmetric) as fd:
         metric_dict_1 = json.load(fd)
     with open(jmetric2) as fd:
         metric_dict_2 = json.load(fd)
-    bern_model.sample(
+    # just test that it runs without error
+    fit1 = bern_model.sample(
+        data=jdata,
+        chains=2,
+        parallel_chains=2,
+        seed=12345,
+        iter_warmup=10,
+        iter_sampling=10,
+        inv_metric=jmetric,
+        force_one_process_per_chain=force_one_process_per_chain,
+    )
+    np.testing.assert_allclose(
+        fit1.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
+    )
+    np.testing.assert_allclose(
+        fit1.inv_metric[1], metric_dict_1['inv_metric'], atol=1e-6
+    )
+
+    fit2 = bern_model.sample(
+        data=jdata,
+        chains=2,
+        parallel_chains=2,
+        seed=12345,
+        iter_warmup=10,
+        iter_sampling=10,
+        inv_metric=[jmetric, jmetric2],
+        force_one_process_per_chain=force_one_process_per_chain,
+    )
+    np.testing.assert_allclose(
+        fit2.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
+    )
+    np.testing.assert_allclose(
+        fit2.inv_metric[1], metric_dict_2['inv_metric'], atol=1e-6
+    )
+
+    fit3 = bern_model.sample(
         data=jdata,
         chains=4,
         parallel_chains=2,
         seed=12345,
-        iter_warmup=100,
-        iter_sampling=200,
-        metric=metric_dict_1,
+        iter_warmup=10,
+        iter_sampling=10,
+        inv_metric=metric_dict_1,
+        force_one_process_per_chain=force_one_process_per_chain,
     )
-    bern_model.sample(
+    for i in range(4):
+        np.testing.assert_allclose(
+            fit3.inv_metric[i], metric_dict_1['inv_metric'], atol=1e-6
+        )
+    fit4 = bern_model.sample(
         data=jdata,
         chains=2,
         seed=12345,
-        iter_warmup=100,
-        iter_sampling=200,
-        metric=[metric_dict_1, metric_dict_2],
+        iter_warmup=10,
+        iter_sampling=10,
+        inv_metric=[metric_dict_1, metric_dict_2],
+        force_one_process_per_chain=force_one_process_per_chain,
     )
+    np.testing.assert_allclose(
+        fit4.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
+    )
+    np.testing.assert_allclose(
+        fit4.inv_metric[1], metric_dict_2['inv_metric'], atol=1e-6
+    )
+
+    fit5 = bern_model.sample(
+        data=jdata,
+        chains=2,
+        seed=12345,
+        iter_warmup=10,
+        iter_sampling=10,
+        inv_metric=[np.array(metric_dict_1['inv_metric']), jmetric2],
+        force_one_process_per_chain=force_one_process_per_chain,
+    )
+    np.testing.assert_allclose(
+        fit5.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
+    )
+    np.testing.assert_allclose(
+        fit5.inv_metric[1], metric_dict_2['inv_metric'], atol=1e-6
+    )
+
     with pytest.raises(
         ValueError,
         match='Number of metric files must match number of chains,',
@@ -1059,25 +1093,25 @@ def test_custom_metric() -> None:
             chains=4,
             parallel_chains=2,
             seed=12345,
-            iter_warmup=100,
-            iter_sampling=200,
-            metric=[metric_dict_1, metric_dict_2],
+            iter_warmup=10,
+            iter_sampling=10,
+            inv_metric=[metric_dict_1, metric_dict_2],
+            force_one_process_per_chain=force_one_process_per_chain,
         )
     # metric mismatches - (not appropriate for bernoulli)
     with open(os.path.join(DATAFILES_PATH, 'metric_diag.data.json')) as fd:
         metric_dict_1 = json.load(fd)
     with open(os.path.join(DATAFILES_PATH, 'metric_dense.data.json')) as fd:
         metric_dict_2 = json.load(fd)
-    with pytest.raises(
-        ValueError, match='Found inconsistent "inv_metric" entry'
-    ):
+    with pytest.raises(RuntimeError, match='Error during sampling'):
         bern_model.sample(
             data=jdata,
             chains=2,
             seed=12345,
-            iter_warmup=100,
-            iter_sampling=200,
-            metric=[metric_dict_1, metric_dict_2],
+            iter_warmup=10,
+            iter_sampling=10,
+            inv_metric=[metric_dict_1, metric_dict_2],
+            force_one_process_per_chain=force_one_process_per_chain,
         )
     # metric dict, no "inv_metric":
     some_dict = {"foo": [1, 2, 3]}
@@ -1090,7 +1124,8 @@ def test_custom_metric() -> None:
             seed=12345,
             iter_warmup=100,
             iter_sampling=200,
-            metric=some_dict,
+            inv_metric=some_dict,
+            force_one_process_per_chain=force_one_process_per_chain,
         )
 
 
@@ -2136,8 +2171,8 @@ def test_sample_dense_mass_matrix():
     linear_model = CmdStanModel(stan_file=stan)
 
     fit = linear_model.sample(data=jdata, metric="dense_e", chains=2)
-    assert fit.metric is not None
-    assert fit.metric.shape == (2, 3, 3)
+    assert fit.inv_metric is not None
+    assert fit.inv_metric.shape == (2, 3, 3)
 
 
 def test_no_output_draws():

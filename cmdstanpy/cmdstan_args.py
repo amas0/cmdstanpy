@@ -10,15 +10,7 @@ from typing import Any, Mapping, Optional, Union
 import numpy as np
 from numpy.random import default_rng
 
-from cmdstanpy import _TMPDIR
-from cmdstanpy.utils import (
-    cmdstan_path,
-    cmdstan_version_before,
-    create_named_text_file,
-    get_logger,
-    read_metric,
-    write_stan_json,
-)
+from cmdstanpy.utils import cmdstan_path, cmdstan_version_before, get_logger
 
 OptionalPath = Union[str, os.PathLike, None]
 
@@ -65,9 +57,8 @@ class SamplerArgs:
         save_warmup: bool = False,
         thin: Optional[int] = None,
         max_treedepth: Optional[int] = None,
-        metric: Union[
-            str, dict[str, Any], list[str], list[dict[str, Any]], None
-        ] = None,
+        metric_type: Optional[str] = None,
+        metric_file: Union[str, list[str], None] = None,
         step_size: Union[float, list[float], None] = None,
         adapt_engaged: bool = True,
         adapt_delta: Optional[float] = None,
@@ -83,9 +74,8 @@ class SamplerArgs:
         self.save_warmup = save_warmup
         self.thin = thin
         self.max_treedepth = max_treedepth
-        self.metric = metric
-        self.metric_type: Optional[str] = None
-        self.metric_file: Union[str, list[str], None] = None
+        self.metric_type: Optional[str] = metric_type
+        self.metric_file: Union[str, list[str], None] = metric_file
         self.step_size = step_size
         self.adapt_engaged = adapt_engaged
         self.adapt_delta = adapt_delta
@@ -178,124 +168,15 @@ class SamplerArgs:
                             'Argument "step_size" must be > 0, '
                             'chain {}, found {}.'.format(i + 1, step_size)
                         )
-        if self.metric is not None:
-            if isinstance(self.metric, str):
-                if self.metric in ['diag', 'diag_e']:
-                    self.metric_type = 'diag_e'
-                elif self.metric in ['dense', 'dense_e']:
-                    self.metric_type = 'dense_e'
-                elif self.metric in ['unit', 'unit_e']:
-                    self.metric_type = 'unit_e'
-                else:
-                    if not os.path.exists(self.metric):
-                        raise ValueError('no such file {}'.format(self.metric))
-                    dims = read_metric(self.metric)
-                    if len(dims) == 1:
-                        self.metric_type = 'diag_e'
-                    else:
-                        self.metric_type = 'dense_e'
-                    self.metric_file = self.metric
-            elif isinstance(self.metric, dict):
-                if 'inv_metric' not in self.metric:
-                    raise ValueError(
-                        'Entry "inv_metric" not found in metric dict.'
-                    )
-                dims = list(np.asarray(self.metric['inv_metric']).shape)
-                if len(dims) == 1:
-                    self.metric_type = 'diag_e'
-                else:
-                    self.metric_type = 'dense_e'
-                dict_file = create_named_text_file(
-                    dir=_TMPDIR, prefix="metric", suffix=".json"
-                )
-                write_stan_json(dict_file, self.metric)
-                self.metric_file = dict_file
-            elif isinstance(self.metric, (list, tuple)):
-                if len(self.metric) != chains:
-                    raise ValueError(
-                        'Number of metric files must match number of chains,'
-                        ' found {} metric files for {} chains.'.format(
-                            len(self.metric), chains
-                        )
-                    )
-                if all(isinstance(elem, dict) for elem in self.metric):
-                    metric_files: list[str] = []
-                    for i, metric in enumerate(self.metric):
-                        metric_dict: dict[str, Any] = metric  # type: ignore
-                        if 'inv_metric' not in metric_dict:
-                            raise ValueError(
-                                'Entry "inv_metric" not found in metric dict '
-                                'for chain {}.'.format(i + 1)
-                            )
-                        if i == 0:
-                            dims = list(
-                                np.asarray(metric_dict['inv_metric']).shape
-                            )
-                        else:
-                            dims2 = list(
-                                np.asarray(metric_dict['inv_metric']).shape
-                            )
-                            if dims != dims2:
-                                raise ValueError(
-                                    'Found inconsistent "inv_metric" entry '
-                                    'for chain {}: entry has dims '
-                                    '{}, expected {}.'.format(
-                                        i + 1, dims, dims2
-                                    )
-                                )
-                        dict_file = create_named_text_file(
-                            dir=_TMPDIR, prefix="metric", suffix=".json"
-                        )
-                        write_stan_json(dict_file, metric_dict)
-                        metric_files.append(dict_file)
-                    if len(dims) == 1:
-                        self.metric_type = 'diag_e'
-                    else:
-                        self.metric_type = 'dense_e'
-                    self.metric_file = metric_files
-                elif all(isinstance(elem, str) for elem in self.metric):
-                    metric_files = []
-                    for i, metric in enumerate(self.metric):
-                        assert isinstance(metric, str)  # typecheck
-                        if not os.path.exists(metric):
-                            raise ValueError('no such file {}'.format(metric))
-                        if i == 0:
-                            dims = read_metric(metric)
-                        else:
-                            dims2 = read_metric(metric)
-                            if len(dims) != len(dims2):
-                                raise ValueError(
-                                    'Metrics files {}, {},'
-                                    ' inconsistent metrics'.format(
-                                        self.metric[0], metric
-                                    )
-                                )
-                            if dims != dims2:
-                                raise ValueError(
-                                    'Metrics files {}, {},'
-                                    ' inconsistent metrics'.format(
-                                        self.metric[0], metric
-                                    )
-                                )
-                        metric_files.append(metric)
-                    if len(dims) == 1:
-                        self.metric_type = 'diag_e'
-                    else:
-                        self.metric_type = 'dense_e'
-                    self.metric_file = metric_files
-                else:
-                    raise ValueError(
-                        'Argument "metric" must be a list of pathnames or '
-                        'Python dicts, found list of {}.'.format(
-                            type(self.metric[0])
-                        )
-                    )
-            else:
+        if self.metric_type is not None:
+            if self.metric_type in ['diag', 'dense', 'unit']:
+                self.metric_type += '_e'
+            if self.metric_type not in ['diag_e', 'dense_e', 'unit_e']:
                 raise ValueError(
-                    'Invalid metric specified, not a recognized metric type, '
-                    'must be either a metric type name, a filepath, dict, '
-                    'or list of per-chain filepaths or dicts.  Found '
-                    'an object of type {}.'.format(type(self.metric))
+                    'Argument "metric" must be one of [diag, dense, unit,'
+                    ' diag_e, dense_e, unit_e], found {}.'.format(
+                        self.metric_type
+                    )
                 )
 
         if self.adapt_delta is not None:
@@ -332,7 +213,8 @@ class SamplerArgs:
 
         if self.fixed_param and (
             self.max_treedepth is not None
-            or self.metric is not None
+            or self.metric_type is not None
+            or self.metric_file is not None
             or self.step_size is not None
             or not (
                 self.adapt_delta is None
@@ -371,7 +253,7 @@ class SamplerArgs:
                 cmd.append(f'stepsize={self.step_size}')
             else:
                 cmd.append(f'stepsize={self.step_size[idx]}')
-        if self.metric is not None:
+        if self.metric_type is not None:
             cmd.append(f'metric={self.metric_type}')
         if self.metric_file is not None:
             if not isinstance(self.metric_file, list):
