@@ -798,9 +798,11 @@ class CmdStanModel:
         :param max_treedepth: Maximum depth of trees evaluated by NUTS sampler
             per iteration.
 
-        :param metric: Specify the type of the mass matrix. Options are
+        :param metric: Specify the type of the inverse mass matrix. Options are
             'diag' or 'diag_e' for diagonal matrix, 'dense' or 'dense_e'
-            for a dense matrix, or 'unit_e' an identity mass matrix.
+            for a dense matrix, or 'unit_e' an identity mass matrix. To provide
+            an initial value for the inverse mass matrix, use the ``inv_metric``
+            argument.
 
         :param inv_metric: Provide an initial value for the inverse
             mass matrix.
