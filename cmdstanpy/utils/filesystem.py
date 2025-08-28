@@ -8,7 +8,7 @@ import platform
 import re
 import shutil
 import tempfile
-from typing import Any, Iterator, List, Mapping, Optional, Tuple, Union
+from typing import Any, Iterator, Mapping, Optional, Union
 
 import numpy as np
 
@@ -131,7 +131,7 @@ temp_single_json = contextlib.contextmanager(_temp_single_json)
 
 
 def _temp_multiinput(
-    input: Union[str, os.PathLike, Mapping[str, Any], List[Any], None],
+    input: Union[str, os.PathLike, Mapping[str, Any], list[Any], None],
     base: int = 1,
 ) -> Iterator[Optional[str]]:
     if isinstance(input, list):
@@ -144,7 +144,7 @@ def _temp_multiinput(
             dir=_TMPDIR, prefix='', suffix='.json', name_only=True
         )
         new_files = [
-            os.path.splitext(mother_file)[0] + f'_{i+base}.json'
+            os.path.splitext(mother_file)[0] + f'_{i + base}.json'
             for i in range(len(input))
         ]
         for init, file in zip(input, new_files):
@@ -170,7 +170,7 @@ def _temp_multiinput(
 @contextlib.contextmanager
 def temp_metrics(
     metrics: Union[
-        str, os.PathLike, Mapping[str, Any], np.ndarray, List[Any], None
+        str, os.PathLike, Mapping[str, Any], np.ndarray, list[Any], None
     ],
     *,
     id: int = 1,
@@ -200,7 +200,7 @@ def temp_metrics(
 @contextlib.contextmanager
 def temp_inits(
     inits: Union[
-        str, os.PathLike, Mapping[str, Any], float, int, List[Any], None
+        str, os.PathLike, Mapping[str, Any], float, int, list[Any], None
     ],
     *,
     allow_multiple: bool = True,
@@ -261,7 +261,7 @@ class SanitizedOrTmpFilePath:
         else:
             self._path = file_path
 
-    def __enter__(self) -> Tuple[str, bool]:
+    def __enter__(self) -> tuple[str, bool]:
         return self._path, self._tmpdir is not None
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:  # type: ignore

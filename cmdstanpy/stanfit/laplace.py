@@ -2,16 +2,7 @@
 Container for the result of running a laplace approximation.
 """
 
-from typing import (
-    Any,
-    Dict,
-    Hashable,
-    List,
-    MutableMapping,
-    Optional,
-    Tuple,
-    Union,
-)
+from typing import Any, Hashable, MutableMapping, Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -51,7 +42,7 @@ class CmdStanLaplace:
 
     def create_inits(
         self, seed: Optional[int] = None, chains: int = 4
-    ) -> Union[List[Dict[str, np.ndarray]], Dict[str, np.ndarray]]:
+    ) -> Union[list[dict[str, np.ndarray]], dict[str, np.ndarray]]:
         """
         Create initial values for the parameters of the model
         by randomly selecting draws from the Laplace approximation.
@@ -130,7 +121,7 @@ class CmdStanLaplace:
                 + ", ".join(self._metadata.stan_vars.keys())
             )
 
-    def stan_variables(self) -> Dict[str, np.ndarray]:
+    def stan_variables(self) -> dict[str, np.ndarray]:
         """
         Return a dictionary mapping Stan program variables names
         to the corresponding numpy.ndarray containing the inferred values.
@@ -152,7 +143,7 @@ class CmdStanLaplace:
             result[name] = self.stan_variable(name)
         return result
 
-    def method_variables(self) -> Dict[str, np.ndarray]:
+    def method_variables(self) -> dict[str, np.ndarray]:
         """
         Returns a dictionary of all sampler variables, i.e., all
         output column names ending in `__`.  Assumes that all variables
@@ -177,7 +168,7 @@ class CmdStanLaplace:
 
     def draws_pd(
         self,
-        vars: Union[List[str], str, None] = None,
+        vars: Union[list[str], str, None] = None,
     ) -> pd.DataFrame:
         if vars is not None:
             if isinstance(vars, str):
@@ -206,7 +197,7 @@ class CmdStanLaplace:
 
     def draws_xr(
         self,
-        vars: Union[str, List[str], None] = None,
+        vars: Union[str, list[str], None] = None,
     ) -> "xr.Dataset":
         """
         Returns the sampler draws as a xarray Dataset.
@@ -308,7 +299,7 @@ class CmdStanLaplace:
         return self.__dict__
 
     @property
-    def column_names(self) -> Tuple[str, ...]:
+    def column_names(self) -> tuple[str, ...]:
         """
         Names of all outputs from the sampler, comprising sampler parameters
         and all components of all model parameters, transformed parameters,

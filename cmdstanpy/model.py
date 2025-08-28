@@ -16,9 +16,7 @@ from multiprocessing import cpu_count
 from typing import (
     Any,
     Callable,
-    Dict,
     Iterable,
-    List,
     Literal,
     Mapping,
     Optional,
@@ -121,8 +119,8 @@ class CmdStanModel:
         stan_file: OptionalPath = None,
         exe_file: OptionalPath = None,
         force_compile: bool = False,
-        stanc_options: Optional[Dict[str, Any]] = None,
-        cpp_options: Optional[Dict[str, Any]] = None,
+        stanc_options: Optional[dict[str, Any]] = None,
+        cpp_options: Optional[dict[str, Any]] = None,
         user_header: OptionalPath = None,
         *,
         compile: Union[bool, Literal['force'], None] = None,
@@ -283,14 +281,14 @@ class CmdStanModel:
         """Full path to Stan exe file."""
         return self._exe_file
 
-    def exe_info(self) -> Dict[str, str]:
+    def exe_info(self) -> dict[str, str]:
         """
         Run model with option 'info'. Parse output statements, which all
         have form 'key = value' into a Dict.
         If exe file compiled with CmdStan < 2.27, option 'info' isn't
         available and the method returns an empty dictionary.
         """
-        result: Dict[str, str] = {}
+        result: dict[str, str] = {}
         if self.exe_file is None:
             return result
         try:
@@ -307,7 +305,7 @@ class CmdStanModel:
             get_logger().debug(e)
             return result
 
-    def src_info(self) -> Dict[str, Any]:
+    def src_info(self) -> dict[str, Any]:
         """
         Run stanc with option '--info'.
 
@@ -366,12 +364,12 @@ class CmdStanModel:
         )
 
     @property
-    def stanc_options(self) -> Dict[str, Union[bool, int, str]]:
+    def stanc_options(self) -> dict[str, Union[bool, int, str]]:
         """Options to stanc compilers."""
         return self._compiler_options._stanc_options
 
     @property
-    def cpp_options(self) -> Dict[str, Union[bool, int]]:
+    def cpp_options(self) -> dict[str, Union[bool, int]]:
         """Options to C++ compilers."""
         return self._compiler_options._cpp_options
 
@@ -399,8 +397,8 @@ class CmdStanModel:
     def compile(
         self,
         force: bool = False,
-        stanc_options: Optional[Dict[str, Any]] = None,
-        cpp_options: Optional[Dict[str, Any]] = None,
+        stanc_options: Optional[dict[str, Any]] = None,
+        cpp_options: Optional[dict[str, Any]] = None,
         user_header: OptionalPath = None,
         override_options: bool = False,
         *,
@@ -624,9 +622,10 @@ class CmdStanModel:
                 "in CmdStan 2.32 and above."
             )
 
-        with temp_single_json(data) as _data, temp_inits(
-            inits, allow_multiple=False
-        ) as _inits:
+        with (
+            temp_single_json(data) as _data,
+            temp_inits(inits, allow_multiple=False) as _inits,
+        ):
             args = CmdStanArgs(
                 self._name,
                 self._exe_file,
@@ -668,14 +667,14 @@ class CmdStanModel:
         chains: Optional[int] = None,
         parallel_chains: Optional[int] = None,
         threads_per_chain: Optional[int] = None,
-        seed: Union[int, List[int], None] = None,
-        chain_ids: Union[int, List[int], None] = None,
+        seed: Union[int, list[int], None] = None,
+        chain_ids: Union[int, list[int], None] = None,
         inits: Union[
             Mapping[str, Any],
             float,
             str,
-            List[str],
-            List[Mapping[str, Any]],
+            list[str],
+            list[Mapping[str, Any]],
             None,
         ] = None,
         iter_warmup: Optional[int] = None,
@@ -684,9 +683,9 @@ class CmdStanModel:
         thin: Optional[int] = None,
         max_treedepth: Optional[int] = None,
         metric: Union[
-            str, Dict[str, Any], List[str], List[Dict[str, Any]], None
+            str, dict[str, Any], list[str], list[dict[str, Any]], None
         ] = None,
-        step_size: Union[float, List[float], None] = None,
+        step_size: Union[float, list[float], None] = None,
         adapt_engaged: bool = True,
         adapt_delta: Optional[float] = None,
         adapt_init_phase: Optional[int] = None,
@@ -708,7 +707,7 @@ class CmdStanModel:
             str,
             np.ndarray,
             Mapping[str, Any],
-            List[Union[str, np.ndarray, Mapping[str, Any]]],
+            list[Union[str, np.ndarray, Mapping[str, Any]]],
             None,
         ] = None,
     ) -> CmdStanMCMC:
@@ -928,8 +927,8 @@ class CmdStanModel:
             parallel_chains = chains
         elif parallel_chains < 1:
             raise ValueError(
-                'Argument parallel_chains must be a positive integer, '
-                'found {}.'.format(parallel_chains)
+                'Argument parallel_chains must be a positive '
+                'integer, found {}.'.format(parallel_chains)
             )
         if threads_per_chain is None:
             threads_per_chain = 1
@@ -984,8 +983,8 @@ class CmdStanModel:
             if isinstance(chain_ids, int):
                 if chain_ids < 1:
                     raise ValueError(
-                        'Chain_id must be a positive integer value,'
-                        ' found {}.'.format(chain_ids)
+                        'Chain_id must be a positive integer value, '
+                        'found {}.'.format(chain_ids)
                     )
                 chain_ids = [i + chain_ids for i in range(chains)]
             else:
@@ -1043,11 +1042,13 @@ class CmdStanModel:
                     )
                 )
 
-        with temp_single_json(data) as _data, temp_inits(
-            inits, id=chain_ids[0]
-        ) as _inits, temp_metrics(inv_metric, id=chain_ids[0]) as _inv_metric:
-            cmdstan_inits: Union[str, List[str], int, float, None]
-            cmdstan_metrics: Union[str, List[str], None]
+        with (
+            temp_single_json(data) as _data,
+            temp_inits(inits, id=chain_ids[0]) as _inits,
+            temp_metrics(inv_metric, id=chain_ids[0]) as _inv_metric,
+        ):
+            cmdstan_inits: Union[str, list[str], int, float, None]
+            cmdstan_metrics: Union[str, list[str], None]
 
             if one_process_per_chain and isinstance(inits, list):  # legacy
                 cmdstan_inits = [
@@ -1191,7 +1192,7 @@ class CmdStanModel:
     def generate_quantities(
         self,
         data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
-        previous_fit: Union[Fit, List[str], None] = None,
+        previous_fit: Union[Fit, list[str], None] = None,
         seed: Optional[int] = None,
         gq_output_dir: OptionalPath = None,
         sig_figs: Optional[int] = None,
@@ -1200,7 +1201,7 @@ class CmdStanModel:
         time_fmt: str = "%Y%m%d%H%M%S",
         timeout: Optional[float] = None,
         *,
-        mcmc_sample: Union[CmdStanMCMC, List[str], None] = None,
+        mcmc_sample: Union[CmdStanMCMC, list[str], None] = None,
     ) -> CmdStanGQ[Fit]:
         """
         Run CmdStan's generate_quantities method which runs the generated
@@ -1531,9 +1532,10 @@ class CmdStanModel:
             output_samples=draws,
         )
 
-        with temp_single_json(data) as _data, temp_inits(
-            inits, allow_multiple=False
-        ) as _inits:
+        with (
+            temp_single_json(data) as _data,
+            temp_inits(inits, allow_multiple=False) as _inits,
+        ):
             args = CmdStanArgs(
                 self._name,
                 self._exe_file,
@@ -1621,7 +1623,7 @@ class CmdStanModel:
         calculate_lp: bool = True,
         # arguments standard to all methods
         seed: Optional[int] = None,
-        inits: Union[Dict[str, float], float, str, os.PathLike, None] = None,
+        inits: Union[dict[str, float], float, str, os.PathLike, None] = None,
         output_dir: OptionalPath = None,
         sig_figs: Optional[int] = None,
         save_profile: bool = False,
@@ -1832,7 +1834,7 @@ class CmdStanModel:
 
     def log_prob(
         self,
-        params: Union[Dict[str, Any], str, os.PathLike],
+        params: Union[dict[str, Any], str, os.PathLike],
         data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
         *,
         jacobian: bool = True,
@@ -1874,9 +1876,10 @@ class CmdStanModel:
                 "Method 'log_prob' not available for CmdStan versions "
                 "before 2.31"
             )
-        with temp_single_json(data) as _data, temp_single_json(
-            params
-        ) as _params:
+        with (
+            temp_single_json(data) as _data,
+            temp_single_json(params) as _params,
+        ):
             cmd = [
                 str(self.exe_file),
                 "log_prob",
@@ -1927,7 +1930,7 @@ class CmdStanModel:
         refresh: Optional[int] = None,
         time_fmt: str = "%Y%m%d%H%M%S",
         timeout: Optional[float] = None,
-        opt_args: Optional[Dict[str, Any]] = None,
+        opt_args: Optional[dict[str, Any]] = None,
     ) -> CmdStanLaplace:
         """
         Run a Laplace approximation around the posterior mode.
@@ -2170,7 +2173,7 @@ class CmdStanModel:
     @staticmethod
     @progbar.wrap_callback
     def _wrap_sampler_progress_hook(
-        chain_ids: List[int],
+        chain_ids: list[int],
         total: int,
     ) -> Optional[Callable[[str, int], None]]:
         """
@@ -2180,7 +2183,7 @@ class CmdStanModel:
         For the latter, manage array of pbars, update accordingly.
         """
         chain_pat = re.compile(r'(Chain \[(\d+)\] )?Iteration:\s+(\d+)')
-        pbars: Dict[int, tqdm] = {
+        pbars: dict[int, tqdm] = {
             chain_id: tqdm(
                 total=total,
                 desc=f'chain {chain_id}',
@@ -2211,7 +2214,7 @@ class CmdStanModel:
 
     def diagnose(
         self,
-        inits: Union[Dict[str, Any], str, os.PathLike, None] = None,
+        inits: Union[dict[str, Any], str, os.PathLike, None] = None,
         data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
         *,
         epsilon: Optional[float] = None,

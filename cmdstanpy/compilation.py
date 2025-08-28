@@ -11,7 +11,7 @@ import subprocess
 from copy import copy
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Union
+from typing import Any, Iterable, Optional, Union
 
 from cmdstanpy.utils import get_logger
 from cmdstanpy.utils.cmdstan import (
@@ -81,8 +81,8 @@ class CompilerOptions:
     def __init__(
         self,
         *,
-        stanc_options: Optional[Dict[str, Any]] = None,
-        cpp_options: Optional[Dict[str, Any]] = None,
+        stanc_options: Optional[dict[str, Any]] = None,
+        cpp_options: Optional[dict[str, Any]] = None,
         user_header: OptionalPath = None,
     ) -> None:
         """Initialize object."""
@@ -116,12 +116,12 @@ class CompilerOptions:
         )
 
     @property
-    def stanc_options(self) -> Dict[str, Union[bool, int, str, Iterable[str]]]:
+    def stanc_options(self) -> dict[str, Union[bool, int, str, Iterable[str]]]:
         """Stanc compiler options."""
         return self._stanc_options
 
     @property
-    def cpp_options(self) -> Dict[str, Union[bool, int]]:
+    def cpp_options(self) -> dict[str, Union[bool, int]]:
         """C++ compiler options."""
         return self._cpp_options
 
@@ -165,8 +165,8 @@ class CompilerOptions:
                     del self._stanc_options[deprecated]
                 else:
                     get_logger().warning(
-                        'compiler option "%s" is deprecated and '
-                        'should not be used',
+                        'compiler option "%s" is deprecated and should '
+                        'not be used',
                         deprecated,
                     )
         for key, val in self._stanc_options.items():
@@ -225,8 +225,8 @@ class CompilerOptions:
                 val = self._cpp_options[key]
                 if not isinstance(val, int) or val < 0:
                     raise ValueError(
-                        f'{key} must be a non-negative integer value,'
-                        f' found {val}.'
+                        f'{key} must be a non-negative integer '
+                        f'value, found {val}.'
                     )
 
     def validate_user_header(self) -> None:
@@ -298,7 +298,7 @@ class CompilerOptions:
         elif path not in self._stanc_options['include-paths']:
             self._stanc_options['include-paths'].append(path)
 
-    def compose_stanc(self, filename_in_msg: Optional[str]) -> List[str]:
+    def compose_stanc(self, filename_in_msg: Optional[str]) -> list[str]:
         opts = []
 
         if filename_in_msg is not None:
@@ -322,7 +322,7 @@ class CompilerOptions:
                     opts.append(f'--{key}')
         return opts
 
-    def compose(self, filename_in_msg: Optional[str] = None) -> List[str]:
+    def compose(self, filename_in_msg: Optional[str] = None) -> list[str]:
         """
         Format makefile options as list of strings.
 
@@ -344,7 +344,7 @@ class CompilerOptions:
 
 def src_info(
     stan_file: str, compiler_options: CompilerOptions
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Get source info for Stan program file.
 
@@ -363,15 +363,15 @@ def src_info(
             f"Failed to get source info for Stan model "
             f"'{stan_file}'. Console:\n{proc.stderr}"
         )
-    result: Dict[str, Any] = json.loads(proc.stdout)
+    result: dict[str, Any] = json.loads(proc.stdout)
     return result
 
 
 def compile_stan_file(
     src: Union[str, Path],
     force: bool = False,
-    stanc_options: Optional[Dict[str, Any]] = None,
-    cpp_options: Optional[Dict[str, Any]] = None,
+    stanc_options: Optional[dict[str, Any]] = None,
+    cpp_options: Optional[dict[str, Any]] = None,
     user_header: OptionalPath = None,
 ) -> str:
     """
@@ -480,7 +480,7 @@ def compile_stan_file(
                     "If the issue persists please open a bug report"
                 )
             raise ValueError(
-                f"Failed to compile Stan model '{src}'. " f"Console:\n{console}"
+                f"Failed to compile Stan model '{src}'. Console:\n{console}"
             )
         return str(exe_target)
 
@@ -492,7 +492,7 @@ def format_stan_file(
     canonicalize: Union[bool, str, Iterable[str]] = False,
     max_line_length: int = 78,
     backup: bool = True,
-    stanc_options: Optional[Dict[str, Any]] = None,
+    stanc_options: Optional[dict[str, Any]] = None,
 ) -> None:
     """
     Run stanc's auto-formatter on the model code. Either saves directly

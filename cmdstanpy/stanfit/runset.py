@@ -9,7 +9,7 @@ import shutil
 import tempfile
 from datetime import datetime
 from time import time
-from typing import List, Optional
+from typing import Optional
 
 from cmdstanpy import _TMPDIR
 from cmdstanpy.cmdstan_args import CmdStanArgs, Method
@@ -31,7 +31,7 @@ class RunSet:
         args: CmdStanArgs,
         chains: int = 1,
         *,
-        chain_ids: Optional[List[int]] = None,
+        chain_ids: Optional[list[int]] = None,
         time_fmt: str = "%Y%m%d%H%M%S",
         one_process_per_chain: bool = True,
     ) -> None:
@@ -79,7 +79,7 @@ class RunSet:
                 )
 
         # per-chain output files
-        self._csv_files: List[str] = [''] * chains
+        self._csv_files: list[str] = [''] * chains
         self._diagnostic_files = [''] * chains  # optional
 
         if chains == 1:
@@ -148,11 +148,11 @@ class RunSet:
         return self._chains
 
     @property
-    def chain_ids(self) -> List[int]:
+    def chain_ids(self) -> list[int]:
         """Chain ids."""
         return self._chain_ids
 
-    def cmd(self, idx: int) -> List[str]:
+    def cmd(self, idx: int) -> list[str]:
         """
         Assemble CmdStan invocation.
         When running parallel chains from single process (2.28 and up),
@@ -182,12 +182,12 @@ class RunSet:
             )
 
     @property
-    def csv_files(self) -> List[str]:
+    def csv_files(self) -> list[str]:
         """List of paths to CmdStan output files."""
         return self._csv_files
 
     @property
-    def stdout_files(self) -> List[str]:
+    def stdout_files(self) -> list[str]:
         """
         List of paths to transcript of CmdStan messages sent to the console.
         Transcripts include config information, progress, and error messages.
@@ -202,12 +202,12 @@ class RunSet:
         return True
 
     @property
-    def diagnostic_files(self) -> List[str]:
+    def diagnostic_files(self) -> list[str]:
         """List of paths to CmdStan hamiltonian diagnostic files."""
         return self._diagnostic_files
 
     @property
-    def profile_files(self) -> List[str]:
+    def profile_files(self) -> list[str]:
         """List of paths to CmdStan profiler files."""
         return self._profile_files
 
@@ -302,6 +302,6 @@ class RunSet:
     def raise_for_timeouts(self) -> None:
         if any(self._timeout_flags):
             raise TimeoutError(
-                f"{sum(self._timeout_flags)} of {self.num_procs} processes "
-                "timed out"
+                f"{sum(self._timeout_flags)} of {self.num_procs} "
+                "processes timed out"
             )

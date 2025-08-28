@@ -2,7 +2,7 @@
 
 import glob
 import os
-from typing import List, Optional, Union
+from typing import Optional, Union
 
 from cmdstanpy.cmdstan_args import (
     CmdStanArgs,
@@ -36,7 +36,7 @@ __all__ = [
 
 
 def from_csv(
-    path: Union[str, List[str], os.PathLike, None] = None,
+    path: Union[str, list[str], os.PathLike, None] = None,
     method: Optional[str] = None,
 ) -> Union[
     CmdStanMCMC, CmdStanMLE, CmdStanVB, CmdStanPathfinder, CmdStanLaplace, None
@@ -78,8 +78,8 @@ def from_csv(
         if splits[0] is not None:
             if not (os.path.exists(splits[0]) and os.path.isdir(splits[0])):
                 raise ValueError(
-                    'Invalid path specification, {} '
-                    ' unknown directory: {}'.format(path, splits[0])
+                    'Invalid path specification, {}  unknown '
+                    'directory: {}'.format(path, splits[0])
                 )
         csvfiles = glob.glob(path)
     elif isinstance(path, (str, os.PathLike)):
@@ -99,8 +99,7 @@ def from_csv(
     for file in csvfiles:
         if not (os.path.exists(file) and os.path.splitext(file)[1] == ".csv"):
             raise ValueError(
-                'Bad CSV file path spec,'
-                ' includes non-csv file: {}'.format(file)
+                'Bad CSV file path spec, includes non-csv file: {}'.format(file)
             )
 
     try:
@@ -177,8 +176,9 @@ def from_csv(
         elif config_dict['method'] == 'optimize':
             if 'algorithm' not in config_dict:
                 raise ValueError(
-                    "Cannot find optimization algorithm"
-                    " in file {}.".format(csvfiles[0])
+                    "Cannot find optimization algorithm in file {}.".format(
+                        csvfiles[0]
+                    )
                 )
             algorithm: str = config_dict['algorithm']  # type: ignore
             save_iterations = config_dict['save_iterations'] == 1
@@ -203,8 +203,9 @@ def from_csv(
         elif config_dict['method'] == 'variational':
             if 'algorithm' not in config_dict:
                 raise ValueError(
-                    "Cannot find variational algorithm"
-                    " in file {}.".format(csvfiles[0])
+                    "Cannot find variational algorithm in file {}.".format(
+                        csvfiles[0]
+                    )
                 )
             variational_args = VariationalArgs(
                 algorithm=config_dict['algorithm'],  # type: ignore

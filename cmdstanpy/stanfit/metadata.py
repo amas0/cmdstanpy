@@ -2,7 +2,7 @@
 
 import copy
 import os
-from typing import Any, Dict, Iterator, Tuple, Union
+from typing import Any, Iterator, Union
 
 import stanio
 
@@ -17,7 +17,7 @@ class InferenceMetadata:
     """
 
     def __init__(
-        self, config: Dict[str, Union[str, int, float, Tuple[str, ...]]]
+        self, config: dict[str, Union[str, int, float, tuple[str, ...]]]
     ) -> None:
         """Initialize object from CSV headers"""
         self._cmdstan_config = config
@@ -48,11 +48,11 @@ class InferenceMetadata:
     def __repr__(self) -> str:
         return 'Metadata:\n{}\n'.format(self._cmdstan_config)
 
-    def __getitem__(self, key: str) -> Union[str, int, float, Tuple[str, ...]]:
+    def __getitem__(self, key: str) -> Union[str, int, float, tuple[str, ...]]:
         return self._cmdstan_config[key]
 
     @property
-    def cmdstan_config(self) -> Dict[str, Any]:
+    def cmdstan_config(self) -> dict[str, Any]:
         """
         Returns a dictionary containing a set of name, value pairs
         parsed out of the Stan CSV file header.  These include the
@@ -62,19 +62,19 @@ class InferenceMetadata:
         return copy.deepcopy(self._cmdstan_config)
 
     @property
-    def column_names(self) -> Tuple[str, ...]:
+    def column_names(self) -> tuple[str, ...]:
         col_names = self['column_names']
         return col_names  # type: ignore
 
     @property
-    def method_vars(self) -> Dict[str, stanio.Variable]:
+    def method_vars(self) -> dict[str, stanio.Variable]:
         """
         Method variable names always end in `__`, e.g. `lp__`.
         """
         return self._method_vars
 
     @property
-    def stan_vars(self) -> Dict[str, stanio.Variable]:
+    def stan_vars(self) -> dict[str, stanio.Variable]:
         """
         These are the user-defined variables in the Stan program.
         """

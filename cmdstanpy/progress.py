@@ -1,6 +1,7 @@
 """
 Record tqdm progress bar fail during session
 """
+
 import functools
 import logging
 
