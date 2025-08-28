@@ -1,7 +1,7 @@
 """Container for the result of running optimization"""
 
 from collections import OrderedDict
-from typing import Dict, Optional, Tuple, Union
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -59,7 +59,7 @@ class CmdStanMLE:
 
     def create_inits(
         self, seed: Optional[int] = None, chains: int = 4
-    ) -> Dict[str, np.ndarray]:
+    ) -> dict[str, np.ndarray]:
         """
         Create initial values for the parameters of the model
         from the MLE.
@@ -106,7 +106,7 @@ class CmdStanMLE:
             raise AttributeError(*e.args)
 
     @property
-    def column_names(self) -> Tuple[str, ...]:
+    def column_names(self) -> tuple[str, ...]:
         """
         Names of estimated quantities, includes joint log probability,
         and all parameters, transformed parameters, and generated quantities.
@@ -189,7 +189,7 @@ class CmdStanMLE:
         return pd.DataFrame(self._all_iters, columns=self.column_names)
 
     @property
-    def optimized_params_dict(self) -> Dict[str, np.float64]:
+    def optimized_params_dict(self) -> dict[str, np.float64]:
         """
         Returns all estimates from the optimizer, including `lp__` as a
         Python Dict.  Only returns estimate from final iteration.
@@ -273,7 +273,7 @@ class CmdStanMLE:
 
     def stan_variables(
         self, inc_iterations: bool = False
-    ) -> Dict[str, Union[np.ndarray, float]]:
+    ) -> dict[str, Union[np.ndarray, float]]:
         """
         Return a dictionary mapping Stan program variables names
         to the corresponding numpy.ndarray containing the inferred values.

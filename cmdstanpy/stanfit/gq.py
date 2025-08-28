@@ -6,14 +6,11 @@ generate quantities (GQ) method
 from collections import Counter
 from typing import (
     Any,
-    Dict,
     Generic,
     Hashable,
-    List,
     MutableMapping,
     NoReturn,
     Optional,
-    Tuple,
     TypeVar,
     Union,
     overload,
@@ -141,12 +138,12 @@ class CmdStanGQ(Generic[Fit]):
         return self.runset.chains
 
     @property
-    def chain_ids(self) -> List[int]:
+    def chain_ids(self) -> list[int]:
         """Chain ids."""
         return self.runset.chain_ids
 
     @property
-    def column_names(self) -> Tuple[str, ...]:
+    def column_names(self) -> tuple[str, ...]:
         """
         Names of generated quantities of interest.
         """
@@ -230,7 +227,7 @@ class CmdStanGQ(Generic[Fit]):
                 for item, count in Counter(cols_1 + cols_2).items()
                 if count > 1
             ]
-            drop_cols: List[int] = []
+            drop_cols: list[int] = []
             for dup in dups:
                 drop_cols.extend(
                     self.previous_fit._metadata.stan_vars[dup].columns()
@@ -260,7 +257,7 @@ class CmdStanGQ(Generic[Fit]):
 
     def draws_pd(
         self,
-        vars: Union[List[str], str, None] = None,
+        vars: Union[list[str], str, None] = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
     ) -> pd.DataFrame:
@@ -318,8 +315,8 @@ class CmdStanGQ(Generic[Fit]):
 
         all_columns = ['chain__', 'iter__', 'draw__'] + list(self.column_names)
 
-        gq_cols: List[str] = []
-        mcmc_vars: List[str] = []
+        gq_cols: list[str] = []
+        mcmc_vars: list[str] = []
         if vars is not None:
             for var in vars_list:
                 if var in self._metadata.stan_vars:
@@ -405,7 +402,7 @@ class CmdStanGQ(Generic[Fit]):
     @overload
     def draws_xr(
         self: Union["CmdStanGQ[CmdStanMLE]", "CmdStanGQ[CmdStanVB]"],
-        vars: Union[str, List[str], None] = None,
+        vars: Union[str, list[str], None] = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
     ) -> NoReturn:
@@ -414,7 +411,7 @@ class CmdStanGQ(Generic[Fit]):
     @overload
     def draws_xr(
         self: "CmdStanGQ[CmdStanMCMC]",
-        vars: Union[str, List[str], None] = None,
+        vars: Union[str, list[str], None] = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
     ) -> "xr.Dataset":
@@ -422,7 +419,7 @@ class CmdStanGQ(Generic[Fit]):
 
     def draws_xr(
         self,
-        vars: Union[str, List[str], None] = None,
+        vars: Union[str, list[str], None] = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
     ) -> "xr.Dataset":
@@ -586,7 +583,7 @@ class CmdStanGQ(Generic[Fit]):
         out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(draws)
         return out
 
-    def stan_variables(self, **kwargs: bool) -> Dict[str, np.ndarray]:
+    def stan_variables(self, **kwargs: bool) -> dict[str, np.ndarray]:
         """
         Return a dictionary mapping Stan program variables names
         to the corresponding numpy.ndarray containing the inferred values.
@@ -639,7 +636,7 @@ class CmdStanGQ(Generic[Fit]):
                 ) from exc
         self._draws = gq_sample
 
-    def _draws_start(self, inc_warmup: bool) -> Tuple[int, int]:
+    def _draws_start(self, inc_warmup: bool) -> tuple[int, int]:
         draw1 = 0
         p_fit = self.previous_fit
         if isinstance(p_fit, CmdStanMCMC):
@@ -689,10 +686,10 @@ class CmdStanGQ(Generic[Fit]):
             return p_fit.variational_sample[:, None]
 
     def _previous_draws_pd(
-        self, vars: List[str], inc_warmup: bool
+        self, vars: list[str], inc_warmup: bool
     ) -> pd.DataFrame:
         if vars:
-            sel: Union[List[str], slice] = vars
+            sel: Union[list[str], slice] = vars
         else:
             sel = slice(None, None)
 
