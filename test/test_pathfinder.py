@@ -36,7 +36,7 @@ def test_pathfinder_outputs():
 
     assert pathfinder.is_resampled
 
-    assert pathfinder.draws().shape == (draws, 3)
+    assert pathfinder.draws().shape == (draws, 4)
 
 
 def test_pathfinder_from_csv():
@@ -159,7 +159,7 @@ def test_pathfinder_no_psis():
     pathfinder = bern_model.pathfinder(data=jdata, psis_resample=False)
 
     assert not pathfinder.is_resampled
-    assert pathfinder.draws().shape == (4000, 3)
+    assert pathfinder.draws().shape == (4000, 4)
 
 
 def test_pathfinder_no_lp_calc():
@@ -170,7 +170,7 @@ def test_pathfinder_no_lp_calc():
     pathfinder = bern_model.pathfinder(data=jdata, calculate_lp=False)
 
     assert not pathfinder.is_resampled
-    assert pathfinder.draws().shape == (4000, 3)
+    assert pathfinder.draws().shape == (4000, 4)
     n_lp_nan = np.sum(np.isnan(pathfinder.method_variables()['lp__']))
     assert n_lp_nan < 4000  # some lp still calculated during pathfinder
     assert n_lp_nan > 3000  # but most are not
@@ -190,4 +190,4 @@ def test_pathfinder_threads():
         stan_file=stan, cpp_options={'STAN_THREADS': True}, force_compile=True
     )
     pathfinder = bern_model.pathfinder(data=jdata, num_threads=4)
-    assert pathfinder.draws().shape == (1000, 3)
+    assert pathfinder.draws().shape == (1000, 4)
