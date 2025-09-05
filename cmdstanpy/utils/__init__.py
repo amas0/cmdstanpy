@@ -20,7 +20,7 @@ from .cmdstan import (
     validate_dir,
     wrap_url_progress_hook,
 )
-from .command import do_command, returncode_msg
+from .command import do_command
 from .data_munging import build_xarray_data, flatten_chains
 from .filesystem import (
     SanitizedOrTmpFilePath,
@@ -114,7 +114,6 @@ __all__ = [
     'parse_rdump_value',
     'pushd',
     'read_metric',
-    'returncode_msg',
     'rload',
     'set_cmdstan_path',
     'set_make_env',

@@ -71,25 +71,10 @@ def do_command(
                     serror = os.strerror(proc.returncode)
                 except (ArithmeticError, ValueError):
                     pass
-                msg = 'Command {}\n\t{} {}'.format(
-                    cmd, returncode_msg(proc.returncode), serror
+                msg = "Command {}\n\texited with code '{}' {}".format(
+                    cmd, proc.returncode, serror
                 )
                 raise RuntimeError(msg)
     except OSError as e:
         msg = 'Command: {}\nfailed with error {}\n'.format(cmd, str(e))
         raise RuntimeError(msg) from e
-
-
-def returncode_msg(retcode: int) -> str:
-    """interpret retcode"""
-    if retcode < 0:
-        sig = -1 * retcode
-        return f'terminated by signal {sig}'
-    if retcode <= 125:
-        return 'error during processing'
-    if retcode == 126:  # shouldn't happen
-        return ''
-    if retcode == 127:
-        return 'program not found'
-    sig = retcode - 128
-    return f'terminated by signal {sig}'

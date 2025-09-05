@@ -54,7 +54,6 @@ from cmdstanpy.utils import (
     cmdstan_version_before,
     do_command,
     get_logger,
-    returncode_msg,
 )
 from cmdstanpy.utils.filesystem import (
     temp_inits,
@@ -2162,14 +2161,13 @@ class CmdStanModel:
             get_logger().info('%s done processing', logger_prefix)
 
         if retcode != 0:
-            retcode_summary = returncode_msg(retcode)
             serror = ''
             try:
                 serror = os.strerror(retcode)
             except (ArithmeticError, ValueError):
                 pass
             get_logger().error(
-                '%s error: %s %s', logger_prefix, retcode_summary, serror
+                "%s error: code '%d' %s", logger_prefix, retcode, serror
             )
 
     @staticmethod
