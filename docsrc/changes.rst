@@ -7,6 +7,23 @@ What's New
 
 For full changes, see the `Releases page <https://github.com/stan-dev/cmdstanpy/releases>`_ on GitHub.
 
+CmdStanPy 1.3.0
+---------------
+
+ - Added :meth:`~CmdStanModel.diagnose` method to :class:`CmdStanModel`
+ - Added timing information to :class:`CmdStanMCMC`
+ - Added :func:`~cmdstanpy.enable_logging` and :func:`~cmdstanpy.disable_logging` functions
+ - CSV parsing has been rewritten to be faster
+ - CmdStan path validation only requires ``makefile`` present
+ - Added ``create_inits()`` methods to other fit classes, similar to the existing method in :class:`CmdStanPathfinder`
+ - Cleaned up TQDM usage
+ - Removed support for Python 3.8
+ - Deprecated supplying an initial ``metric`` argument to :meth:`~CmdStanModel.sample` and the ``metric`` property on :class:`CmdStanMCMC`. Both have been renamed to ``inv_metric``
+ - Improved compability with Stan 2.37
+ - Return codes from failing subprocess are now reported unchanged
+
+Reminder: We anticipate the next release of CmdStanPy will be version 2.0, which will remove all existing deprecations.
+
 CmdStanPy 1.2.5
 ---------------
 
