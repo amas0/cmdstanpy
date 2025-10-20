@@ -38,7 +38,7 @@ else:
 if os.environ.get('READTHEDOCS', False):
     import cmdstanpy
 
-    version = 'v' + cmdstanpy.__version__
+    version = os.environ.get('READTHEDOCS_VERSION', 'v' + cmdstanpy.__version__)
 
     cmdstanpy.set_cmdstan_path(
         '/home/docs/checkouts/readthedocs.org/user_builds/cmdstanpy/'
