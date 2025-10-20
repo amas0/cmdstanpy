@@ -24,7 +24,7 @@ Software
   with yearly, weekly, and daily seasonality, plus holiday effects.
 
 - `ArviZ <https://github.com/arviz-devs/arviz>`__ A Python package (with a
-  `Julia interface <https://julia.arviz.org/stable/>`_) for exploratory analysis of
+  `Julia interface <https://julia.arviz.org/ArviZ/stable/>`_) for exploratory analysis of
   Bayesian models. Includes functions for posterior analysis, data storage,
   model checking, comparison and diagnostics.
 

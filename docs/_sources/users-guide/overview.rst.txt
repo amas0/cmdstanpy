@@ -10,12 +10,12 @@ With CmdStanPy, you can:
 
 + Do inference on the model conditioned on the data, using one of Stan inference algorithms
 
-    + Exact Bayesian estimation using the `NUTS-HMC sampler <https://mc-stan.org/docs/reference-manual/hmc.html>`__.
+    + Exact Bayesian estimation using the `NUTS-HMC sampler <https://mc-stan.org/docs/reference-manual/mcmc.html#hamiltonian-monte-carlo>`__.
 
     + Approximate Bayesian estimation algorithms `Pathfinder <https://mc-stan.org/docs/reference-manual/pathfinder.html>`__
-      and `ADVI <https://mc-stan.org/docs/reference-manual/vi-algorithms.html>`__.
+      and `ADVI <https://mc-stan.org/docs/reference-manual/variational.html>`__.
 
-    + MAP estimation by `optimization <https://mc-stan.org/docs/reference-manual/optimization-algorithms.html>`__.
+    + MAP estimation by `optimization <https://mc-stan.org/docs/reference-manual/optimization.html>`__.
 
 + Generate new quantities of interest from a model given an existing sample.
 

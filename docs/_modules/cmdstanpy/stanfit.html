@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>cmdstanpy.stanfit &#8212; CmdStanPy 1.2.5 documentation</title>
+    <title>cmdstanpy.stanfit &#8212; CmdStanPy 1.3.0 documentation</title>
     
     <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -61,7 +61,7 @@
   <div id="navbar-start">
     
     <!-- This will display the version of the docs -->
-<a class='navbar-brand' href='../../index.html'>CmdStanPy 1.2.5</a>
+<a class='navbar-brand' href='../../index.html'>CmdStanPy 1.3.0</a>
     
   </div>
 
@@ -176,7 +176,7 @@
 
 <span class="kn">import</span> <span class="nn">glob</span>
 <span class="kn">import</span> <span class="nn">os</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">List</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">from</span> <span class="nn">cmdstanpy.cmdstan_args</span> <span class="kn">import</span> <span class="p">(</span>
     <span class="n">CmdStanArgs</span><span class="p">,</span>
@@ -186,7 +186,7 @@
     <span class="n">SamplerArgs</span><span class="p">,</span>
     <span class="n">VariationalArgs</span><span class="p">,</span>
 <span class="p">)</span>
-<span class="kn">from</span> <span class="nn">cmdstanpy.utils</span> <span class="kn">import</span> <span class="n">check_sampler_csv</span><span class="p">,</span> <span class="n">get_logger</span><span class="p">,</span> <span class="n">scan_config</span>
+<span class="kn">from</span> <span class="nn">cmdstanpy.utils</span> <span class="kn">import</span> <span class="n">check_sampler_csv</span><span class="p">,</span> <span class="n">get_logger</span><span class="p">,</span> <span class="n">stancsv</span>
 
 <span class="kn">from</span> <span class="nn">.gq</span> <span class="kn">import</span> <span class="n">CmdStanGQ</span>
 <span class="kn">from</span> <span class="nn">.laplace</span> <span class="kn">import</span> <span class="n">CmdStanLaplace</span>
@@ -210,7 +210,7 @@
 
 
 <div class="viewcode-block" id="from_csv"><a class="viewcode-back" href="../../api.html#cmdstanpy.from_csv">[docs]</a><span class="k">def</span> <span class="nf">from_csv</span><span class="p">(</span>
-    <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
+    <span class="n">path</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">list</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">,</span> <span class="kc">None</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">method</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Union</span><span class="p">[</span>
     <span class="n">CmdStanMCMC</span><span class="p">,</span> <span class="n">CmdStanMLE</span><span class="p">,</span> <span class="n">CmdStanVB</span><span class="p">,</span> <span class="n">CmdStanPathfinder</span><span class="p">,</span> <span class="n">CmdStanLaplace</span><span class="p">,</span> <span class="kc">None</span>
@@ -252,8 +252,8 @@
         <span class="k">if</span> <span class="n">splits</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
             <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">splits</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">splits</span><span class="p">[</span><span class="mi">0</span><span class="p">])):</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s1">&#39;Invalid path specification, </span><span class="si">{}</span><span class="s1"> &#39;</span>
-                    <span class="s1">&#39; unknown directory: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">splits</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="s1">&#39;Invalid path specification, </span><span class="si">{}</span><span class="s1">  unknown &#39;</span>
+                    <span class="s1">&#39;directory: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">splits</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
                 <span class="p">)</span>
         <span class="n">csvfiles</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">path</span><span class="p">)</span>
     <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="p">(</span><span class="nb">str</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">PathLike</span><span class="p">)):</span>
@@ -273,14 +273,12 @@
     <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">csvfiles</span><span class="p">:</span>
         <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">file</span><span class="p">)</span> <span class="ow">and</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">splitext</span><span class="p">(</span><span class="n">file</span><span class="p">)[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;.csv&quot;</span><span class="p">):</span>
             <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                <span class="s1">&#39;Bad CSV file path spec,&#39;</span>
-                <span class="s1">&#39; includes non-csv file: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+                <span class="s1">&#39;Bad CSV file path spec, includes non-csv file: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
             <span class="p">)</span>
 
-    <span class="n">config_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="p">{}</span>
     <span class="k">try</span><span class="p">:</span>
-        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">csvfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fd</span><span class="p">:</span>
-            <span class="n">scan_config</span><span class="p">(</span><span class="n">fd</span><span class="p">,</span> <span class="n">config_dict</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">comments</span><span class="p">,</span> <span class="o">*</span><span class="n">_</span> <span class="o">=</span> <span class="n">stancsv</span><span class="o">.</span><span class="n">parse_comments_header_and_draws</span><span class="p">(</span><span class="n">csvfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+        <span class="n">config_dict</span> <span class="o">=</span> <span class="n">stancsv</span><span class="o">.</span><span class="n">parse_config</span><span class="p">(</span><span class="n">comments</span><span class="p">)</span>
     <span class="k">except</span> <span class="p">(</span><span class="ne">IOError</span><span class="p">,</span> <span class="ne">OSError</span><span class="p">,</span> <span class="ne">PermissionError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Cannot read CSV file: </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">csvfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span> <span class="kn">from</span> <span class="nn">e</span>
     <span class="k">if</span> <span class="s1">&#39;model&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config_dict</span> <span class="ow">or</span> <span class="s1">&#39;method&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config_dict</span><span class="p">:</span>
@@ -292,39 +290,43 @@
                 <span class="n">method</span><span class="p">,</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span>
             <span class="p">)</span>
         <span class="p">)</span>
+    <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span>  <span class="c1"># type: ignore</span>
     <span class="k">try</span><span class="p">:</span>
         <span class="k">if</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;sample&#39;</span><span class="p">:</span>
+            <span class="n">save_warmup</span> <span class="o">=</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;save_warmup&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
             <span class="n">chains</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">csvfiles</span><span class="p">)</span>
+            <span class="n">num_samples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_samples&#39;</span><span class="p">]</span>  <span class="c1"># type: ignore</span>
+            <span class="n">num_warmup</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_warmup&#39;</span><span class="p">]</span>  <span class="c1"># type: ignore</span>
+            <span class="n">thin</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;thin&#39;</span><span class="p">]</span>  <span class="c1"># type: ignore</span>
             <span class="n">sampler_args</span> <span class="o">=</span> <span class="n">SamplerArgs</span><span class="p">(</span>
-                <span class="n">iter_sampling</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_samples&#39;</span><span class="p">],</span>
-                <span class="n">iter_warmup</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_warmup&#39;</span><span class="p">],</span>
-                <span class="n">thin</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;thin&#39;</span><span class="p">],</span>
-                <span class="n">save_warmup</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;save_warmup&#39;</span><span class="p">],</span>
+                <span class="n">iter_sampling</span><span class="o">=</span><span class="n">num_samples</span><span class="p">,</span>
+                <span class="n">iter_warmup</span><span class="o">=</span><span class="n">num_warmup</span><span class="p">,</span>
+                <span class="n">thin</span><span class="o">=</span><span class="n">thin</span><span class="p">,</span>
+                <span class="n">save_warmup</span><span class="o">=</span><span class="n">save_warmup</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="c1"># bugfix 425, check for fixed_params output</span>
             <span class="k">try</span><span class="p">:</span>
                 <span class="n">check_sampler_csv</span><span class="p">(</span>
                     <span class="n">csvfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                    <span class="n">iter_sampling</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_samples&#39;</span><span class="p">],</span>
-                    <span class="n">iter_warmup</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_warmup&#39;</span><span class="p">],</span>
-                    <span class="n">thin</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;thin&#39;</span><span class="p">],</span>
-                    <span class="n">save_warmup</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;save_warmup&#39;</span><span class="p">],</span>
+                    <span class="n">iter_sampling</span><span class="o">=</span><span class="n">num_samples</span><span class="p">,</span>
+                    <span class="n">iter_warmup</span><span class="o">=</span><span class="n">num_warmup</span><span class="p">,</span>
+                    <span class="n">thin</span><span class="o">=</span><span class="n">thin</span><span class="p">,</span>
+                    <span class="n">save_warmup</span><span class="o">=</span><span class="n">save_warmup</span><span class="p">,</span>
                 <span class="p">)</span>
             <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
                 <span class="k">try</span><span class="p">:</span>
                     <span class="n">check_sampler_csv</span><span class="p">(</span>
                         <span class="n">csvfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
-                        <span class="n">is_fixed_param</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-                        <span class="n">iter_sampling</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_samples&#39;</span><span class="p">],</span>
-                        <span class="n">iter_warmup</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_warmup&#39;</span><span class="p">],</span>
-                        <span class="n">thin</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;thin&#39;</span><span class="p">],</span>
-                        <span class="n">save_warmup</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;save_warmup&#39;</span><span class="p">],</span>
+                        <span class="n">iter_sampling</span><span class="o">=</span><span class="n">num_samples</span><span class="p">,</span>
+                        <span class="n">iter_warmup</span><span class="o">=</span><span class="n">num_warmup</span><span class="p">,</span>
+                        <span class="n">thin</span><span class="o">=</span><span class="n">thin</span><span class="p">,</span>
+                        <span class="n">save_warmup</span><span class="o">=</span><span class="n">save_warmup</span><span class="p">,</span>
                     <span class="p">)</span>
                     <span class="n">sampler_args</span> <span class="o">=</span> <span class="n">SamplerArgs</span><span class="p">(</span>
-                        <span class="n">iter_sampling</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_samples&#39;</span><span class="p">],</span>
-                        <span class="n">iter_warmup</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_warmup&#39;</span><span class="p">],</span>
-                        <span class="n">thin</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;thin&#39;</span><span class="p">],</span>
-                        <span class="n">save_warmup</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;save_warmup&#39;</span><span class="p">],</span>
+                        <span class="n">iter_sampling</span><span class="o">=</span><span class="n">num_samples</span><span class="p">,</span>
+                        <span class="n">iter_warmup</span><span class="o">=</span><span class="n">num_warmup</span><span class="p">,</span>
+                        <span class="n">thin</span><span class="o">=</span><span class="n">thin</span><span class="p">,</span>
+                        <span class="n">save_warmup</span><span class="o">=</span><span class="n">save_warmup</span><span class="p">,</span>
                         <span class="n">fixed_param</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
                     <span class="p">)</span>
                 <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
@@ -333,8 +335,8 @@
                     <span class="p">)</span> <span class="kn">from</span> <span class="nn">e</span>
 
             <span class="n">cmdstan_args</span> <span class="o">=</span> <span class="n">CmdStanArgs</span><span class="p">(</span>
-                <span class="n">model_name</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
-                <span class="n">model_exe</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
+                <span class="n">model_name</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">model_exe</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
                 <span class="n">chain_ids</span><span class="o">=</span><span class="p">[</span><span class="n">x</span> <span class="o">+</span> <span class="mi">1</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">chains</span><span class="p">)],</span>
                 <span class="n">method_args</span><span class="o">=</span><span class="n">sampler_args</span><span class="p">,</span>
             <span class="p">)</span>
@@ -348,17 +350,22 @@
         <span class="k">elif</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;optimize&#39;</span><span class="p">:</span>
             <span class="k">if</span> <span class="s1">&#39;algorithm&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config_dict</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;Cannot find optimization algorithm&quot;</span>
-                    <span class="s2">&quot; in file </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">csvfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="s2">&quot;Cannot find optimization algorithm in file </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">csvfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="p">)</span>
                 <span class="p">)</span>
+            <span class="n">algorithm</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;algorithm&#39;</span><span class="p">]</span>  <span class="c1"># type: ignore</span>
+            <span class="n">save_iterations</span> <span class="o">=</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;save_iterations&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
+            <span class="n">jacobian</span> <span class="o">=</span> <span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;jacobian&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span> <span class="o">==</span> <span class="mi">1</span>
+
             <span class="n">optimize_args</span> <span class="o">=</span> <span class="n">OptimizeArgs</span><span class="p">(</span>
-                <span class="n">algorithm</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;algorithm&#39;</span><span class="p">],</span>
-                <span class="n">save_iterations</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;save_iterations&#39;</span><span class="p">],</span>
-                <span class="n">jacobian</span><span class="o">=</span><span class="n">config_dict</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">&#39;jacobian&#39;</span><span class="p">,</span> <span class="mi">0</span><span class="p">),</span>
+                <span class="n">algorithm</span><span class="o">=</span><span class="n">algorithm</span><span class="p">,</span>
+                <span class="n">save_iterations</span><span class="o">=</span><span class="n">save_iterations</span><span class="p">,</span>
+                <span class="n">jacobian</span><span class="o">=</span><span class="n">jacobian</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">cmdstan_args</span> <span class="o">=</span> <span class="n">CmdStanArgs</span><span class="p">(</span>
-                <span class="n">model_name</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
-                <span class="n">model_exe</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
+                <span class="n">model_name</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">model_exe</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
                 <span class="n">chain_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">method_args</span><span class="o">=</span><span class="n">optimize_args</span><span class="p">,</span>
             <span class="p">)</span>
@@ -370,22 +377,23 @@
         <span class="k">elif</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;variational&#39;</span><span class="p">:</span>
             <span class="k">if</span> <span class="s1">&#39;algorithm&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">config_dict</span><span class="p">:</span>
                 <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-                    <span class="s2">&quot;Cannot find variational algorithm&quot;</span>
-                    <span class="s2">&quot; in file </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">csvfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="s2">&quot;Cannot find variational algorithm in file </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                        <span class="n">csvfiles</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="p">)</span>
                 <span class="p">)</span>
             <span class="n">variational_args</span> <span class="o">=</span> <span class="n">VariationalArgs</span><span class="p">(</span>
-                <span class="n">algorithm</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;algorithm&#39;</span><span class="p">],</span>
-                <span class="nb">iter</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;iter&#39;</span><span class="p">],</span>
-                <span class="n">grad_samples</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;grad_samples&#39;</span><span class="p">],</span>
-                <span class="n">elbo_samples</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;elbo_samples&#39;</span><span class="p">],</span>
-                <span class="n">eta</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;eta&#39;</span><span class="p">],</span>
-                <span class="n">tol_rel_obj</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;tol_rel_obj&#39;</span><span class="p">],</span>
-                <span class="n">eval_elbo</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;eval_elbo&#39;</span><span class="p">],</span>
-                <span class="n">output_samples</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;output_samples&#39;</span><span class="p">],</span>
+                <span class="n">algorithm</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;algorithm&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="nb">iter</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;iter&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="n">grad_samples</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;grad_samples&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="n">elbo_samples</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;elbo_samples&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="n">eta</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;eta&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="n">tol_rel_obj</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;tol_rel_obj&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="n">eval_elbo</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;eval_elbo&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="n">output_samples</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;output_samples&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
             <span class="p">)</span>
             <span class="n">cmdstan_args</span> <span class="o">=</span> <span class="n">CmdStanArgs</span><span class="p">(</span>
-                <span class="n">model_name</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
-                <span class="n">model_exe</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
+                <span class="n">model_name</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">model_exe</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
                 <span class="n">chain_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">method_args</span><span class="o">=</span><span class="n">variational_args</span><span class="p">,</span>
             <span class="p">)</span>
@@ -395,14 +403,15 @@
                 <span class="n">runset</span><span class="o">.</span><span class="n">_set_retcode</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">CmdStanVB</span><span class="p">(</span><span class="n">runset</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;laplace&#39;</span><span class="p">:</span>
+            <span class="n">jacobian</span> <span class="o">=</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;jacobian&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span>
             <span class="n">laplace_args</span> <span class="o">=</span> <span class="n">LaplaceArgs</span><span class="p">(</span>
-                <span class="n">mode</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;mode&#39;</span><span class="p">],</span>
-                <span class="n">draws</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;draws&#39;</span><span class="p">],</span>
-                <span class="n">jacobian</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;jacobian&#39;</span><span class="p">],</span>
+                <span class="n">mode</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;mode&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="n">draws</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;draws&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="n">jacobian</span><span class="o">=</span><span class="n">jacobian</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">cmdstan_args</span> <span class="o">=</span> <span class="n">CmdStanArgs</span><span class="p">(</span>
-                <span class="n">model_name</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
-                <span class="n">model_exe</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
+                <span class="n">model_name</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">model_exe</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
                 <span class="n">chain_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">method_args</span><span class="o">=</span><span class="n">laplace_args</span><span class="p">,</span>
             <span class="p">)</span>
@@ -411,18 +420,18 @@
             <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">runset</span><span class="o">.</span><span class="n">_retcodes</span><span class="p">)):</span>
                 <span class="n">runset</span><span class="o">.</span><span class="n">_set_retcode</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span>
             <span class="n">mode</span><span class="p">:</span> <span class="n">CmdStanMLE</span> <span class="o">=</span> <span class="n">from_csv</span><span class="p">(</span>
-                <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;mode&#39;</span><span class="p">],</span>
+                <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;mode&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
                 <span class="n">method</span><span class="o">=</span><span class="s1">&#39;optimize&#39;</span><span class="p">,</span>
             <span class="p">)</span>  <span class="c1"># type: ignore</span>
             <span class="k">return</span> <span class="n">CmdStanLaplace</span><span class="p">(</span><span class="n">runset</span><span class="p">,</span> <span class="n">mode</span><span class="o">=</span><span class="n">mode</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;method&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="s1">&#39;pathfinder&#39;</span><span class="p">:</span>
             <span class="n">pathfinder_args</span> <span class="o">=</span> <span class="n">PathfinderArgs</span><span class="p">(</span>
-                <span class="n">num_draws</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_draws&#39;</span><span class="p">],</span>
-                <span class="n">num_paths</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_paths&#39;</span><span class="p">],</span>
+                <span class="n">num_draws</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_draws&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
+                <span class="n">num_paths</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;num_paths&#39;</span><span class="p">],</span>  <span class="c1"># type: ignore</span>
             <span class="p">)</span>
             <span class="n">cmdstan_args</span> <span class="o">=</span> <span class="n">CmdStanArgs</span><span class="p">(</span>
-                <span class="n">model_name</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
-                <span class="n">model_exe</span><span class="o">=</span><span class="n">config_dict</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">],</span>
+                <span class="n">model_name</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
+                <span class="n">model_exe</span><span class="o">=</span><span class="n">model</span><span class="p">,</span>
                 <span class="n">chain_ids</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
                 <span class="n">method_args</span><span class="o">=</span><span class="n">pathfinder_args</span><span class="p">,</span>
             <span class="p">)</span>

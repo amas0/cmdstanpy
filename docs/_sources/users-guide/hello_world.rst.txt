@@ -115,7 +115,7 @@ Accessing the results
 ^^^^^^^^^^^^^^^^^^^^^
 
 The sampler outputs are the set of per-chain
-`Stan CSV files <https://mc-stan.org/docs/cmdstan-guide/stan-csv.html>`__,
+`Stan CSV files <https://mc-stan.org/docs/cmdstan-guide/stan_csv_apdx.html>`__,
 a non-standard CSV file format.
 Each data row of the Stan CSV file contains the per-iteration estimate of the Stan model
 parameters, transformed parameters,  and generated quantities variables.
@@ -171,7 +171,7 @@ access to the the per-chain HMC tuning parameters from the NUTS-HMC adaptive sam
 .. ipython:: python
 
     print(fit.metric_type)
-    print(fit.metric)
+    print(fit.inv_metric)
     print(fit.step_size)
 
 
@@ -200,7 +200,7 @@ all model parameters and quantities of interest in a pandas.DataFrame:
 
 
 CmdStan is distributed with a second posterior analysis utility
-`diagnose <https://mc-stan.org/docs/cmdstan-guide/diagnose.html>`__
+`diagnose <https://mc-stan.org/docs/cmdstan-guide/diagnose_utility.html>`__
 which analyzes the per-draw sampler parameters across all chains
 looking for potential problems which indicate that the sample
 isn't a representative sample from the posterior.

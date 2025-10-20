@@ -6,7 +6,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
 
-    <title>MCMC Sampling &#8212; CmdStanPy 1.2.5 documentation</title>
+    <title>MCMC Sampling &#8212; CmdStanPy 1.3.0 documentation</title>
     
     <link href="../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -65,7 +65,7 @@
   <div id="navbar-start">
     
     <!-- This will display the version of the docs -->
-<a class='navbar-brand' href='../../index.html'>CmdStanPy 1.2.5</a>
+<a class='navbar-brand' href='../../index.html'>CmdStanPy 1.3.0</a>
     
   </div>
 
@@ -204,12 +204,12 @@
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="VI%20as%20Sampler%20Inits.html">
-     Using Variational Estimates to Initialize the NUTS-HMC Sampler
+     Initializing the NUTS-HMC sampler
     </a>
    </li>
    <li class="toctree-l2">
     <a class="reference internal" href="Run%20Generated%20Quantities.html">
-     Generating new quantities of interest.
+     Generating new quantities of interest
     </a>
    </li>
    <li class="toctree-l2">
@@ -370,8 +370,8 @@
 <section id="Overview">
 <h2>Overview<a class="headerlink" href="#Overview" title="Permalink to this heading">¶</a></h2>
 <p>Stan’s MCMC sampler implements the Hamiltonian Monte Carlo (HMC) algorithm and its adaptive variant the no-U-turn sampler (NUTS). It creates a set of draws from the posterior distribution of the model conditioned on the data, allowing for exact Bayesian inference of the model parameters. Each draw consists of the values for all parameter, transformed parameter, and generated quantities variables, reported on the constrained scale.</p>
-<p>The <a class="reference external" href="https://mc-stan.org/cmdstanpy/api.html#cmdstanpy.CmdStanModel.sample">CmdStanModel sample</a> method wraps the CmdStan <a class="reference external" href="https://mc-stan.org/docs/cmdstan-guide/mcmc-config.html">sample</a> method. Underlyingly, the CmdStan outputs are a set of per-chain Stan CSV files. In addition to the resulting sample, reported as one row per draw, the Stan CSV files encode information about the inference engine configuration and the sampler state. The NUTS-HMC adaptive sampler algorithm also outputs the
-per-chain HMC tuning parameters <code class="docutils literal notranslate"><span class="pre">step_size</span></code> and <code class="docutils literal notranslate"><span class="pre">metric</span></code>.</p>
+<p>The <a class="reference external" href="https://mc-stan.org/cmdstanpy/api.html#cmdstanpy.CmdStanModel.sample">CmdStanModel sample</a> method wraps the CmdStan <a class="reference external" href="https://mc-stan.org/docs/cmdstan-guide/mcmc_config.html#running-the-sampler">sample</a> method. Underlyingly, the CmdStan outputs are a set of per-chain Stan CSV files. In addition to the resulting sample, reported as one row per draw, the Stan CSV files encode information about the inference engine configuration and the sampler state. The NUTS-HMC adaptive sampler
+algorithm also outputs the per-chain HMC tuning parameters <code class="docutils literal notranslate"><span class="pre">step_size</span></code> and <code class="docutils literal notranslate"><span class="pre">metric</span></code>.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">sample</span></code> method returns a <a class="reference external" href="https://mc-stan.org/cmdstanpy/api.html#cmdstanmcmc">CmdStanMCMC</a> object, which provides access to the disparate information from the Stan CSV files. Accessor functions allow the user to access the sample in whatever data format is needed for further analysis, either as tabular data (i.e., in terms of the per-chain CSV file rows and columns), or as structured objects which correspond to the variables in the Stan model and the individual diagnostics produced by
 the inference method.</p>
 <ul class="simple">
@@ -1470,10 +1470,10 @@ name: energy__, shape: (1000, 4)
 <section id="Extracting-the-per-chain-HMC-tuning-parameters">
 <h3>Extracting the per-chain HMC tuning parameters<a class="headerlink" href="#Extracting-the-per-chain-HMC-tuning-parameters" title="Permalink to this heading">¶</a></h3>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
 </pre></div>
 </div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;adapted step_size per chain</span><span class="se">\n</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">step_size</span><span class="si">}</span><span class="se">\n</span><span class="s1">metric_type: </span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">metric_type</span><span class="si">}</span><span class="se">\n</span><span class="s1">metric:</span><span class="se">\n</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">metric</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre><span></span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;adapted step_size per chain</span><span class="se">\n</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">step_size</span><span class="si">}</span><span class="se">\n</span><span class="s1">metric_type: </span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">metric_type</span><span class="si">}</span><span class="se">\n</span><span class="s1">inverse metric:</span><span class="se">\n</span><span class="si">{</span><span class="n">fit</span><span class="o">.</span><span class="n">inv_metric</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>

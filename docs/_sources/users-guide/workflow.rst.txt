@@ -129,7 +129,7 @@ For each CmdStan inference method, there is a corresponding method on the :class
 An example of each is provided in the `next section <examples.rst>`__.
 
 * The :meth:`~CmdStanModel.sample` method runs Stan's
-  `HMC-NUTS sampler <https://mc-stan.org/docs/reference-manual/hamiltonian-monte-carlo.html>`__.
+  `HMC-NUTS sampler <https://mc-stan.org/docs/reference-manual/mcmc.html#hamiltonian-monte-carlo>`__.
 
   It returns a :class:`CmdStanMCMC` object which contains
   a sample from the posterior distribution of the model conditioned on the data.
@@ -141,12 +141,12 @@ An example of each is provided in the `next section <examples.rst>`__.
   a sample from a Gaussian approximation the posterior distribution.
 
 * The :meth:`~CmdStanModel.variational` method runs Stan's
-  `Automatic Differentiation Variational Inference (ADVI) algorithm <https://mc-stan.org/docs/reference-manual/vi-algorithms-chapter.html>`__.
+  `Automatic Differentiation Variational Inference (ADVI) algorithm <https://mc-stan.org/docs/reference-manual/variational.html>`__.
 
   It returns a :class:`CmdStanVB` object which contains an approximation the posterior distribution.
 
 * The :meth:`~CmdStanModel.optimize` runs one of Stan's
-  `optimization algorithms <https://mc-stan.org/docs/reference-manual/optimization-algorithms-chapter.html>`__
+  `optimization algorithms <https://mc-stan.org/docs/reference-manual/optimization.html>`__
   to find a mode of the density specified by the Stan program.
 
   It returns a :class:`CmdStanMLE` object.
@@ -155,7 +155,7 @@ An example of each is provided in the `next section <examples.rst>`__.
   `generate_quantities method <https://mc-stan.org/docs/cmdstan-guide/standalone-generate-quantities.html>`__.
   which generates additional quantities of interest from a mode. Its take an existing fit as input and
   uses the parameter estimates in the fit to run the Stan program's
-  `generated quantities block <https://mc-stan.org/docs/reference-manual/program-block-generated-quantities.html>`__.
+  `generated quantities block <https://mc-stan.org/docs/reference-manual/blocks.html#program-block-generated-quantities>`__.
 
   It returns a :class:`CmdStanGQ` object.
 

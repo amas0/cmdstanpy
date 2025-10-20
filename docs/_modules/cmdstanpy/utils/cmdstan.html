@@ -5,7 +5,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>cmdstanpy.utils.cmdstan &#8212; CmdStanPy 1.2.5 documentation</title>
+    <title>cmdstanpy.utils.cmdstan &#8212; CmdStanPy 1.3.0 documentation</title>
     
     <link href="../../../_static/styles/theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
 <link href="../../../_static/styles/pydata-sphinx-theme.css?digest=1999514e3f237ded88cf" rel="stylesheet">
@@ -61,7 +61,7 @@
   <div id="navbar-start">
     
     <!-- This will display the version of the docs -->
-<a class='navbar-brand' href='../../../index.html'>CmdStanPy 1.2.5</a>
+<a class='navbar-brand' href='../../../index.html'>CmdStanPy 1.3.0</a>
     
   </div>
 
@@ -175,12 +175,13 @@
 <span></span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">Utilities for finding and installing CmdStan</span>
 <span class="sd">&quot;&quot;&quot;</span>
+
 <span class="kn">import</span> <span class="nn">os</span>
 <span class="kn">import</span> <span class="nn">platform</span>
 <span class="kn">import</span> <span class="nn">subprocess</span>
 <span class="kn">import</span> <span class="nn">sys</span>
 <span class="kn">from</span> <span class="nn">collections</span> <span class="kn">import</span> <span class="n">OrderedDict</span>
-<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">Callable</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Union</span>
 
 <span class="kn">from</span> <span class="nn">tqdm.auto</span> <span class="kn">import</span> <span class="n">tqdm</span>
 
@@ -307,13 +308,27 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;No CmdStan directory, path </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s1"> does not exist.&#39;</span><span class="p">)</span>
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;bin&#39;</span><span class="p">,</span> <span class="s1">&#39;stanc&#39;</span> <span class="o">+</span> <span class="n">EXTENSION</span><span class="p">)):</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="s1">&#39;makefile&#39;</span><span class="p">)):</span>
         <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
-            <span class="sa">f</span><span class="s1">&#39;CmdStan installataion missing binaries in </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s1">/bin. &#39;</span>
-            <span class="s1">&#39;Re-install cmdstan by running command &quot;install_cmdstan &#39;</span>
-            <span class="s1">&#39;--overwrite&quot;, or Python code &quot;import cmdstanpy; &#39;</span>
-            <span class="s1">&#39;cmdstanpy.install_cmdstan(overwrite=True)&quot;&#39;</span>
+            <span class="sa">f</span><span class="s1">&#39;CmdStan installataion missing makefile, path </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s1"> is invalid.&#39;</span>
+            <span class="s1">&#39; You may wish to re-install cmdstan by running command &#39;</span>
+            <span class="s1">&#39;&quot;install_cmdstan --overwrite&quot;, or Python code &#39;</span>
+            <span class="s1">&#39;&quot;import cmdstanpy; cmdstanpy.install_cmdstan(overwrite=True)&quot;&#39;</span>
         <span class="p">)</span>
+
+
+<span class="k">def</span> <span class="nf">stanc_path</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="nb">str</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Returns the path to the stanc executable in the CmdStan installation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cmdstan</span> <span class="o">=</span> <span class="n">cmdstan_path</span><span class="p">()</span>
+    <span class="n">stanc_exe</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cmdstan</span><span class="p">,</span> <span class="s1">&#39;bin&#39;</span><span class="p">,</span> <span class="s1">&#39;stanc&#39;</span> <span class="o">+</span> <span class="n">EXTENSION</span><span class="p">)</span>
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">stanc_exe</span><span class="p">):</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+            <span class="sa">f</span><span class="s1">&#39;stanc executable not found in CmdStan installation: </span><span class="si">{</span><span class="n">cmdstan</span><span class="si">}</span><span class="s1">.</span><span class="se">\n</span><span class="s1">&#39;</span>
+            <span class="s1">&#39;You may need to re-install or re-build CmdStan.&#39;</span><span class="p">,</span>
+        <span class="p">)</span>
+    <span class="k">return</span> <span class="n">stanc_exe</span>
 
 
 <div class="viewcode-block" id="set_cmdstan_path"><a class="viewcode-back" href="../../../api.html#cmdstanpy.set_cmdstan_path">[docs]</a><span class="k">def</span> <span class="nf">set_cmdstan_path</span><span class="p">(</span><span class="n">path</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
@@ -357,7 +372,7 @@
     <span class="k">return</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">normpath</span><span class="p">(</span><span class="n">cmdstan</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="cmdstan_version"><a class="viewcode-back" href="../../../api.html#cmdstanpy.cmdstan_version">[docs]</a><span class="k">def</span> <span class="nf">cmdstan_version</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]:</span>
+<div class="viewcode-block" id="cmdstan_version"><a class="viewcode-back" href="../../../api.html#cmdstanpy.cmdstan_version">[docs]</a><span class="k">def</span> <span class="nf">cmdstan_version</span><span class="p">()</span> <span class="o">-&gt;</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">tuple</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="o">...</span><span class="p">]]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Parses version string out of CmdStan makefile variable CMDSTAN_VERSION,</span>
 <span class="sd">    returns Tuple(Major, minor).</span>
@@ -372,13 +387,6 @@
     <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
         <span class="n">get_logger</span><span class="p">()</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s1">&#39;No CmdStan installation found.&#39;</span><span class="p">)</span>
         <span class="n">get_logger</span><span class="p">()</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">%s</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">e</span><span class="p">)</span>
-        <span class="k">return</span> <span class="kc">None</span>
-
-    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">makefile</span><span class="p">):</span>
-        <span class="n">get_logger</span><span class="p">()</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="s1">&#39;CmdStan installation </span><span class="si">%s</span><span class="s1"> missing makefile, cannot get version.&#39;</span><span class="p">,</span>
-            <span class="n">cmdstan_path</span><span class="p">(),</span>
-        <span class="p">)</span>
         <span class="k">return</span> <span class="kc">None</span>
 
     <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">makefile</span><span class="p">,</span> <span class="s1">&#39;r&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fd</span><span class="p">:</span>
@@ -408,7 +416,7 @@
 
 
 <span class="k">def</span> <span class="nf">cmdstan_version_before</span><span class="p">(</span>
-    <span class="n">major</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">minor</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">info</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">major</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">minor</span><span class="p">:</span> <span class="nb">int</span><span class="p">,</span> <span class="n">info</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">dict</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span>
 <span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Check that CmdStan version is less than Major.minor version.</span>
@@ -440,7 +448,7 @@
 
 <span class="k">def</span> <span class="nf">cxx_toolchain_path</span><span class="p">(</span>
     <span class="n">version</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">install_dir</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
-<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="o">...</span><span class="p">]:</span>
 <span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Validate, then activate C++ toolchain directory path.</span>
 <span class="sd">    &quot;&quot;&quot;</span>
