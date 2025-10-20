@@ -10,3 +10,6 @@ formats:
 
 conda:
     environment: docsrc/env.yml
+
+sphinx:
+    configuration: docsrc/conf.py
