@@ -56,7 +56,7 @@ docs = [
     "pydata-sphinx-theme<0.9",
     "nbsphinx",
     "ipython",
-    "ipykernel",
+    "ipykernel<7",
     "ipywidgets",
     "sphinx-copybutton",
     "xarray",
