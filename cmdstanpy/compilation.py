@@ -352,6 +352,18 @@ def compile_stan_file(
     )
     compiler_options.validate()
 
+    # if program has include directives, record path
+    if '#include' in src.read_text():
+        path = os.fspath(src.parent.resolve())
+        if 'include-paths' not in compiler_options.stanc_options:
+            compiler_options.stanc_options['include-paths'] = [path]
+        else:
+            paths: list[str] = compiler_options.stanc_options[
+                'include-paths'
+            ]  # type: ignore
+            if path not in paths:
+                paths.append(path)
+
     exe_target = src.with_suffix(EXTENSION)
     if exe_target.exists():
         exe_time = os.path.getmtime(exe_target)

@@ -168,18 +168,6 @@ class CmdStanModel:
                         ' found: {}.'.format(self._name, filename)
                     )
 
-            # if program has include directives, record path
-            with open(self._stan_file, 'r') as fd:
-                program = fd.read()
-            if '#include' in program:
-                path, _ = os.path.split(
-                    os.path.abspath(os.path.expanduser(self._stan_file))
-                )
-                if 'include-paths' not in self._stanc_options:
-                    self._stanc_options['include-paths'] = [path]
-                elif path not in self._stanc_options['include-paths']:
-                    self._stanc_options['include-paths'].append(path)
-
             self._exe_file = compilation.compile_stan_file(
                 str(self.stan_file),
                 force=force_compile,
