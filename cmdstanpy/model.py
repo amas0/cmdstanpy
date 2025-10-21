@@ -13,16 +13,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 from multiprocessing import cpu_count
-from typing import (
-    Any,
-    Callable,
-    Iterable,
-    Literal,
-    Mapping,
-    Optional,
-    TypeVar,
-    Union,
-)
+from typing import Any, Callable, Iterable, Mapping, Optional, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -114,15 +105,12 @@ class CmdStanModel:
 
     def __init__(
         self,
-        model_name: Optional[str] = None,
         stan_file: OptionalPath = None,
         exe_file: OptionalPath = None,
         force_compile: bool = False,
         stanc_options: Optional[dict[str, Any]] = None,
         cpp_options: Optional[dict[str, Any]] = None,
         user_header: OptionalPath = None,
-        *,
-        compile: Union[bool, Literal['force'], None] = None,
     ) -> None:
         """
         Initialize object given constructor args.
@@ -136,52 +124,30 @@ class CmdStanModel:
         :param cpp_options: Options for C++ compiler.
         :param user_header: A path to a header file to include during C++
             compilation.
-        :param compile: Deprecated. Whether or not to compile the model.
         """
         self._name = ''
         self._stan_file = None
-        self._exe_file = None
-        self._compiler_options = compilation.CompilerOptions(
-            stanc_options=stanc_options,
-            cpp_options=cpp_options,
-            user_header=user_header,
-        )
-        self._compiler_options.validate()
+        self._stanc_options: dict[str, Any] = stanc_options or {}
 
         self._fixed_param = False
 
-        if compile is None:
-            compile = True
-        else:
-            get_logger().warning(
-                "CmdStanModel(compile=...) is deprecated and will be "
-                "removed in the next major version. The constructor will "
-                "always ensure a model has a compiled executable.\n"
-                "If you wish to force recompilation, use force_compile=True "
-                "instead."
-            )
-
-        if force_compile:
-            compile = 'force'
-
-        if model_name is not None:
-            get_logger().warning(
-                "CmdStanModel(model_name=...) is deprecated and will be "
-                "removed in the next major version."
-            )
-            if not model_name.strip():
-                raise ValueError(
-                    'Invalid value for argument model name, found "{}"'.format(
-                        model_name
-                    )
-                )
-            self._name = model_name.strip()
+        if exe_file is not None:
+            self._exe_file = os.path.realpath(os.path.expanduser(exe_file))
+            if not os.path.exists(self._exe_file):
+                raise ValueError('no such file {}'.format(self._exe_file))
+            _, exename = os.path.split(self._exe_file)
+            self._name, _ = os.path.splitext(exename)
 
         if stan_file is None:
             if exe_file is None:
                 raise ValueError(
                     'Missing model file arguments, you must specify '
                     'either Stan source or executable program file or both.'
+                )
+            if force_compile:
+                raise ValueError(
+                    'Cannot force compilation when no Stan source file '
+                    'is specified.'
                 )
         else:
             self._stan_file = os.path.realpath(os.path.expanduser(stan_file))
@@ -194,41 +160,41 @@ class CmdStanModel:
                 )
             if not self._name:
                 self._name, _ = os.path.splitext(filename)
+            else:
+                if self._name != os.path.splitext(filename)[0]:
+                    raise ValueError(
+                        'Name mismatch between Stan file and compiled'
+                        ' executable, expecting basename: {}'
+                        ' found: {}.'.format(self._name, filename)
+                    )
 
             # if program has include directives, record path
             with open(self._stan_file, 'r') as fd:
                 program = fd.read()
             if '#include' in program:
-                path, _ = os.path.split(self._stan_file)
-                self._compiler_options.add_include_path(path)
+                path, _ = os.path.split(
+                    os.path.abspath(os.path.expanduser(self._stan_file))
+                )
+                if 'include-paths' not in self._stanc_options:
+                    self._stanc_options['include-paths'] = [path]
+                elif path not in self._stanc_options['include-paths']:
+                    self._stanc_options['include-paths'].append(path)
+
+            self._exe_file = compilation.compile_stan_file(
+                str(self.stan_file),
+                force=force_compile,
+                stanc_options=self._stanc_options,
+                cpp_options=cpp_options,
+                user_header=user_header,
+            )
 
             # try to detect models w/out parameters, needed for sampler
             if (not cmdstan_version_before(2, 27)) and cmdstan_version_before(
                 2, 36
             ):
-                try:
-                    model_info = self.src_info()
-                    if 'parameters' in model_info:
-                        self._fixed_param |= len(model_info['parameters']) == 0
-                except ValueError as e:
-                    if compile:
-                        raise
-                    get_logger().debug(e)
-
-        if exe_file is not None:
-            self._exe_file = os.path.realpath(os.path.expanduser(exe_file))
-            if not os.path.exists(self._exe_file):
-                raise ValueError('no such file {}'.format(self._exe_file))
-            _, exename = os.path.split(self._exe_file)
-            if not self._name:
-                self._name, _ = os.path.splitext(exename)
-            else:
-                if self._name != os.path.splitext(exename)[0]:
-                    raise ValueError(
-                        'Name mismatch between Stan file and compiled'
-                        ' executable, expecting basename: {}'
-                        ' found: {}.'.format(self._name, exename)
-                    )
+                model_info = self.src_info()
+                if 'parameters' in model_info:
+                    self._fixed_param |= len(model_info['parameters']) == 0
 
         if platform.system() == 'Windows':
             try:
@@ -251,14 +217,10 @@ class CmdStanModel:
             else:
                 get_logger().debug("TBB already found in load path")
 
-        if compile and self._exe_file is None:
-            self.compile(force=str(compile).lower() == 'force', _internal=True)
-
     def __repr__(self) -> str:
         repr = 'CmdStanModel: name={}'.format(self._name)
         repr = '{}\n\t stan_file={}'.format(repr, self._stan_file)
         repr = '{}\n\t exe_file={}'.format(repr, self._exe_file)
-        repr = '{}\n\t compiler_options={}'.format(repr, self._compiler_options)
         return repr
 
     @property
@@ -276,7 +238,7 @@ class CmdStanModel:
         return self._stan_file
 
     @property
-    def exe_file(self) -> OptionalPath:
+    def exe_file(self) -> Union[os.PathLike, str]:
         """Full path to Stan exe file."""
         return self._exe_file
 
@@ -284,25 +246,17 @@ class CmdStanModel:
         """
         Run model with option 'info'. Parse output statements, which all
         have form 'key = value' into a Dict.
-        If exe file compiled with CmdStan < 2.27, option 'info' isn't
-        available and the method returns an empty dictionary.
         """
         result: dict[str, str] = {}
-        if self.exe_file is None:
-            return result
-        try:
-            info = StringIO()
-            do_command(cmd=[str(self.exe_file), 'info'], fd_out=info)
-            lines = info.getvalue().split('\n')
-            for line in lines:
-                kv_pair = [x.strip() for x in line.split('=')]
-                if len(kv_pair) != 2:
-                    continue
-                result[kv_pair[0]] = kv_pair[1]
-            return result
-        except RuntimeError as e:
-            get_logger().debug(e)
-            return result
+        info = StringIO()
+        do_command(cmd=[str(self.exe_file), 'info'], fd_out=info)
+        lines = info.getvalue().split('\n')
+        for line in lines:
+            kv_pair = [x.strip() for x in line.split('=')]
+            if len(kv_pair) != 2:
+                continue
+            result[kv_pair[0]] = kv_pair[1]
+        return result
 
     def src_info(self) -> dict[str, Any]:
         """
@@ -313,7 +267,7 @@ class CmdStanModel:
         """
         if self.stan_file is None or cmdstan_version_before(2, 27):
             return {}
-        return compilation.src_info(str(self.stan_file), self._compiler_options)
+        return compilation.src_info(str(self.stan_file), self._stanc_options)
 
     # TODO(2.0) remove
     def format(
@@ -359,23 +313,8 @@ class CmdStanModel:
             max_line_length=max_line_length,
             canonicalize=canonicalize,
             backup=backup,
-            stanc_options=self.stanc_options,
+            stanc_options=self._stanc_options,
         )
-
-    @property
-    def stanc_options(self) -> dict[str, Union[bool, int, str]]:
-        """Options to stanc compilers."""
-        return self._compiler_options._stanc_options
-
-    @property
-    def cpp_options(self) -> dict[str, Union[bool, int]]:
-        """Options to C++ compilers."""
-        return self._compiler_options._cpp_options
-
-    @property
-    def user_header(self) -> str:
-        """The user header file if it exists, otherwise empty"""
-        return self._compiler_options._user_header
 
     def code(self) -> Optional[str]:
         """Return Stan program as a string."""
@@ -391,82 +330,6 @@ class CmdStanModel:
                 'Cannot read file Stan file: %s', self._stan_file
             )
         return code
-
-    # TODO(2.0): remove
-    def compile(
-        self,
-        force: bool = False,
-        stanc_options: Optional[dict[str, Any]] = None,
-        cpp_options: Optional[dict[str, Any]] = None,
-        user_header: OptionalPath = None,
-        override_options: bool = False,
-        *,
-        _internal: bool = False,
-    ) -> None:
-        """
-        Deprecated: To compile a model, use the :class:`~cmdstanpy.CmdStanModel`
-        constructor or :func:`cmdstanpy.compile_stan_file()`.
-
-        Compile the given Stan program file.  Translates the Stan code to
-        C++, then calls the C++ compiler.
-
-        By default, this function compares the timestamps on the source and
-        executable files; if the executable is newer than the source file, it
-        will not recompile the file, unless argument ``force`` is ``True``
-        or unless the compiler options have been changed.
-
-        :param force: When ``True``, always compile, even if the executable file
-            is newer than the source file.  Used for Stan models which have
-            ``#include`` directives in order to force recompilation when changes
-            are made to the included files.
-
-        :param stanc_options: Options for stanc compiler.
-        :param cpp_options: Options for C++ compiler.
-        :param user_header: A path to a header file to include during C++
-            compilation.
-
-        :param override_options: When ``True``, override existing option.
-            When ``False``, add/replace existing options.  Default is ``False``.
-        """
-        if not _internal:
-            get_logger().warning(
-                "CmdStanModel.compile() is deprecated and will be removed in "
-                "the next major version. To compile a model, use the "
-                "CmdStanModel() constructor or cmdstanpy.compile_stan_file()."
-            )
-
-        if not self._stan_file:
-            raise RuntimeError('Please specify source file')
-
-        compiler_options = None
-        if (
-            stanc_options is not None
-            or cpp_options is not None
-            or user_header is not None
-        ):
-            compiler_options = compilation.CompilerOptions(
-                stanc_options=stanc_options,
-                cpp_options=cpp_options,
-                user_header=user_header,
-            )
-            compiler_options.validate()
-
-            if compiler_options != self._compiler_options:
-                force = True
-                if self._compiler_options is None:
-                    self._compiler_options = compiler_options
-                elif override_options:
-                    self._compiler_options = compiler_options
-                else:
-                    self._compiler_options.add(compiler_options)
-
-        self._exe_file = compilation.compile_stan_file(
-            str(self.stan_file),
-            force=force,
-            stanc_options=self._compiler_options.stanc_options,
-            cpp_options=self._compiler_options.cpp_options,
-            user_header=self._compiler_options.user_header,
-        )
 
     def optimize(
         self,

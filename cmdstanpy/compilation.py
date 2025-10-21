@@ -8,7 +8,6 @@ import os
 import platform
 import shutil
 import subprocess
-from copy import copy
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Iterable, Optional, Union
@@ -37,11 +36,6 @@ STANC_OPTS = [
     'warn-pedantic',
 ]
 
-# TODO(2.0): remove
-STANC_DEPRECATED_OPTS = {
-    'allow_undefined': 'allow-undefined',
-    'include_paths': 'include-paths',
-}
 
 STANC_IGNORE_OPTS = [
     'debug-lex',
@@ -67,7 +61,6 @@ STANC_IGNORE_OPTS = [
 OptionalPath = Union[str, os.PathLike, None]
 
 
-# TODO(2.0): can remove add function and other logic
 class CompilerOptions:
     """
     User-specified flags for stanc and C++ compiler.
@@ -151,24 +144,6 @@ class CompilerOptions:
         paths = None
         has_o_flag = False
 
-        for deprecated, replacement in STANC_DEPRECATED_OPTS.items():
-            if deprecated in self._stanc_options:
-                if replacement:
-                    get_logger().warning(
-                        'compiler option "%s" is deprecated, use "%s" instead',
-                        deprecated,
-                        replacement,
-                    )
-                    self._stanc_options[replacement] = copy(
-                        self._stanc_options[deprecated]
-                    )
-                    del self._stanc_options[deprecated]
-                else:
-                    get_logger().warning(
-                        'compiler option "%s" is deprecated and should '
-                        'not be used',
-                        deprecated,
-                    )
         for key, val in self._stanc_options.items():
             if key in STANC_IGNORE_OPTS:
                 get_logger().info('ignoring compiler option: %s', key)
@@ -267,37 +242,6 @@ class CompilerOptions:
 
             self._cpp_options['USER_HEADER'] = self._user_header
 
-    def add(self, new_opts: "CompilerOptions") -> None:  # noqa: disable=Q000
-        """Adds options to existing set of compiler options."""
-        if new_opts.stanc_options is not None:
-            if self._stanc_options is None:
-                self._stanc_options = new_opts.stanc_options
-            else:
-                for key, val in new_opts.stanc_options.items():
-                    if key == 'include-paths':
-                        if isinstance(val, Iterable) and not isinstance(
-                            val, str
-                        ):
-                            for path in val:
-                                self.add_include_path(str(path))
-                        else:
-                            self.add_include_path(str(val))
-                    else:
-                        self._stanc_options[key] = val
-        if new_opts.cpp_options is not None:
-            for key, val in new_opts.cpp_options.items():
-                self._cpp_options[key] = val
-        if new_opts._user_header != '' and self._user_header == '':
-            self._user_header = new_opts._user_header
-
-    def add_include_path(self, path: str) -> None:
-        """Adds include path to existing set of compiler options."""
-        path = os.path.abspath(os.path.expanduser(path))
-        if 'include-paths' not in self._stanc_options:
-            self._stanc_options['include-paths'] = [path]
-        elif path not in self._stanc_options['include-paths']:
-            self._stanc_options['include-paths'].append(path)
-
     def compose_stanc(self, filename_in_msg: Optional[str]) -> list[str]:
         opts = []
 
@@ -343,7 +287,8 @@ class CompilerOptions:
 
 
 def src_info(
-    stan_file: str, compiler_options: CompilerOptions
+    stan_file: str,
+    stanc_options: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     """
     Get source info for Stan program file.
@@ -354,7 +299,7 @@ def src_info(
     cmd = (
         [stanc_path()]
         # handle include-paths, allow-undefined etc
-        + compiler_options.compose_stanc(None)
+        + CompilerOptions(stanc_options=stanc_options).compose_stanc(None)
         + ['--info', str(stan_file)]
     )
     proc = subprocess.run(cmd, capture_output=True, text=True, check=False)
@@ -412,7 +357,9 @@ def compile_stan_file(
         exe_time = os.path.getmtime(exe_target)
         included_files = [src]
         included_files.extend(
-            src_info(str(src), compiler_options).get('included_files', [])
+            src_info(str(src), compiler_options.stanc_options).get(
+                'included_files', []
+            )
         )
         out_of_date = any(
             os.path.getmtime(included_file) > exe_time
