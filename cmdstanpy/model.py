@@ -68,11 +68,6 @@ class CmdStanModel:
     Stan program source file or the compiled executable, or both.
     This will compile the model if provided a Stan file and no executable,
 
-    :param model_name: Model name, used for output file names.
-        Optional, default is the base filename of the Stan program file.
-        Deprecated: In version 2.0.0, model name cannot be
-        specified and will always be taken from executable.
-
     :param stan_file: Path to Stan program file.
 
     :param exe_file: Path to compiled executable file.  Optional, unless
@@ -94,13 +89,6 @@ class CmdStanModel:
     :param user_header: A path to a header file to include during C++
         compilation.
         Optional.
-
-    :param compile: Whether or not to compile the model.  Default is ``True``.
-        If set to the string ``"force"``, it will always compile even if
-        an existing executable is found.
-        Deprecated: Use ``force_compile`` instead. The ability to instantiate
-        a CmdStanModel without an executable will be removed in version 2.0.0.
-
     """
 
     def __init__(
@@ -115,7 +103,6 @@ class CmdStanModel:
         """
         Initialize object given constructor args.
 
-        :param model_name: Deprecated. Model name, used for output file names.
         :param stan_file: Path to Stan program file.
         :param exe_file: Path to compiled executable file.
         :param force_compile: Whether or not to force recompilation if
@@ -206,17 +193,15 @@ class CmdStanModel:
                 get_logger().debug("TBB already found in load path")
 
     def __repr__(self) -> str:
-        repr = 'CmdStanModel: name={}'.format(self._name)
-        repr = '{}\n\t stan_file={}'.format(repr, self._stan_file)
-        repr = '{}\n\t exe_file={}'.format(repr, self._exe_file)
-        return repr
+        return (
+            f"CmdStanModel(stan_file={self.stan_file!r}, "
+            f"exe_file={self.exe_file!r})"
+        )
 
     @property
     def name(self) -> str:
         """
-        Model name used in output filename templates. Default is basename
-        of Stan program or exe file, unless specified in call to constructor
-        via argument ``model_name``.
+        Model name used in output filename templates.
         """
         return self._name
 
@@ -226,7 +211,7 @@ class CmdStanModel:
         return self._stan_file
 
     @property
-    def exe_file(self) -> Union[os.PathLike, str]:
+    def exe_file(self) -> str:
         """Full path to Stan exe file."""
         return self._exe_file
 
@@ -237,7 +222,7 @@ class CmdStanModel:
         """
         result: dict[str, str] = {}
         info = StringIO()
-        do_command(cmd=[str(self.exe_file), 'info'], fd_out=info)
+        do_command(cmd=[self.exe_file, 'info'], fd_out=info)
         lines = info.getvalue().split('\n')
         for line in lines:
             kv_pair = [x.strip() for x in line.split('=')]

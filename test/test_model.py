@@ -344,8 +344,7 @@ def test_model_syntax_error() -> None:
 
 def test_repr() -> None:
     model = CmdStanModel(stan_file=BERN_STAN)
-    model_repr = repr(model)
-    assert 'name=bernoulli' in model_repr
+    assert BERN_STAN in repr(model)
 
 
 def test_print() -> None:

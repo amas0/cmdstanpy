@@ -632,7 +632,7 @@ class CmdStanArgs:
     def __init__(
         self,
         model_name: str,
-        model_exe: Union[os.PathLike, str],
+        model_exe: str,
         chain_ids: Optional[list[int]],
         method_args: Union[
             SamplerArgs,
@@ -853,10 +853,10 @@ class CmdStanArgs:
                         idx, len(self.chain_ids)
                     )
                 )
-            cmd.append(self.model_exe)  # type: ignore # guaranteed by validate
+            cmd.append(self.model_exe)
             cmd.append(f'id={self.chain_ids[idx]}')
         else:
-            cmd.append(self.model_exe)  # type: ignore # guaranteed by validate
+            cmd.append(self.model_exe)
 
         if self.seed is not None:
             if not isinstance(self.seed, list):

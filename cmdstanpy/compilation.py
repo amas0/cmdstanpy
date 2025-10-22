@@ -441,7 +441,7 @@ def compile_stan_file(
             raise ValueError(
                 f"Failed to compile Stan model '{src}'. Console:\n{console}"
             )
-        return str(exe_target)
+        return os.fspath(exe_target)
 
 
 def format_stan_file(
