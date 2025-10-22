@@ -36,7 +36,6 @@ STANC_OPTS = [
     'warn-pedantic',
 ]
 
-
 STANC_IGNORE_OPTS = [
     'debug-lex',
     'debug-parse',
@@ -88,26 +87,6 @@ class CompilerOptions:
             self._stanc_options, self._cpp_options
         )
 
-    def __eq__(self, other: Any) -> bool:
-        """Overrides the default implementation"""
-        if self.is_empty() and other is None:  # equiv w/r/t compiler
-            return True
-        if not isinstance(other, CompilerOptions):
-            return False
-        return (
-            self._stanc_options == other.stanc_options
-            and self._cpp_options == other.cpp_options
-            and self._user_header == other.user_header
-        )
-
-    def is_empty(self) -> bool:
-        """True if no options specified."""
-        return (
-            self._stanc_options == {}
-            and self._cpp_options == {}
-            and self._user_header == ''
-        )
-
     @property
     def stanc_options(self) -> dict[str, Union[bool, int, str, Iterable[str]]]:
         """Stanc compiler options."""
@@ -137,7 +116,6 @@ class CompilerOptions:
         Check stanc compiler args and consistency between stanc and C++ options.
         Raise ValueError if bad config is found.
         """
-        # pylint: disable=no-member
         if self._stanc_options is None:
             return
         ignore = []

@@ -12,23 +12,6 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
 
 
-def test_opts_empty_eq() -> None:
-    opts_a = CompilerOptions()
-    assert opts_a.is_empty()
-
-    opts_b = None
-    assert opts_a == opts_b
-
-    opts_c = CompilerOptions(stanc_options={'O'})
-    assert opts_a != opts_c != opts_b
-
-    stanc_opts = {}
-    cpp_opts = {'STAN_THREADS': 'T'}
-    opts_c = CompilerOptions(stanc_options=stanc_opts, cpp_options=cpp_opts)
-    assert not opts_c.is_empty()
-    assert opts_a != opts_c
-
-
 def test_opts_empty() -> None:
     opts = CompilerOptions()
     opts.validate()
