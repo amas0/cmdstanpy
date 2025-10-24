@@ -1,16 +1,13 @@
 """CmdStanModel tests"""
 
-import contextlib
-import io
 import logging
 import os
 import re
 import shutil
 import tempfile
-from glob import glob
-from test import check_present, raises_nested
+from test import check_present
 from typing import List
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 import pytest
@@ -442,86 +439,6 @@ def test_model_includes_implicit() -> None:
         os.remove(exe)
     model2 = CmdStanModel(stan_file=stan)
     assert os.path.samefile(model2.exe_file, exe)
-
-
-@pytest.mark.skipif(
-    not cmdstan_version_before(2, 32),
-    reason="Deprecated syntax removed in Stan 2.32",
-)
-def test_model_format_deprecations() -> None:
-    stan = os.path.join(DATAFILES_PATH, 'format_me_deprecations.stan')
-
-    model = CmdStanModel(stan_file=stan)
-
-    sys_stdout = io.StringIO()
-    with contextlib.redirect_stdout(sys_stdout):
-        model.format(canonicalize=True)
-
-    formatted = sys_stdout.getvalue()
-    assert "//" in formatted
-    assert "#" not in formatted
-    assert "<-" not in formatted
-    assert formatted.count('(') == 0
-
-    shutil.copy(stan, stan + '.testbak')
-    try:
-        model.format(overwrite_file=True, canonicalize=True)
-        assert len(glob(stan + '.bak-*')) == 1
-    finally:
-        shutil.copy(stan + '.testbak', stan)
-
-
-@pytest.mark.skipif(
-    cmdstan_version_before(2, 29), reason='Options only available later'
-)
-def test_model_format_options() -> None:
-    stan = os.path.join(DATAFILES_PATH, 'format_me.stan')
-
-    model = CmdStanModel(stan_file=stan)
-
-    sys_stdout = io.StringIO()
-    with contextlib.redirect_stdout(sys_stdout):
-        model.format(max_line_length=10)
-    formatted = sys_stdout.getvalue()
-    assert len(formatted.splitlines()) > 11
-
-    sys_stdout = io.StringIO()
-    with contextlib.redirect_stdout(sys_stdout):
-        model.format(canonicalize='braces')
-    formatted = sys_stdout.getvalue()
-    assert formatted.count('{') == 3
-    assert formatted.count('(') == 4
-
-    sys_stdout = io.StringIO()
-    with contextlib.redirect_stdout(sys_stdout):
-        model.format(canonicalize=['parentheses'])
-    formatted = sys_stdout.getvalue()
-    assert formatted.count('{') == 1
-    assert formatted.count('(') == 1
-
-    sys_stdout = io.StringIO()
-    with contextlib.redirect_stdout(sys_stdout):
-        model.format(canonicalize=True)
-    formatted = sys_stdout.getvalue()
-    assert formatted.count('{') == 3
-    assert formatted.count('(') == 1
-
-
-@patch(
-    'cmdstanpy.utils.cmdstan.cmdstan_version',
-    MagicMock(return_value=(2, 27)),
-)
-def test_format_old_version() -> None:
-    assert cmdstan_version_before(2, 28)
-
-    stan = os.path.join(DATAFILES_PATH, 'format_me.stan')
-    model = CmdStanModel(stan_file=stan)
-    with raises_nested(RuntimeError, r"--canonicalize"):
-        model.format(canonicalize='braces')
-    with raises_nested(RuntimeError, r"--max-line"):
-        model.format(max_line_length=88)
-
-    model.format(canonicalize=True)
 
 
 def test_diagnose():
