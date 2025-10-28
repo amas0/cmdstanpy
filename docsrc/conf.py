@@ -198,6 +198,7 @@ html_theme_options = {
         "index": [],
     },
     "use_edit_page_button": True,
+    "default_mode": "light",
     "show_toc_level": 2,
     "pygments_light_style": "tango",
     "pygments_dark_style": "nord",
