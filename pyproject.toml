@@ -52,8 +52,8 @@ test = [
     "polars>=1.8.2"
 ]
 docs = [
-    "sphinx>5,<6",
-    "pydata-sphinx-theme<0.9",
+    "sphinx<9",
+    "pydata-sphinx-theme<0.17",
     "nbsphinx",
     "ipython",
     "ipykernel<7",
