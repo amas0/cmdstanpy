@@ -344,7 +344,7 @@ def test_serialization() -> None:
     )
 
 
-def test_variational_create_inits():
+def test_variational_create_inits() -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
@@ -374,7 +374,7 @@ def test_variational_create_inits():
     )
 
 
-def test_variational_init_sampling():
+def test_variational_init_sampling() -> None:
     stan = os.path.join(DATAFILES_PATH, 'logistic.stan')
     logistic_model = CmdStanModel(stan_file=stan)
     logistic_data = os.path.join(DATAFILES_PATH, 'logistic.data.R')
