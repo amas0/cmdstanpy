@@ -345,7 +345,7 @@ def test_args_good() -> None:
 
     # integer type
     rng = np.random.default_rng(42)
-    seed = int(rng.integers(low=0, high=int(1e7)))
+    seed: np.integer = rng.integers(low=0, high=int(1e7))  # type: ignore
     assert not isinstance(seed, int)
     assert isinstance(seed, np.integer)
 

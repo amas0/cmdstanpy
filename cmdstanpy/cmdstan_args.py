@@ -643,7 +643,7 @@ class CmdStanArgs:
             PathfinderArgs,
         ],
         data: Union[Mapping[str, Any], str, None] = None,
-        seed: Union[int, list[int], None] = None,
+        seed: Union[int, np.integer, list[int], list[np.integer], None] = None,
         inits: Union[int, float, str, list[str], None] = None,
         output_dir: OptionalPath = None,
         sig_figs: Optional[int] = None,
