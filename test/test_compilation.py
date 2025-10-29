@@ -5,6 +5,7 @@ import io
 import logging
 import os
 from test import check_present, raises_nested
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -22,12 +23,12 @@ def test_opts_empty() -> None:
     assert opts.compose() == []
     assert repr(opts) == 'stanc_options={}, cpp_options={}'
 
-    stanc_opts = {}
+    stanc_opts: dict[str, Any] = {}
     opts = CompilerOptions(stanc_options=stanc_opts)
     opts.validate()
     assert opts.compose() == []
 
-    cpp_opts = {}
+    cpp_opts: dict[str, Any] = {}
     opts = CompilerOptions(cpp_options=cpp_opts)
     opts.validate()
     assert opts.compose() == []
@@ -39,7 +40,7 @@ def test_opts_empty() -> None:
 
 
 def test_opts_stanc(caplog: pytest.LogCaptureFixture) -> None:
-    stanc_opts = {}
+    stanc_opts: dict[str, Any] = {}
     opts = CompilerOptions()
     opts.validate()
     assert opts.compose() == []
@@ -114,7 +115,7 @@ def test_opts_stanc_includes() -> None:
     paths_str = ','.join([DATAFILES_PATH, path2]).replace('\\', '/')
     expect = 'STANCFLAGS+=--include-paths=' + paths_str
 
-    stanc_opts = {'include-paths': paths_str}
+    stanc_opts: dict[str, Any] = {'include-paths': paths_str}
     opts = CompilerOptions(stanc_options=stanc_opts)
     opts.validate()
     opts_list = opts.compose()
@@ -128,7 +129,7 @@ def test_opts_stanc_includes() -> None:
 
 
 def test_opts_cpp() -> None:
-    cpp_opts = {}
+    cpp_opts: dict[str, Any] = {}
     opts = CompilerOptions(cpp_options=cpp_opts)
     opts.validate()
     assert opts.compose() == []
@@ -140,7 +141,7 @@ def test_opts_cpp() -> None:
 
 
 def test_opts_cpp_opencl() -> None:
-    cpp_opts = {'OPENCL_DEVICE_ID': 1}
+    cpp_opts: dict[str, Any] = {'OPENCL_DEVICE_ID': 1}
     opts = CompilerOptions(cpp_options=cpp_opts)
     opts.validate()
     opts_list = opts.compose()

@@ -248,7 +248,7 @@ def from_csv(
             mode: CmdStanMLE = from_csv(
                 config_dict['mode'],  # type: ignore
                 method='optimize',
-            )  # type: ignore
+            )
             return CmdStanLaplace(runset, mode=mode)
         elif config_dict['method'] == 'pathfinder':
             pathfinder_args = PathfinderArgs(

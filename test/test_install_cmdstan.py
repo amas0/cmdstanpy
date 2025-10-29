@@ -34,7 +34,7 @@ def test_retrieve_version() -> None:
     ):
         retrieve_version('no_such_version')
     with pytest.raises(ValueError):
-        retrieve_version(None)
+        retrieve_version(None)  # type: ignore
     with pytest.raises(ValueError):
         retrieve_version('')
 
@@ -44,4 +44,4 @@ def test_rebuild_bad_path() -> None:
         with pytest.raises(
             CmdStanInstallError, match="you sure it is installed"
         ):
-            rebuild_cmdstan(latest_version())
+            rebuild_cmdstan()

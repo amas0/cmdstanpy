@@ -12,6 +12,7 @@ import shutil
 import stat
 import tempfile
 from test import check_present, mark_windows_only, raises_nested
+from typing import Generator
 from unittest import mock
 
 import numpy as np
@@ -63,7 +64,7 @@ def test_default_path() -> None:
     else:
         cmdstan_dir = os.path.expanduser(os.path.join('~', _DOT_CMDSTAN))
         install_version = os.path.join(
-            cmdstan_dir, get_latest_cmdstan(cmdstan_dir)
+            cmdstan_dir, get_latest_cmdstan(cmdstan_dir)  # type: ignore
         )
         assert os.path.samefile(cmdstan_path(), install_version)
         assert 'CMDSTAN' in os.environ
@@ -88,10 +89,8 @@ def test_non_special_chars_location(bad_dir: str, bad_name: str) -> None:
         stan_bad = os.path.join(bad_path, bad_name)
         shutil.copy(stan, stan_bad)
 
-        stan_copied = None
         try:
-            with SanitizedOrTmpFilePath(stan_bad) as (pth, is_changed):
-                stan_copied = pth
+            with SanitizedOrTmpFilePath(stan_bad) as (stan_copied, is_changed):
                 assert os.path.exists(stan_copied)
                 assert ' ' not in stan_copied
 
@@ -126,7 +125,7 @@ def test_set_path() -> None:
     else:
         cmdstan_dir = os.path.expanduser(os.path.join('~', _DOT_CMDSTAN))
         install_version = os.path.join(
-            cmdstan_dir, get_latest_cmdstan(cmdstan_dir)
+            cmdstan_dir, get_latest_cmdstan(cmdstan_dir)  # type: ignore
         )
         set_cmdstan_path(install_version)
         assert os.path.samefile(install_version, cmdstan_path())
@@ -134,7 +133,7 @@ def test_set_path() -> None:
 
 
 @contextlib.contextmanager
-def temporary_cmdstan_path(path: str) -> None:
+def temporary_cmdstan_path(path: str) -> Generator[None, None, None]:
     prev = cmdstan_path()
     try:
         set_cmdstan_path(path)
@@ -145,12 +144,12 @@ def temporary_cmdstan_path(path: str) -> None:
 
 def test_validate_path() -> None:
     if 'CMDSTAN' in os.environ:
-        install_version = os.environ.get('CMDSTAN')
+        install_version = os.environ.get('CMDSTAN', '')
     else:
         cmdstan_dir = os.path.expanduser(os.path.join('~', _DOT_CMDSTAN))
 
         install_version = os.path.join(
-            cmdstan_dir, get_latest_cmdstan(cmdstan_dir)
+            cmdstan_dir, get_latest_cmdstan(cmdstan_dir)  # type: ignore
         )
 
     set_cmdstan_path(install_version)
@@ -246,13 +245,14 @@ def test_cmdstan_version(caplog: pytest.LogCaptureFixture) -> None:
 def test_dict_to_file() -> None:
     file_good = os.path.join(DATAFILES_PATH, 'bernoulli_output_1.csv')
     dict_good = {'a': 0.5}
-    created_tmp = None
 
     with temp_single_json(file_good) as fg1:
+        assert fg1 is not None
         assert os.path.exists(fg1)
     assert os.path.exists(file_good)
 
     with temp_single_json(dict_good) as fg2:
+        assert fg2 is not None
         assert os.path.exists(fg2)
         with open(fg2) as fg2_d:
             assert json.load(fg2_d) == dict_good
@@ -261,13 +261,14 @@ def test_dict_to_file() -> None:
     assert not os.path.exists(created_tmp)
 
     with pytest.raises(AttributeError):
-        with temp_single_json(123) as _:
+        with temp_single_json(123) as _:  # type: ignore
             pass
 
 
-def test_temp_inits():
+def test_temp_inits() -> None:
     dict_good = {'a': 0.5}
     with temp_inits([dict_good, dict_good]) as base_file:
+        assert isinstance(base_file, str)
         fg1 = base_file[:-5] + '_1.json'
         fg2 = base_file[:-5] + '_2.json'
         assert os.path.exists(fg1)
@@ -519,26 +520,34 @@ def test_windows_short_path_file_with_space() -> None:
 def test_rload_metric() -> None:
     dfile = os.path.join(DATAFILES_PATH, 'metric_diag.data.R')
     data_dict = rload(dfile)
+    assert data_dict is not None
+    assert isinstance(data_dict['inv_metric'], np.ndarray)
     assert data_dict['inv_metric'].shape == (3,)
 
     dfile = os.path.join(DATAFILES_PATH, 'metric_dense.data.R')
     data_dict = rload(dfile)
+    assert data_dict is not None
+    assert isinstance(data_dict['inv_metric'], np.ndarray)
     assert data_dict['inv_metric'].shape == (3, 3)
 
 
 def test_rload_data() -> None:
     dfile = os.path.join(DATAFILES_PATH, 'rdump_test.data.R')
     data_dict = rload(dfile)
+    assert data_dict is not None
     assert data_dict['N'] == 128
     assert data_dict['M'] == 2
+    assert isinstance(data_dict['x'], np.ndarray)
     assert data_dict['x'].shape == (128, 2)
 
 
 def test_rload_jags_data() -> None:
     dfile = os.path.join(DATAFILES_PATH, 'rdump_jags.data.R')
     data_dict = rload(dfile)
+    assert data_dict is not None
     assert data_dict['N'] == 128
     assert data_dict['M'] == 2
+    assert isinstance(data_dict['y'], np.ndarray)
     assert data_dict['y'].shape == (128,)
 
 
@@ -569,6 +578,7 @@ def test_rload_bad_data_3() -> None:
 def test_parse_rdump_value() -> None:
     struct1 = 'structure(c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16),.Dim=c(2,8))'
     v_struct1 = parse_rdump_value(struct1)
+    assert isinstance(v_struct1, np.ndarray)
     assert v_struct1.shape == (2, 8)
     assert v_struct1[1, 0] == 2
     assert v_struct1[0, 7] == 15
@@ -577,10 +587,12 @@ def test_parse_rdump_value() -> None:
         'structure(c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16),.Dim=c(1,16))'
     )
     v_struct2 = parse_rdump_value(struct2)
+    assert isinstance(v_struct2, np.ndarray)
     assert v_struct2.shape == (1, 16)
 
     struct3 = 'structure(c(1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16),.Dim=c(8,2))'
     v_struct3 = parse_rdump_value(struct3)
+    assert isinstance(v_struct3, np.ndarray)
     assert v_struct3.shape == (8, 2)
     assert v_struct3[1, 0] == 2
     assert v_struct3[7, 0] == 8

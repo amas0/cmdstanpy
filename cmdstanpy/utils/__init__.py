@@ -80,7 +80,7 @@ def show_versions(output: bool = True) -> str:
             deps_info.append((module, None))
         else:
             try:
-                ver = mod.__version__  # type: ignore
+                ver = mod.__version__
                 deps_info.append((module, ver))
             # pylint: disable=broad-except
             except Exception:

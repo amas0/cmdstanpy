@@ -8,6 +8,7 @@ import os
 import pickle
 import shutil
 from test import check_present
+from typing import Any
 
 import numpy as np
 import pytest
@@ -23,13 +24,12 @@ DATAFILES_PATH = os.path.join(HERE, 'data')
 def test_instantiate() -> None:
     stan = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
     model = CmdStanModel(stan_file=stan)
-    no_data = {}
     args = OptimizeArgs(algorithm='Newton')
     cmdstan_args = CmdStanArgs(
         model_name=model.name,
         model_exe=model.exe_file,
         chain_ids=None,
-        data=no_data,
+        data={},
         method_args=args,
     )
     runset = RunSet(args=cmdstan_args, chains=1)
@@ -49,6 +49,7 @@ def test_instantiate_from_csvfiles() -> None:
         DATAFILES_PATH, 'optimize', 'rosenbrock_mle.csv'
     )
     mle = from_csv(path=csvfiles_path)
+    assert isinstance(mle, CmdStanMLE)
     assert 'CmdStanMLE: model=rosenbrock' in repr(mle)
     assert 'method=optimize' in repr(mle)
     assert mle.column_names == ('lp__', 'x', 'y')
@@ -61,6 +62,7 @@ def test_instantiate_from_csvfiles_save_iterations() -> None:
         DATAFILES_PATH, 'optimize', 'eight_schools_mle_iters.csv'
     )
     mle = from_csv(path=csvfiles_path)
+    assert isinstance(mle, CmdStanMLE)
     assert 'CmdStanMLE: model=eight_schools' in repr(mle)
     assert 'method=optimize' in repr(mle)
     assert mle.column_names == (
@@ -82,6 +84,7 @@ def test_instantiate_from_csvfiles_save_iterations() -> None:
     np.testing.assert_almost_equal(
         mle.optimized_params_dict['theta[1]'], 1.06401, decimal=3
     )
+    assert mle.optimized_iterations_np is not None
     assert mle.optimized_iterations_np.shape == (173, 11)
 
 
@@ -134,7 +137,7 @@ def test_rosenbrock(caplog: pytest.LogCaptureFixture) -> None:
         mle.optimized_params_pd['x'][0], 1, decimal=3
     )
     np.testing.assert_almost_equal(mle.optimized_params_dict['x'], 1, decimal=3)
-
+    assert mle.optimized_iterations_np is not None
     last_iter = mle.optimized_iterations_np.shape[0] - 1
     assert (
         mle.optimized_iterations_np[0, 1]
@@ -375,7 +378,7 @@ def test_parameters_are_floats() -> None:
             seed=1239812093,
             inits=jinit,
             algorithm='LBFGS',
-            tol_obj="rabbit",
+            tol_obj="rabbit",  # type: ignore
         )
 
     with pytest.raises(ValueError, match='must be of type float'):
@@ -384,7 +387,7 @@ def test_parameters_are_floats() -> None:
             seed=1239812093,
             inits=jinit,
             algorithm='LBFGS',
-            tol_rel_obj="rabbit",
+            tol_rel_obj="rabbit",  # type: ignore
         )
 
     with pytest.raises(ValueError, match='must be of type float'):
@@ -393,7 +396,7 @@ def test_parameters_are_floats() -> None:
             seed=1239812093,
             inits=jinit,
             algorithm='LBFGS',
-            tol_grad="rabbit",
+            tol_grad="rabbit",  # type: ignore
         )
 
     with pytest.raises(ValueError, match='must be of type float'):
@@ -402,7 +405,7 @@ def test_parameters_are_floats() -> None:
             seed=1239812093,
             inits=jinit,
             algorithm='LBFGS',
-            tol_rel_grad="rabbit",
+            tol_rel_grad="rabbit",  # type: ignore
         )
 
     with pytest.raises(ValueError, match='must be of type float'):
@@ -411,7 +414,7 @@ def test_parameters_are_floats() -> None:
             seed=1239812093,
             inits=jinit,
             algorithm='LBFGS',
-            tol_param="rabbit",
+            tol_param="rabbit",  # type: ignore
         )
 
     with pytest.raises(ValueError, match='must be of type int'):
@@ -420,7 +423,7 @@ def test_parameters_are_floats() -> None:
             seed=1239812093,
             inits=jinit,
             algorithm='LBFGS',
-            history_size="rabbit",
+            history_size="rabbit",  # type: ignore
         )
 
 
@@ -550,7 +553,7 @@ def test_optimize_no_data() -> None:
 def test_optimize_bad() -> None:
     stan = os.path.join(DATAFILES_PATH, 'optimize', 'exponential_boundary.stan')
     exp_bound_model = CmdStanModel(stan_file=stan)
-    no_data = {}
+    no_data: dict[str, Any] = {}
     with pytest.raises(RuntimeError, match='Error during optimization'):
         exp_bound_model.optimize(
             data=no_data, seed=1239812093, inits=None, algorithm='BFGS'

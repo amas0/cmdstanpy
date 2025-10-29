@@ -13,7 +13,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
 
 
-def test_laplace_from_opt_csv():
+def test_laplace_from_opt_csv() -> None:
     model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
     model = cmdstanpy.CmdStanModel(stan_file=model_file)
     fit = model.laplace_sample(
@@ -26,7 +26,7 @@ def test_laplace_from_opt_csv():
     assert isinstance(fit.mode, cmdstanpy.CmdStanMLE)
 
 
-def test_laplace_from_csv():
+def test_laplace_from_csv() -> None:
     model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
     model = cmdstanpy.CmdStanModel(stan_file=model_file)
     fit = model.laplace_sample(
@@ -55,7 +55,7 @@ def test_laplace_from_csv():
         assert isinstance(fit3.mode, cmdstanpy.CmdStanMLE)
 
 
-def test_laplace_runs_opt():
+def test_laplace_runs_opt() -> None:
     model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
     model = cmdstanpy.CmdStanModel(stan_file=model_file)
     fit1 = model.laplace_sample(data={}, seed=1234, opt_args={'iter': 1003})
@@ -66,7 +66,7 @@ def test_laplace_runs_opt():
     assert fit1.mode.metadata.cmdstan_config['iter'] == 1003
 
 
-def test_laplace_bad_jacobian_mismatch():
+def test_laplace_bad_jacobian_mismatch() -> None:
     model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
     model = cmdstanpy.CmdStanModel(stan_file=model_file)
     with pytest.raises(ValueError):
@@ -77,7 +77,7 @@ def test_laplace_bad_jacobian_mismatch():
         )
 
 
-def test_laplace_bad_two_modes():
+def test_laplace_bad_two_modes() -> None:
     model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
     model = cmdstanpy.CmdStanModel(stan_file=model_file)
     with pytest.raises(ValueError):
@@ -89,7 +89,7 @@ def test_laplace_bad_two_modes():
         )
 
 
-def test_laplace_outputs():
+def test_laplace_outputs() -> None:
     model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
     model = cmdstanpy.CmdStanModel(stan_file=model_file)
     fit = model.laplace_sample(data={}, seed=1234, draws=123)
@@ -107,7 +107,7 @@ def test_laplace_outputs():
     assert fit_pd['x'].shape == (123,)
 
 
-def test_laplace_create_inits():
+def test_laplace_create_inits() -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = cmdstanpy.CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
@@ -131,13 +131,15 @@ def test_laplace_create_inits():
 
     seeded = laplace.create_inits(seed=1234)
     seeded2 = laplace.create_inits(seed=1234)
+    assert isinstance(seeded, list)
+    assert isinstance(seeded2, list)
     assert all(
         init1['theta'] == init2['theta']
         for init1, init2 in zip(seeded, seeded2)
     )
 
 
-def test_laplace_init_sampling():
+def test_laplace_init_sampling() -> None:
     stan = os.path.join(DATAFILES_PATH, 'logistic.stan')
     logistic_model = cmdstanpy.CmdStanModel(stan_file=stan)
     logistic_data = os.path.join(DATAFILES_PATH, 'logistic.data.R')

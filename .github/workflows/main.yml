@@ -68,11 +68,11 @@ jobs:
         run: python -m pip freeze
 
       - name: Run flake8, pylint, mypy
-        if: matrix.python-version == '3.11'
+        if: matrix.python-version == '3.14'
         run: |
           flake8 cmdstanpy test
           pylint -v cmdstanpy test
-          mypy cmdstanpy
+          mypy cmdstanpy test
 
       - name: CmdStan installation cacheing
         id: cache-cmdstan
