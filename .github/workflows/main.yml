@@ -107,7 +107,8 @@ jobs:
           pytest -v ../test --cov=../cmdstanpy
 
       - name: Submit codecov
-        run: |
-          pip install codecov
-          cd run_tests
-          codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          verbose: true
+          directory: ./run_tests
