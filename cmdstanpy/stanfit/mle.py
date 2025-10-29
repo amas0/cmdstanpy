@@ -77,9 +77,7 @@ class CmdStanMLE:
         """
         # pylint: disable=unused-argument
 
-        return {
-            name: np.array(val) for name, val in self.stan_variables().items()
-        }
+        return self.stan_variables()
 
     def __repr__(self) -> str:
         repr = 'CmdStanMLE: model={}{}'.format(
