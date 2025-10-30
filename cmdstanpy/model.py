@@ -13,7 +13,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 from multiprocessing import cpu_count
-from typing import Any, Callable, Iterable, Mapping, Optional, TypeVar, Union
+from typing import Any, Callable, Mapping, Optional, TypeVar, Union
 
 import numpy as np
 import pandas as pd
@@ -241,53 +241,6 @@ class CmdStanModel:
         if self.stan_file is None or cmdstan_version_before(2, 27):
             return {}
         return compilation.src_info(str(self.stan_file), self._stanc_options)
-
-    # TODO(2.0) remove
-    def format(
-        self,
-        overwrite_file: bool = False,
-        canonicalize: Union[bool, str, Iterable[str]] = False,
-        max_line_length: int = 78,
-        *,
-        backup: bool = True,
-    ) -> None:
-        """
-        Deprecated: Use :func:`cmdstanpy.format_stan_file()` instead.
-
-        Run stanc's auto-formatter on the model code. Either saves directly
-        back to the file or prints for inspection
-
-
-        :param overwrite_file: If True, save the updated code to disk, rather
-            than printing it. By default False
-        :param canonicalize: Whether or not the compiler should 'canonicalize'
-            the Stan model, removing things like deprecated syntax. Default is
-            False. If True, all canonicalizations are run. If it is a list of
-            strings, those options are passed to stanc (new in Stan 2.29)
-        :param max_line_length: Set the wrapping point for the formatter. The
-            default value is 78, which wraps most lines by the 80th character.
-        :param backup: If True, create a stanfile.bak backup before
-            writing to the file. Only disable this if you're sure you have other
-            copies of the file or are using a version control system like Git.
-        """
-
-        get_logger().warning(
-            "CmdStanModel.format() is deprecated and will be "
-            "removed in the next major version.\n"
-            "Use cmdstanpy.format_stan_file() instead."
-        )
-
-        if self.stan_file is None:
-            raise ValueError("No Stan file found for this module")
-
-        compilation.format_stan_file(
-            self.stan_file,
-            overwrite_file=overwrite_file,
-            max_line_length=max_line_length,
-            canonicalize=canonicalize,
-            backup=backup,
-            stanc_options=self._stanc_options,
-        )
 
     def code(self) -> Optional[str]:
         """Return Stan program as a string."""
@@ -517,9 +470,7 @@ class CmdStanModel:
         save_warmup: bool = False,
         thin: Optional[int] = None,
         max_treedepth: Optional[int] = None,
-        metric: Union[
-            str, dict[str, Any], list[str], list[dict[str, Any]], None
-        ] = None,
+        metric: Optional[str] = None,
         step_size: Union[float, list[float], None] = None,
         adapt_engaged: bool = True,
         adapt_delta: Optional[float] = None,
@@ -845,27 +796,6 @@ class CmdStanModel:
                             'Chain_id must be a non-negative integer value,'
                             ' found {}.'.format(chain_id)
                         )
-        if metric is not None and metric not in (
-            'diag',
-            'dense',
-            'unit_e',
-            'diag_e',
-            'dense_e',
-        ):
-            get_logger().warning(
-                "Providing anything other than metric type for"
-                " 'metric' is deprecated and will be removed"
-                " in the next major release."
-                " Please provide such information via"
-                " 'inv_metric' argument."
-            )
-            if inv_metric is not None:
-                raise ValueError(
-                    "Cannot provide both (deprecated) non-metric-type 'metric'"
-                    " argument and 'inv_metric' argument."
-                )
-            inv_metric = metric  # type: ignore # for backwards compatibility
-            metric = None
 
         if metric is None and inv_metric is not None:
             metric = try_deduce_metric_type(inv_metric)
@@ -908,7 +838,7 @@ class CmdStanModel:
                 save_warmup=save_warmup,
                 thin=thin,
                 max_treedepth=max_treedepth,
-                metric_type=metric,  # type: ignore
+                metric_type=metric,
                 metric_file=cmdstan_metrics,
                 step_size=step_size,
                 adapt_engaged=adapt_engaged,
@@ -1037,8 +967,6 @@ class CmdStanModel:
         refresh: Optional[int] = None,
         time_fmt: str = "%Y%m%d%H%M%S",
         timeout: Optional[float] = None,
-        *,
-        mcmc_sample: Union[CmdStanMCMC, list[str], None] = None,
     ) -> CmdStanGQ[Fit]:
         """
         Run CmdStan's generate_quantities method which runs the generated
@@ -1104,19 +1032,6 @@ class CmdStanModel:
 
         :return: CmdStanGQ object
         """
-        # TODO(2.0): remove
-        if mcmc_sample is not None:
-            if previous_fit:
-                raise ValueError(
-                    "Cannot supply both 'previous_fit' and "
-                    "deprecated argument 'mcmc_sample'"
-                )
-            get_logger().warning(
-                "Argument name `mcmc_sample` is deprecated, please "
-                "rename to `previous_fit`."
-            )
-
-            previous_fit = mcmc_sample  # type: ignore
 
         if isinstance(previous_fit, (CmdStanMCMC, CmdStanMLE, CmdStanVB)):
             fit_object = previous_fit
@@ -1243,8 +1158,6 @@ class CmdStanModel:
         refresh: Optional[int] = None,
         time_fmt: str = "%Y%m%d%H%M%S",
         timeout: Optional[float] = None,
-        *,
-        output_samples: Optional[int] = None,
     ) -> CmdStanVB:
         """
         Run CmdStan's variational inference algorithm to approximate
@@ -1342,19 +1255,6 @@ class CmdStanModel:
 
         :return: CmdStanVB object
         """
-        # TODO(2.0): remove
-        if output_samples is not None:
-            if draws is not None:
-                raise ValueError(
-                    "Cannot supply both 'draws' and deprecated argument "
-                    "'output_samples'"
-                )
-            get_logger().warning(
-                "Argument name `output_samples` is deprecated, please "
-                "rename to `draws`."
-            )
-
-            draws = output_samples
 
         variational_args = VariationalArgs(
             algorithm=algorithm,

@@ -1,7 +1,7 @@
 """Container for the result of running optimization"""
 
 from collections import OrderedDict
-from typing import Optional, Union
+from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -77,9 +77,7 @@ class CmdStanMLE:
         """
         # pylint: disable=unused-argument
 
-        return {
-            name: np.array(val) for name, val in self.stan_variables().items()
-        }
+        return self.stan_variables()
 
     def __repr__(self) -> str:
         repr = 'CmdStanMLE: model={}{}'.format(
@@ -95,7 +93,7 @@ class CmdStanMLE:
             repr = '{} optimization failed to converge.'.format(repr)
         return repr
 
-    def __getattr__(self, attr: str) -> Union[np.ndarray, float]:
+    def __getattr__(self, attr: str) -> np.ndarray:
         """Synonymous with ``fit.stan_variable(attr)"""
         if attr.startswith("_"):
             raise AttributeError(f"Unknown variable name {attr}")
@@ -206,7 +204,7 @@ class CmdStanMLE:
         *,
         inc_iterations: bool = False,
         warn: bool = True,
-    ) -> Union[np.ndarray, float]:
+    ) -> np.ndarray:
         """
         Return a numpy.ndarray which contains the estimates for the
         for the named Stan program variable where the dimensions of the
@@ -254,14 +252,6 @@ class CmdStanMLE:
             out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(
                 data
             )
-            # TODO(2.0) remove
-            if out.shape == () or out.shape == (1,):
-                get_logger().warning(
-                    "The default behavior of CmdStanMLE.stan_variable() "
-                    "will change in a future release to always return a "
-                    "numpy.ndarray, even for scalar variables."
-                )
-                return out.item()  # type: ignore
             return out
         except KeyError:
             # pylint: disable=raise-missing-from
@@ -273,7 +263,7 @@ class CmdStanMLE:
 
     def stan_variables(
         self, inc_iterations: bool = False
-    ) -> dict[str, Union[np.ndarray, float]]:
+    ) -> dict[str, np.ndarray]:
         """
         Return a dictionary mapping Stan program variables names
         to the corresponding numpy.ndarray containing the inferred values.
