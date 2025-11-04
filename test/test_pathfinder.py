@@ -16,7 +16,7 @@ HERE = Path(__file__).parent
 DATAFILES_PATH = HERE / 'data'
 
 
-def test_pathfinder_outputs():
+def test_pathfinder_outputs() -> None:
     stan = DATAFILES_PATH / 'bernoulli.stan'
     bern_model = cmdstanpy.CmdStanModel(stan_file=stan)
     jdata = str(DATAFILES_PATH / 'bernoulli.data.json')
@@ -39,7 +39,7 @@ def test_pathfinder_outputs():
     assert pathfinder.draws().shape == (draws, 4)
 
 
-def test_pathfinder_from_csv():
+def test_pathfinder_from_csv() -> None:
     pathfinder_outputs = DATAFILES_PATH / 'pathfinder'
     pathfinder = from_csv(pathfinder_outputs)
     assert isinstance(pathfinder, cmdstanpy.CmdStanPathfinder)
@@ -51,7 +51,7 @@ def test_pathfinder_from_csv():
     assert 0.23 < theta.mean() < 0.27
 
 
-def test_single_pathfinder():
+def test_single_pathfinder() -> None:
     stan = DATAFILES_PATH / 'bernoulli.stan'
     bern_model = cmdstanpy.CmdStanModel(stan_file=stan)
     jdata = str(DATAFILES_PATH / 'bernoulli.data.json')
@@ -86,7 +86,7 @@ def test_single_pathfinder():
         )
 
 
-def test_pathfinder_create_inits():
+def test_pathfinder_create_inits() -> None:
     stan = DATAFILES_PATH / 'bernoulli.stan'
     bern_model = cmdstanpy.CmdStanModel(stan_file=stan)
     jdata = str(DATAFILES_PATH / 'bernoulli.data.json')
@@ -110,13 +110,15 @@ def test_pathfinder_create_inits():
 
     seeded = pathfinder.create_inits(seed=1234)
     seeded2 = pathfinder.create_inits(seed=1234)
+    assert isinstance(seeded, list)
+    assert isinstance(seeded2, list)
     assert all(
         init1['theta'] == init2['theta']
         for init1, init2 in zip(seeded, seeded2)
     )
 
 
-def test_pathfinder_init_sampling():
+def test_pathfinder_init_sampling() -> None:
     logistic_stan = DATAFILES_PATH / 'logistic.stan'
     logistic_model = cmdstanpy.CmdStanModel(stan_file=logistic_stan)
     logistic_data = str(DATAFILES_PATH / 'logistic.data.R')
@@ -131,7 +133,7 @@ def test_pathfinder_init_sampling():
     assert fit.draws().shape == (1000, 4, 9)
 
 
-def test_inits_for_pathfinder():
+def test_inits_for_pathfinder() -> None:
     stan = DATAFILES_PATH / 'bernoulli.stan'
     bern_model = cmdstanpy.CmdStanModel(stan_file=stan)
     jdata = str(DATAFILES_PATH / 'bernoulli.data.json')
@@ -151,7 +153,7 @@ def test_inits_for_pathfinder():
     assert "Bounded variable is 1.1" in captured.getvalue()
 
 
-def test_pathfinder_no_psis():
+def test_pathfinder_no_psis() -> None:
     stan = DATAFILES_PATH / 'bernoulli.stan'
     bern_model = cmdstanpy.CmdStanModel(stan_file=stan)
     jdata = str(DATAFILES_PATH / 'bernoulli.data.json')
@@ -162,7 +164,7 @@ def test_pathfinder_no_psis():
     assert pathfinder.draws().shape == (4000, 4)
 
 
-def test_pathfinder_no_lp_calc():
+def test_pathfinder_no_lp_calc() -> None:
     stan = DATAFILES_PATH / 'bernoulli.stan'
     bern_model = cmdstanpy.CmdStanModel(stan_file=stan)
     jdata = str(DATAFILES_PATH / 'bernoulli.data.json')
@@ -176,7 +178,7 @@ def test_pathfinder_no_lp_calc():
     assert n_lp_nan > 3000  # but most are not
 
 
-def test_pathfinder_threads():
+def test_pathfinder_threads() -> None:
     stan = DATAFILES_PATH / 'bernoulli.stan'
     bern_model = cmdstanpy.CmdStanModel(stan_file=stan)
     jdata = str(DATAFILES_PATH / 'bernoulli.data.json')

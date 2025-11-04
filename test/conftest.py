@@ -1,6 +1,7 @@
 """The global configuration for the test suite"""
 import os
 import subprocess
+from typing import Generator
 
 import pytest
 
@@ -9,7 +10,7 @@ DATAFILES_PATH = os.path.join(HERE, 'data')
 
 
 @pytest.fixture(scope='session', autouse=True)
-def cleanup_test_files():
+def cleanup_test_files() -> Generator[None, None, None]:
     """Remove compiled models and output files after test run."""
     yield
     subprocess.Popen(

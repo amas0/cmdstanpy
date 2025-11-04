@@ -8,6 +8,7 @@ import pickle
 import shutil
 from math import fabs
 from test import check_present
+from typing import Any
 
 import numpy as np
 import pytest
@@ -24,7 +25,7 @@ DATAFILES_PATH = os.path.join(HERE, 'data')
 def test_instantiate() -> None:
     stan = os.path.join(DATAFILES_PATH, 'variational', 'eta_should_be_big.stan')
     model = CmdStanModel(stan_file=stan)
-    no_data = {}
+    no_data: dict[str, Any] = {}
     args = VariationalArgs(algorithm='meanfield')
     cmdstan_args = CmdStanArgs(
         model_name=model.name,
@@ -61,6 +62,7 @@ def test_instantiate() -> None:
 def test_instantiate_from_csvfiles() -> None:
     csvfiles_path = os.path.join(DATAFILES_PATH, 'variational')
     variational = from_csv(path=csvfiles_path)
+    assert isinstance(variational, CmdStanVB)
     assert 'CmdStanVB: model=eta_should_be_big' in repr(variational)
     assert 'method=variational' in repr(variational)
     assert variational.column_names == (
@@ -368,6 +370,9 @@ def test_variational_create_inits() -> None:
 
     seeded = vb.create_inits(seed=1234)
     seeded2 = vb.create_inits(seed=1234)
+    assert isinstance(seeded, list)
+    assert isinstance(seeded2, list)
+    assert len(seeded) == len(seeded2) == 4
     assert all(
         init1['theta'] == init2['theta']
         for init1, init2 in zip(seeded, seeded2)

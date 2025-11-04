@@ -5,7 +5,8 @@ import logging
 import platform
 import re
 from importlib import reload
-from typing import Tuple, Type
+from types import ModuleType
+from typing import Generator, Optional, Type
 from unittest import mock
 
 import pytest
@@ -20,7 +21,9 @@ mark_not_windows = pytest.mark.skipif(
 
 # pylint: disable=invalid-name
 @contextlib.contextmanager
-def raises_nested(expected_exception: Type[Exception], match: str) -> None:
+def raises_nested(
+    expected_exception: Type[Exception], match: str
+) -> Generator[None, None, None]:
     """A version of assertRaisesRegex that checks the full traceback.
 
     Useful for when an exception is raised from another and you wish to
@@ -28,7 +31,7 @@ def raises_nested(expected_exception: Type[Exception], match: str) -> None:
     """
     with pytest.raises(expected_exception) as ctx:
         yield
-    exception: Exception = ctx.value
+    exception: Optional[BaseException] = ctx.value
     lines = []
     while exception:
         lines.append(str(exception))
@@ -38,7 +41,9 @@ def raises_nested(expected_exception: Type[Exception], match: str) -> None:
 
 
 @contextlib.contextmanager
-def without_import(library, module):
+def without_import(
+    library: str, module: ModuleType
+) -> Generator[None, None, None]:
     with mock.patch.dict('sys.modules', {library: None}):
         reload(module)
         yield
@@ -47,7 +52,7 @@ def without_import(library, module):
 
 def check_present(
     caplog: pytest.LogCaptureFixture,
-    *conditions: Tuple,
+    *conditions: tuple,
     clear: bool = True,
 ) -> None:
     """
@@ -58,9 +63,13 @@ def check_present(
         if isinstance(level, str):
             level = getattr(logging, level)
         found = any(
-            logger == logger_ and level == level_ and message.match(message_)
-            if isinstance(message, re.Pattern)
-            else message == message_
+            (
+                logger == logger_
+                and level == level_
+                and message.match(message_)
+                if isinstance(message, re.Pattern)
+                else message == message_
+            )
             for logger_, level_, message_ in caplog.record_tuples
         )
         if not found:

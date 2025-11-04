@@ -18,6 +18,7 @@ import cmdstanpy.stanfit
 from cmdstanpy.cmdstan_args import Method
 from cmdstanpy.model import CmdStanModel
 from cmdstanpy.stanfit import CmdStanGQ
+from cmdstanpy.stanfit.mcmc import CmdStanMCMC
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
@@ -92,7 +93,7 @@ def test_from_csv_files(caplog: pytest.LogCaptureFixture) -> None:
     ) == (["chain__", "iter__", "draw__"] + column_names)
 
 
-def test_pd_xr_agreement():
+def test_pd_xr_agreement() -> None:
     # fitted_params sample - list of filenames
     goodfiles_path = os.path.join(DATAFILES_PATH, 'runset-good', 'bern')
     csv_files = []
@@ -533,7 +534,7 @@ def test_serialization() -> None:
 
     dumped = pickle.dumps(fit1)
     shutil.rmtree(fit1.runset._output_dir)
-    fit2: CmdStanGQ = pickle.loads(dumped)
+    fit2: CmdStanGQ[CmdStanMCMC] = pickle.loads(dumped)
     variables1 = fit1.stan_variables()
     variables2 = fit2.stan_variables()
     assert set(variables1) == set(variables2)
@@ -582,11 +583,12 @@ def test_from_optimization() -> None:
     assert y_rep.shape == (1, 10)
 
 
-def test_opt_save_iterations(caplog: pytest.LogCaptureFixture):
+def test_opt_save_iterations(caplog: pytest.LogCaptureFixture) -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
     bern_fit = bern_model.optimize(data=jdata, seed=12345, save_iterations=True)
+    assert bern_fit.optimized_iterations_np is not None
     iters = bern_fit.optimized_iterations_np.shape[0]
 
     # gq_model
@@ -634,7 +636,7 @@ def test_opt_save_iterations(caplog: pytest.LogCaptureFixture):
     assert y_rep.shape == (iters, 10)
 
 
-def test_opt_request_warmup_none(caplog: pytest.LogCaptureFixture):
+def test_opt_request_warmup_none(caplog: pytest.LogCaptureFixture) -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
@@ -664,7 +666,7 @@ def test_opt_request_warmup_none(caplog: pytest.LogCaptureFixture):
     assert bern_gqs.draws(inc_iterations=True).shape == (1, 1, 10)
 
 
-def test_opt_xarray():
+def test_opt_xarray() -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
@@ -681,7 +683,7 @@ def test_opt_xarray():
         _ = bern_gqs.draws_xr()
 
 
-def test_from_vb():
+def test_from_vb() -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
@@ -724,7 +726,7 @@ def test_from_vb():
     assert y_rep.shape == (1000, 10)
 
 
-def test_vb_request_warmup_none(caplog: pytest.LogCaptureFixture):
+def test_vb_request_warmup_none(caplog: pytest.LogCaptureFixture) -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
@@ -753,7 +755,7 @@ def test_vb_request_warmup_none(caplog: pytest.LogCaptureFixture):
     )
 
 
-def test_vb_xarray():
+def test_vb_xarray() -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
@@ -776,7 +778,7 @@ def test_vb_xarray():
     'cmdstanpy.utils.cmdstan.cmdstan_version',
     MagicMock(return_value=(2, 27)),
 )
-def test_from_non_hmc_old():
+def test_from_non_hmc_old() -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')

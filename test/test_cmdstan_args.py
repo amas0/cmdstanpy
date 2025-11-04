@@ -32,14 +32,14 @@ def test_args_algorithm() -> None:
         args.validate()
     args = OptimizeArgs(algorithm='Newton')
     args.validate()
-    cmd = args.compose(None, cmd=['output'])
+    cmd = args.compose(0, cmd=['output'])
     assert 'algorithm=newton' in ' '.join(cmd)
 
 
 def test_args_algorithm_init_alpha() -> None:
     args = OptimizeArgs(algorithm='bfgs', init_alpha=2e-4)
     args.validate()
-    cmd = args.compose(None, cmd=['output'])
+    cmd = args.compose(0, cmd=['output'])
 
     assert 'init_alpha=0.0002' in ' '.join(cmd)
     args = OptimizeArgs(init_alpha=2e-4)
@@ -56,7 +56,7 @@ def test_args_algorithm_init_alpha() -> None:
 def test_args_algorithm_iter() -> None:
     args = OptimizeArgs(iter=400)
     args.validate()
-    cmd = args.compose(None, cmd=['output'])
+    cmd = args.compose(0, cmd=['output'])
     assert 'iter=400' in ' '.join(cmd)
     args = OptimizeArgs(iter=-1)
     with pytest.raises(ValueError):
@@ -163,15 +163,15 @@ def test_bad() -> None:
     with pytest.raises(ValueError):
         args.validate(chains=2)
 
-    args = SamplerArgs(adapt_init_phase=0.88)
+    args = SamplerArgs(adapt_init_phase=0.88)  # type: ignore
     with pytest.raises(ValueError):
         args.validate(chains=2)
 
-    args = SamplerArgs(adapt_metric_window=0.88)
+    args = SamplerArgs(adapt_metric_window=0.88)  # type: ignore
     with pytest.raises(ValueError):
         args.validate(chains=2)
 
-    args = SamplerArgs(adapt_step_size=0.88)
+    args = SamplerArgs(adapt_step_size=0.88)  # type: ignore
     with pytest.raises(ValueError):
         args.validate(chains=2)
 
@@ -345,7 +345,7 @@ def test_args_good() -> None:
 
     # integer type
     rng = np.random.default_rng(42)
-    seed = rng.integers(low=0, high=int(1e7))
+    seed: np.integer = rng.integers(low=0, high=int(1e7))  # type: ignore
     assert not isinstance(seed, int)
     assert isinstance(seed, np.integer)
 
@@ -437,7 +437,10 @@ def test_args_bad() -> None:
     with pytest.raises(
         Exception, match='missing 2 required positional arguments'
     ):
-        CmdStanArgs(model_name='bernoulli', model_exe='bernoulli.exe')
+        CmdStanArgs(
+            model_name='bernoulli',
+            model_exe='bernoulli.exe',
+        )  # type: ignore
 
     with pytest.raises(ValueError, match='no such file no/such/path/to.file'):
         CmdStanArgs(
@@ -496,7 +499,7 @@ def test_args_bad() -> None:
             model_name='bernoulli',
             model_exe='bernoulli.exe',
             chain_ids=[1, 2, 3, 4],
-            seed='badseed',
+            seed='badseed',  # type: ignore
             method_args=sampler_args,
         )
 
@@ -568,7 +571,7 @@ def test_args_bad() -> None:
             model_exe='bernoulli.exe',
             chain_ids=[1, 2, 3, 4],
             method_args=sampler_args,
-            refresh="a",
+            refresh="a",  # type: ignore
         )
 
     with pytest.raises(
@@ -685,7 +688,7 @@ def test_variational_args_bad() -> None:
     with pytest.raises(ValueError):
         args.validate()
 
-    args = VariationalArgs(iter=1.1)
+    args = VariationalArgs(iter=1.1)  # type: ignore
     with pytest.raises(ValueError):
         args.validate()
 
@@ -693,7 +696,7 @@ def test_variational_args_bad() -> None:
     with pytest.raises(ValueError):
         args.validate()
 
-    args = VariationalArgs(grad_samples=1.1)
+    args = VariationalArgs(grad_samples=1.1)  # type: ignore
     with pytest.raises(ValueError):
         args.validate()
 
@@ -701,7 +704,7 @@ def test_variational_args_bad() -> None:
     with pytest.raises(ValueError):
         args.validate()
 
-    args = VariationalArgs(elbo_samples=1.1)
+    args = VariationalArgs(elbo_samples=1.1)  # type: ignore
     with pytest.raises(ValueError):
         args.validate()
 
@@ -713,7 +716,7 @@ def test_variational_args_bad() -> None:
     with pytest.raises(ValueError):
         args.validate()
 
-    args = VariationalArgs(adapt_iter=1.1)
+    args = VariationalArgs(adapt_iter=1.1)  # type: ignore
     with pytest.raises(ValueError):
         args.validate()
 
@@ -725,7 +728,7 @@ def test_variational_args_bad() -> None:
     with pytest.raises(ValueError):
         args.validate()
 
-    args = VariationalArgs(eval_elbo=1.5)
+    args = VariationalArgs(eval_elbo=1.5)  # type: ignore
     with pytest.raises(ValueError):
         args.validate()
 
@@ -734,7 +737,7 @@ def test_variational_args_bad() -> None:
         args.validate()
 
 
-def test_args_laplace():
+def test_args_laplace() -> None:
     mode = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock_mle.csv')
     args = LaplaceArgs(mode=mode)
     args.validate()
@@ -752,7 +755,7 @@ def test_args_laplace():
     assert 'jacobian=0' in full_cmd
 
 
-def test_args_laplace_bad():
+def test_args_laplace_bad() -> None:
     fake_mode = os.path.join(DATAFILES_PATH, 'not_here.csv')
     args = LaplaceArgs(mode=fake_mode)
     with pytest.raises(ValueError):
@@ -763,12 +766,12 @@ def test_args_laplace_bad():
     with pytest.raises(ValueError):
         args.validate()
 
-    args = LaplaceArgs(mode=mode, draws=1.1)
+    args = LaplaceArgs(mode=mode, draws=1.1)  # type: ignore
     with pytest.raises(ValueError):
         args.validate()
 
 
-def test_args_pathfinder():
+def test_args_pathfinder() -> None:
     args = PathfinderArgs()
     args.validate()
     cmd = args.compose(0, cmd=[])
@@ -812,15 +815,15 @@ def test_args_pathfinder():
         ('num_elbo_draws', True),
     ],
 )
-def test_args_pathfinder_bad(arg, require_int):
+def test_args_pathfinder_bad(arg: str, require_int: bool) -> None:
     # pathfinder's only arg restrictions are on positiveness
-    args = PathfinderArgs(**{arg: 0})
+    args = PathfinderArgs(**{arg: 0})  # type: ignore
     with pytest.raises(ValueError):
         args.validate()
-    args = PathfinderArgs(**{arg: -1})
+    args = PathfinderArgs(**{arg: -1})  # type: ignore
     with pytest.raises(ValueError):
         args.validate()
     if require_int:
-        args = PathfinderArgs(**{arg: 1.1})
+        args = PathfinderArgs(**{arg: 1.1})  # type: ignore
         with pytest.raises(ValueError):
             args.validate()

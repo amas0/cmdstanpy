@@ -8,7 +8,7 @@ import math
 import os
 import re
 import warnings
-from typing import Any, Iterator, Mapping, Optional, Union
+from typing import Any, Iterator, Mapping, Optional, Sequence, Union
 
 import numpy as np
 import numpy.typing as npt
@@ -638,11 +638,13 @@ def try_deduce_metric_type(
         str,
         np.ndarray,
         Mapping[str, Any],
-        list[Union[str, np.ndarray, Mapping[str, Any]]],
+        Sequence[Union[str, np.ndarray, Mapping[str, Any]]],
     ],
 ) -> Optional[str]:
     """Given a user-supplied metric, try to infer the correct metric type."""
-    if isinstance(inv_metric, list):
+    if isinstance(inv_metric, Sequence) and not isinstance(
+        inv_metric, (str, np.ndarray, Mapping)
+    ):
         if inv_metric:
             inv_metric = inv_metric[0]
 
