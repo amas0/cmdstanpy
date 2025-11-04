@@ -6,7 +6,7 @@ import platform
 import re
 from importlib import reload
 from types import ModuleType
-from typing import Generator, Optional, Tuple, Type
+from typing import Generator, Optional, Type
 from unittest import mock
 
 import pytest
@@ -52,7 +52,7 @@ def without_import(
 
 def check_present(
     caplog: pytest.LogCaptureFixture,
-    *conditions: Tuple,
+    *conditions: tuple,
     clear: bool = True,
 ) -> None:
     """
