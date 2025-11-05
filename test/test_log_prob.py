@@ -4,7 +4,6 @@ import logging
 import os
 import re
 from test import check_present
-from typing import List, Optional
 
 import numpy as np
 import pytest
@@ -34,7 +33,7 @@ BERN_BASENAME = 'bernoulli'
     ],
 )
 def test_lp_good(
-    sig_figs: Optional[int], expected: List[str], expected_unadjusted: List[str]
+    sig_figs: int | None, expected: list[str], expected_unadjusted: list[str]
 ) -> None:
     model = CmdStanModel(stan_file=BERN_STAN)
     params = {"theta": 0.34903938392023830482}

@@ -4,7 +4,6 @@ import io
 import os
 from pathlib import Path
 from test import without_import
-from typing import List
 
 import numpy as np
 import pytest
@@ -94,7 +93,7 @@ def test_csv_bytes_empty() -> None:
 
 
 def test_parse_comments_header_and_draws() -> None:
-    lines: List[bytes] = [b"# 1\n", b"a\n", b"3\n", b"# 4\n"]
+    lines: list[bytes] = [b"# 1\n", b"a\n", b"3\n", b"# 4\n"]
     (
         comment_lines,
         header,

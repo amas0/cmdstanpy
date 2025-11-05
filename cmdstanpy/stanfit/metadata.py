@@ -2,7 +2,7 @@
 
 import copy
 import os
-from typing import Any, Iterator, Union
+from typing import Any, Iterator
 
 import stanio
 
@@ -17,7 +17,7 @@ class InferenceMetadata:
     """
 
     def __init__(
-        self, config: dict[str, Union[str, int, float, tuple[str, ...]]]
+        self, config: dict[str, str | int | float | tuple[str, ...]]
     ) -> None:
         """Initialize object from CSV headers"""
         self._cmdstan_config = config
@@ -33,7 +33,7 @@ class InferenceMetadata:
 
     @classmethod
     def from_csv(
-        cls, stan_csv: Union[str, os.PathLike, Iterator[bytes]]
+        cls, stan_csv: str | os.PathLike | Iterator[bytes]
     ) -> 'InferenceMetadata':
         try:
             comments, header, _ = stancsv.parse_comments_header_and_draws(
@@ -48,7 +48,7 @@ class InferenceMetadata:
     def __repr__(self) -> str:
         return 'Metadata:\n{}\n'.format(self._cmdstan_config)
 
-    def __getitem__(self, key: str) -> Union[str, int, float, tuple[str, ...]]:
+    def __getitem__(self, key: str) -> str | int | float | tuple[str, ...]:
         return self._cmdstan_config[key]
 
     @property

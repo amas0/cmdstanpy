@@ -1,7 +1,6 @@
 """Container for the result of running optimization"""
 
 from collections import OrderedDict
-from typing import Optional
 
 import numpy as np
 import pandas as pd
@@ -58,7 +57,7 @@ class CmdStanMLE:
             self._all_iters: np.ndarray = all_draws
 
     def create_inits(
-        self, seed: Optional[int] = None, chains: int = 4
+        self, seed: int | None = None, chains: int = 4
     ) -> dict[str, np.ndarray]:
         """
         Create initial values for the parameters of the model
@@ -134,7 +133,7 @@ class CmdStanMLE:
         return self._mle
 
     @property
-    def optimized_iterations_np(self) -> Optional[np.ndarray]:
+    def optimized_iterations_np(self) -> np.ndarray | None:
         """
         Returns all saved iterations from the optimizer and final estimate
         as a numpy.ndarray which contains all optimizer outputs, i.e.,
@@ -167,7 +166,7 @@ class CmdStanMLE:
         return pd.DataFrame([self._mle], columns=self.column_names)
 
     @property
-    def optimized_iterations_pd(self) -> Optional[pd.DataFrame]:
+    def optimized_iterations_pd(self) -> pd.DataFrame | None:
         """
         Returns all saved iterations from the optimizer and final estimate
         as a pandas.DataFrame which contains all optimizer outputs, i.e.,
@@ -294,7 +293,7 @@ class CmdStanMLE:
             )
         return result
 
-    def save_csvfiles(self, dir: Optional[str] = None) -> None:
+    def save_csvfiles(self, dir: str | None = None) -> None:
         """
         Move output CSV files to specified directory.  If files were
         written to the temporary session directory, clean filename.

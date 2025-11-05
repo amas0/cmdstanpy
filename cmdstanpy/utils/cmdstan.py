@@ -7,7 +7,7 @@ import platform
 import subprocess
 import sys
 from collections import OrderedDict
-from typing import Callable, Optional, Union
+from typing import Callable
 
 from tqdm.auto import tqdm
 
@@ -83,7 +83,7 @@ def validate_dir(install_dir: str) -> None:
             ) from e
 
 
-def get_latest_cmdstan(cmdstan_dir: str) -> Optional[str]:
+def get_latest_cmdstan(cmdstan_dir: str) -> str | None:
     """
     Given a valid directory path, find all installed CmdStan versions
     and return highest (i.e., latest) version number.
@@ -198,7 +198,7 @@ def cmdstan_path() -> str:
     return os.path.normpath(cmdstan)
 
 
-def cmdstan_version() -> Optional[tuple[int, ...]]:
+def cmdstan_version() -> tuple[int, ...] | None:
     """
     Parses version string out of CmdStan makefile variable CMDSTAN_VERSION,
     returns Tuple(Major, minor).
@@ -242,7 +242,7 @@ def cmdstan_version() -> Optional[tuple[int, ...]]:
 
 
 def cmdstan_version_before(
-    major: int, minor: int, info: Optional[dict[str, str]] = None
+    major: int, minor: int, info: dict[str, str] | None = None
 ) -> bool:
     """
     Check that CmdStan version is less than Major.minor version.
@@ -273,7 +273,7 @@ def cmdstan_version_before(
 
 
 def cxx_toolchain_path(
-    version: Optional[str] = None, install_dir: Optional[str] = None
+    version: str | None = None, install_dir: str | None = None
 ) -> tuple[str, ...]:
     """
     Validate, then activate C++ toolchain directory path.
@@ -434,8 +434,8 @@ def cxx_toolchain_path(
 
 
 def install_cmdstan(
-    version: Optional[str] = None,
-    dir: Optional[str] = None,
+    version: str | None = None,
+    dir: str | None = None,
     overwrite: bool = False,
     compiler: bool = False,
     progress: bool = False,
@@ -493,7 +493,7 @@ def install_cmdstan(
             run_install,
         )
 
-        args: Union[InstallationSettings, InteractiveSettings]
+        args: InstallationSettings | InteractiveSettings
 
         if interactive:
             if any(
@@ -538,7 +538,7 @@ def install_cmdstan(
 
 
 @progbar.wrap_callback
-def wrap_url_progress_hook() -> Optional[Callable[[int, int, int], None]]:
+def wrap_url_progress_hook() -> Callable[[int, int, int], None] | None:
     """Sets up tqdm callback for url downloads."""
     pbar: tqdm = tqdm(
         unit='B',

@@ -1,7 +1,6 @@
 """Container for the results of running autodiff variational inference"""
 
 from collections import OrderedDict
-from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -53,8 +52,8 @@ class CmdStanVB:
         self._variational_sample: np.ndarray = draws_np[1:]
 
     def create_inits(
-        self, seed: Optional[int] = None, chains: int = 4
-    ) -> Union[list[dict[str, np.ndarray]], dict[str, np.ndarray]]:
+        self, seed: int | None = None, chains: int = 4
+    ) -> list[dict[str, np.ndarray]] | dict[str, np.ndarray]:
         """
         Create initial values for the parameters of the model
         by randomly selecting draws from the variational approximation
@@ -248,7 +247,7 @@ class CmdStanVB:
         """
         return pd.DataFrame(self._variational_sample, columns=self.column_names)
 
-    def save_csvfiles(self, dir: Optional[str] = None) -> None:
+    def save_csvfiles(self, dir: str | None = None) -> None:
         """
         Move output CSV files to specified directory.  If files were
         written to the temporary session directory, clean filename.

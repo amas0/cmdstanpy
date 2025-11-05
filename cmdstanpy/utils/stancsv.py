@@ -8,7 +8,7 @@ import math
 import os
 import re
 import warnings
-from typing import Any, Iterator, Mapping, Optional, Sequence, Union
+from typing import Any, Iterator, Mapping, Sequence
 
 import numpy as np
 import numpy.typing as npt
@@ -17,8 +17,8 @@ from cmdstanpy import _CMDSTAN_SAMPLING, _CMDSTAN_THIN, _CMDSTAN_WARMUP
 
 
 def parse_comments_header_and_draws(
-    stan_csv: Union[str, os.PathLike, Iterator[bytes]],
-) -> tuple[list[bytes], Optional[str], list[bytes]]:
+    stan_csv: str | os.PathLike | Iterator[bytes],
+) -> tuple[list[bytes], str | None, list[bytes]]:
     """Parses lines of a Stan CSV file into comment lines, the header line,
     and draws lines.
 
@@ -27,7 +27,7 @@ def parse_comments_header_and_draws(
 
     def partition_csv(
         lines: Iterator[bytes],
-    ) -> tuple[list[bytes], Optional[str], list[bytes]]:
+    ) -> tuple[list[bytes], str | None, list[bytes]]:
         comment_lines: list[bytes] = []
         draws_lines: list[bytes] = []
         header = None
@@ -105,7 +105,7 @@ def csv_bytes_list_to_numpy(
 
 def parse_hmc_adaptation_lines(
     comment_lines: list[bytes],
-) -> tuple[Optional[float], Optional[npt.NDArray[np.float64]]]:
+) -> tuple[float | None, npt.NDArray[np.float64] | None]:
     """Extracts step size/mass matrix information from the Stan CSV comment
     lines by parsing the adaptation section. If the diag_e metric is used,
     the returned mass matrix will be a 1D array of the diagnoal elements,
@@ -163,10 +163,10 @@ def extract_key_val_pairs(
 
 def parse_config(
     comment_lines: list[bytes],
-) -> dict[str, Union[str, int, float]]:
+) -> dict[str, str | int | float]:
     """Extracts the key=value config settings from Stan CSV comment
     lines and returns a dictionary."""
-    out: dict[str, Union[str, int, float]] = {}
+    out: dict[str, str | int | float] = {}
     for key, val in extract_key_val_pairs(comment_lines):
         if key == 'file':
             if not val.endswith('csv'):
@@ -194,12 +194,12 @@ def parse_header(header: str) -> tuple[str, ...]:
 
 
 def construct_config_header_dict(
-    comment_lines: list[bytes], header: Optional[str]
-) -> dict[str, Union[str, int, float, tuple[str, ...]]]:
+    comment_lines: list[bytes], header: str | None
+) -> dict[str, str | int | float | tuple[str, ...]]:
     """Extracts config and header info from comment/draws lines parsed
     from a Stan CSV file."""
     config = parse_config(comment_lines)
-    out: dict[str, Union[str, int, float, tuple[str, ...]]] = {**config}
+    out: dict[str, str | int | float | tuple[str, ...]] = {**config}
     if header:
         out["raw_header"] = header
         out["column_names"] = parse_header(header)
@@ -264,7 +264,7 @@ def is_sneaky_fixed_param(header: str) -> bool:
 
 
 def count_warmup_and_sampling_draws(
-    stan_csv: Union[str, os.PathLike, Iterator[bytes]],
+    stan_csv: str | os.PathLike | Iterator[bytes],
 ) -> tuple[int, int]:
     """Scans through a Stan CSV file to count the number of lines in the
     warmup/sampling blocks to determine counts for warmup and sampling draws.
@@ -432,7 +432,7 @@ def parse_timing_lines(
 
 
 def check_sampler_csv(
-    path: Union[str, os.PathLike],
+    path: str | os.PathLike,
     iter_sampling: int = _CMDSTAN_SAMPLING,
     iter_warmup: int = _CMDSTAN_WARMUP,
     save_warmup: bool = False,
@@ -473,8 +473,8 @@ def check_sampler_csv(
 
 
 def parse_sampler_metadata_from_csv(
-    path: Union[str, os.PathLike],
-) -> dict[str, Union[int, float, str, tuple[str, ...], dict[str, float]]]:
+    path: str | os.PathLike,
+) -> dict[str, int | float | str | tuple[str, ...] | dict[str, float]]:
     """Parses sampling metadata from a given Stan CSV path for a sample run"""
     try:
         comments, header, draws = parse_comments_header_and_draws(path)
@@ -504,7 +504,7 @@ def parse_sampler_metadata_from_csv(
         "Sampling": "sampling",
         "Total": "total",
     }
-    addtl: dict[str, Union[int, dict[str, float]]] = {
+    addtl: dict[str, int | dict[str, float]] = {
         "draws_warmup": num_warmup,
         "draws_sampling": num_sampling,
         "ct_divergences": divs,
@@ -569,7 +569,7 @@ def read_rdump_metric(path: str) -> list[int]:
     return list(metric_dict['inv_metric'].shape)
 
 
-def rload(fname: str) -> Optional[dict[str, Union[int, float, np.ndarray]]]:
+def rload(fname: str) -> dict[str, int | float | np.ndarray] | None:
     """Parse data and parameter variable values from an R dump format file.
     This parser only supports the subset of R dump data as described
     in the "Dump Data Format" section of the CmdStan manual, i.e.,
@@ -602,7 +602,7 @@ def rload(fname: str) -> Optional[dict[str, Union[int, float, np.ndarray]]]:
     return data_dict
 
 
-def parse_rdump_value(rhs: str) -> Union[int, float, np.ndarray]:
+def parse_rdump_value(rhs: str) -> int | float | np.ndarray:
     """Process right hand side of Rdump variable assignment statement.
     Value is either scalar, vector, or multi-dim structure.
     Use regex to capture structure values, dimensions.
@@ -611,7 +611,7 @@ def parse_rdump_value(rhs: str) -> Union[int, float, np.ndarray]:
         r'structure\(\s*c\((?P<vals>[^)]*)\)'
         r'(,\s*\.Dim\s*=\s*c\s*\((?P<dims>[^)]*)\s*\))?\)'
     )
-    val: Union[int, float, np.ndarray]
+    val: int | float | np.ndarray
     try:
         if rhs.startswith('structure'):
             parse = pat.match(rhs)
@@ -634,13 +634,13 @@ def parse_rdump_value(rhs: str) -> Union[int, float, np.ndarray]:
 
 
 def try_deduce_metric_type(
-    inv_metric: Union[
-        str,
-        np.ndarray,
-        Mapping[str, Any],
-        Sequence[Union[str, np.ndarray, Mapping[str, Any]]],
-    ],
-) -> Optional[str]:
+    inv_metric: (
+        str
+        | np.ndarray
+        | Mapping[str, Any]
+        | Sequence[str | np.ndarray | Mapping[str, Any]]
+    ),
+) -> str | None:
     """Given a user-supplied metric, try to infer the correct metric type."""
     if isinstance(inv_metric, Sequence) and not isinstance(
         inv_metric, (str, np.ndarray, Mapping)

@@ -9,7 +9,6 @@ import shutil
 import tempfile
 from datetime import datetime
 from time import time
-from typing import Optional
 
 from cmdstanpy import _TMPDIR
 from cmdstanpy.cmdstan_args import CmdStanArgs, Method
@@ -31,7 +30,7 @@ class RunSet:
         args: CmdStanArgs,
         chains: int = 1,
         *,
-        chain_ids: Optional[list[int]] = None,
+        chain_ids: list[int] | None = None,
         time_fmt: str = "%Y%m%d%H%M%S",
         one_process_per_chain: bool = True,
     ) -> None:
@@ -162,23 +161,29 @@ class RunSet:
             return self._args.compose_command(
                 idx,
                 csv_file=self.csv_files[idx],
-                diagnostic_file=self.diagnostic_files[idx]
-                if self._args.save_latent_dynamics
-                else None,
-                profile_file=self.profile_files[idx]
-                if self._args.save_profile
-                else None,
+                diagnostic_file=(
+                    self.diagnostic_files[idx]
+                    if self._args.save_latent_dynamics
+                    else None
+                ),
+                profile_file=(
+                    self.profile_files[idx] if self._args.save_profile else None
+                ),
             )
         else:
             return self._args.compose_command(
                 idx,
                 csv_file=self.file_path('.csv'),
-                diagnostic_file=self.file_path(".csv", extra="-diagnostic")
-                if self._args.save_latent_dynamics
-                else None,
-                profile_file=self.file_path(".csv", extra="-profile")
-                if self._args.save_profile
-                else None,
+                diagnostic_file=(
+                    self.file_path(".csv", extra="-diagnostic")
+                    if self._args.save_latent_dynamics
+                    else None
+                ),
+                profile_file=(
+                    self.file_path(".csv", extra="-profile")
+                    if self._args.save_profile
+                    else None
+                ),
             )
 
     @property
@@ -213,7 +218,7 @@ class RunSet:
 
     # pylint: disable=invalid-name
     def file_path(
-        self, suffix: str, *, extra: str = "", id: Optional[int] = None
+        self, suffix: str, *, extra: str = "", id: int | None = None
     ) -> str:
         if id is not None:
             suffix = f"_{id}{suffix}"
@@ -256,7 +261,7 @@ class RunSet:
                             msgs.append('\n\t'.join(errors))
         return '\n'.join(msgs)
 
-    def save_csvfiles(self, dir: Optional[str] = None) -> None:
+    def save_csvfiles(self, dir: str | None = None) -> None:
         """
         Moves CSV files to specified directory.
 

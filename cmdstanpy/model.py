@@ -13,7 +13,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 from multiprocessing import cpu_count
-from typing import Any, Callable, Mapping, Optional, Sequence, TypeVar, Union
+from typing import Any, Callable, Mapping, Sequence, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -55,7 +55,7 @@ from cmdstanpy.utils.stancsv import try_deduce_metric_type
 
 from . import progress as progbar
 
-OptionalPath = Union[str, os.PathLike, None]
+OptionalPath = str | os.PathLike | None
 Fit = TypeVar('Fit', CmdStanMCMC, CmdStanMLE, CmdStanVB)
 
 
@@ -96,8 +96,8 @@ class CmdStanModel:
         stan_file: OptionalPath = None,
         exe_file: OptionalPath = None,
         force_compile: bool = False,
-        stanc_options: Optional[dict[str, Any]] = None,
-        cpp_options: Optional[dict[str, Any]] = None,
+        stanc_options: dict[str, Any] | None = None,
+        cpp_options: dict[str, Any] | None = None,
         user_header: OptionalPath = None,
     ) -> None:
         """
@@ -242,7 +242,7 @@ class CmdStanModel:
             return {}
         return compilation.src_info(str(self.stan_file), self._stanc_options)
 
-    def code(self) -> Optional[str]:
+    def code(self) -> str | None:
         """Return Stan program as a string."""
         if not self._stan_file:
             raise RuntimeError('Please specify source file')
@@ -259,27 +259,27 @@ class CmdStanModel:
 
     def optimize(
         self,
-        data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
-        seed: Optional[int] = None,
-        inits: Union[Mapping[str, Any], float, str, os.PathLike, None] = None,
+        data: Mapping[str, Any] | str | os.PathLike | None = None,
+        seed: int | None = None,
+        inits: Mapping[str, Any] | float | str | os.PathLike | None = None,
         output_dir: OptionalPath = None,
-        sig_figs: Optional[int] = None,
+        sig_figs: int | None = None,
         save_profile: bool = False,
-        algorithm: Optional[str] = None,
-        init_alpha: Optional[float] = None,
-        tol_obj: Optional[float] = None,
-        tol_rel_obj: Optional[float] = None,
-        tol_grad: Optional[float] = None,
-        tol_rel_grad: Optional[float] = None,
-        tol_param: Optional[float] = None,
-        history_size: Optional[int] = None,
-        iter: Optional[int] = None,
+        algorithm: str | None = None,
+        init_alpha: float | None = None,
+        tol_obj: float | None = None,
+        tol_rel_obj: float | None = None,
+        tol_grad: float | None = None,
+        tol_rel_grad: float | None = None,
+        tol_param: float | None = None,
+        history_size: int | None = None,
+        iter: int | None = None,
         save_iterations: bool = False,
         require_converged: bool = True,
         show_console: bool = False,
-        refresh: Optional[int] = None,
+        refresh: int | None = None,
         time_fmt: str = "%Y%m%d%H%M%S",
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         jacobian: bool = False,
         # would be nice to move this further up, but that's a breaking change
     ) -> CmdStanMLE:
@@ -451,50 +451,50 @@ class CmdStanModel:
     # pylint: disable=too-many-arguments
     def sample(
         self,
-        data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
-        chains: Optional[int] = None,
-        parallel_chains: Optional[int] = None,
-        threads_per_chain: Optional[int] = None,
-        seed: Union[int, list[int], None] = None,
-        chain_ids: Union[int, list[int], None] = None,
-        inits: Union[
-            Mapping[str, Any],
-            float,
-            str,
-            Sequence[Union[str, Mapping[str, Any]]],
-            None,
-        ] = None,
-        iter_warmup: Optional[int] = None,
-        iter_sampling: Optional[int] = None,
+        data: Mapping[str, Any] | str | os.PathLike | None = None,
+        chains: int | None = None,
+        parallel_chains: int | None = None,
+        threads_per_chain: int | None = None,
+        seed: int | list[int] | None = None,
+        chain_ids: int | list[int] | None = None,
+        inits: (
+            Mapping[str, Any]
+            | float
+            | str
+            | Sequence[str | Mapping[str, Any]]
+            | None
+        ) = None,
+        iter_warmup: int | None = None,
+        iter_sampling: int | None = None,
         save_warmup: bool = False,
-        thin: Optional[int] = None,
-        max_treedepth: Optional[int] = None,
-        metric: Optional[str] = None,
-        step_size: Union[float, list[float], None] = None,
+        thin: int | None = None,
+        max_treedepth: int | None = None,
+        metric: str | None = None,
+        step_size: float | list[float] | None = None,
         adapt_engaged: bool = True,
-        adapt_delta: Optional[float] = None,
-        adapt_init_phase: Optional[int] = None,
-        adapt_metric_window: Optional[int] = None,
-        adapt_step_size: Optional[int] = None,
+        adapt_delta: float | None = None,
+        adapt_init_phase: int | None = None,
+        adapt_metric_window: int | None = None,
+        adapt_step_size: int | None = None,
         fixed_param: bool = False,
-        output_dir: OptionalPath = None,
-        sig_figs: Optional[int] = None,
+        output_dir: OptionalPath = None,  # Update OptionalPath if needed
+        sig_figs: int | None = None,
         save_latent_dynamics: bool = False,
         save_profile: bool = False,
         show_progress: bool = True,
         show_console: bool = False,
-        refresh: Optional[int] = None,
+        refresh: int | None = None,
         time_fmt: str = "%Y%m%d%H%M%S",
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
         *,
-        force_one_process_per_chain: Optional[bool] = None,
-        inv_metric: Union[
-            str,
-            np.ndarray,
-            Mapping[str, Any],
-            Sequence[Union[str, np.ndarray, Mapping[str, Any]]],
-            None,
-        ] = None,
+        force_one_process_per_chain: bool | None = None,
+        inv_metric: (
+            str
+            | np.ndarray
+            | Mapping[str, Any]
+            | Sequence[str | np.ndarray | Mapping[str, Any]]
+            | None
+        ) = None,
     ) -> CmdStanMCMC:
         """
         Run or more chains of the NUTS-HMC sampler to produce a set of draws
@@ -813,8 +813,8 @@ class CmdStanModel:
             temp_inits(inits, id=chain_ids[0]) as _inits,
             temp_metrics(inv_metric, id=chain_ids[0]) as _inv_metric,
         ):
-            cmdstan_inits: Union[str, list[str], int, float, None]
-            cmdstan_metrics: Union[str, list[str], None]
+            cmdstan_inits: str | list[str] | int | float | None
+            cmdstan_metrics: str | list[str] | None
 
             if one_process_per_chain and isinstance(inits, list):  # legacy
                 cmdstan_inits = [
@@ -869,7 +869,7 @@ class CmdStanModel:
                 show_progress = show_progress and progbar.allow_show_progress()
                 get_logger().info('CmdStan start processing')
 
-            progress_hook: Optional[Callable[[str, int], None]] = None
+            progress_hook: Callable[[str, int], None] | None = None
             if show_progress:
                 iter_total = 0
                 if iter_warmup is None:
@@ -957,15 +957,15 @@ class CmdStanModel:
 
     def generate_quantities(
         self,
-        data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
-        previous_fit: Union[Fit, list[str], None] = None,
-        seed: Optional[int] = None,
+        data: Mapping[str, Any] | str | os.PathLike | None = None,
+        previous_fit: Fit | list[str] | None = None,
+        seed: int | None = None,
         gq_output_dir: OptionalPath = None,
-        sig_figs: Optional[int] = None,
+        sig_figs: int | None = None,
         show_console: bool = False,
-        refresh: Optional[int] = None,
+        refresh: int | None = None,
         time_fmt: str = "%Y%m%d%H%M%S",
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> CmdStanGQ[Fit]:
         """
         Run CmdStan's generate_quantities method which runs the generated
@@ -1042,7 +1042,7 @@ class CmdStanModel:
                 )
             try:
                 fit_csv_files = previous_fit
-                fit_object = from_csv(fit_csv_files)  # type: ignore
+                fit_object: Fit = from_csv(fit_csv_files)  # type: ignore
             except ValueError as e:
                 raise ValueError(
                     'Invalid sample from Stan CSV files, error:\n\t{}\n\t'
@@ -1135,28 +1135,28 @@ class CmdStanModel:
 
     def variational(
         self,
-        data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
-        seed: Optional[int] = None,
-        inits: Optional[float] = None,
+        data: Mapping[str, Any] | str | os.PathLike | None = None,
+        seed: int | None = None,
+        inits: float | None = None,
         output_dir: OptionalPath = None,
-        sig_figs: Optional[int] = None,
+        sig_figs: int | None = None,
         save_latent_dynamics: bool = False,
         save_profile: bool = False,
-        algorithm: Optional[str] = None,
-        iter: Optional[int] = None,
-        grad_samples: Optional[int] = None,
-        elbo_samples: Optional[int] = None,
-        eta: Optional[float] = None,
+        algorithm: str | None = None,
+        iter: int | None = None,
+        grad_samples: int | None = None,
+        elbo_samples: int | None = None,
+        eta: float | None = None,
         adapt_engaged: bool = True,
-        adapt_iter: Optional[int] = None,
-        tol_rel_obj: Optional[float] = None,
-        eval_elbo: Optional[int] = None,
-        draws: Optional[int] = None,
+        adapt_iter: int | None = None,
+        tol_rel_obj: float | None = None,
+        eval_elbo: int | None = None,
+        draws: int | None = None,
         require_converged: bool = True,
         show_console: bool = False,
-        refresh: Optional[int] = None,
+        refresh: int | None = None,
         time_fmt: str = "%Y%m%d%H%M%S",
-        timeout: Optional[float] = None,
+        timeout: float | None = None,
     ) -> CmdStanVB:
         """
         Run CmdStan's variational inference algorithm to approximate
@@ -1341,39 +1341,39 @@ class CmdStanModel:
 
     def pathfinder(
         self,
-        data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
+        data: Mapping[str, Any] | str | os.PathLike | None = None,
         *,
-        init_alpha: Optional[float] = None,
-        tol_obj: Optional[float] = None,
-        tol_rel_obj: Optional[float] = None,
-        tol_grad: Optional[float] = None,
-        tol_rel_grad: Optional[float] = None,
-        tol_param: Optional[float] = None,
-        history_size: Optional[int] = None,
-        num_paths: Optional[int] = None,
-        max_lbfgs_iters: Optional[int] = None,
-        draws: Optional[int] = None,
-        num_single_draws: Optional[int] = None,
-        num_elbo_draws: Optional[int] = None,
+        init_alpha: float | None = None,
+        tol_obj: float | None = None,
+        tol_rel_obj: float | None = None,
+        tol_grad: float | None = None,
+        tol_rel_grad: float | None = None,
+        tol_param: float | None = None,
+        history_size: int | None = None,
+        num_paths: int | None = None,
+        max_lbfgs_iters: int | None = None,
+        draws: int | None = None,
+        num_single_draws: int | None = None,
+        num_elbo_draws: int | None = None,
         psis_resample: bool = True,
         calculate_lp: bool = True,
         # arguments standard to all methods
-        seed: Optional[int] = None,
-        inits: Union[
-            Mapping[str, Any],
-            float,
-            str,
-            Sequence[Union[str, Mapping[str, Any]]],
-            None,
-        ] = None,
+        seed: int | None = None,
+        inits: (
+            Mapping[str, Any]
+            | float
+            | str
+            | Sequence[str | Mapping[str, Any]]
+            | None
+        ) = None,
         output_dir: OptionalPath = None,
-        sig_figs: Optional[int] = None,
+        sig_figs: int | None = None,
         save_profile: bool = False,
         show_console: bool = False,
-        refresh: Optional[int] = None,
+        refresh: int | None = None,
         time_fmt: str = "%Y%m%d%H%M%S",
-        timeout: Optional[float] = None,
-        num_threads: Optional[int] = None,
+        timeout: float | None = None,
+        num_threads: int | None = None,
     ) -> CmdStanPathfinder:
         """
         Run CmdStan's Pathfinder variational inference algorithm.
@@ -1576,11 +1576,11 @@ class CmdStanModel:
 
     def log_prob(
         self,
-        params: Union[dict[str, Any], str, os.PathLike],
-        data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
+        params: dict[str, Any] | str | os.PathLike,
+        data: Mapping[str, Any] | str | os.PathLike | None = None,
         *,
         jacobian: bool = True,
-        sig_figs: Optional[int] = None,
+        sig_figs: int | None = None,
     ) -> pd.DataFrame:
         """
         Calculate the log probability and gradient at the given parameter
@@ -1659,20 +1659,20 @@ class CmdStanModel:
 
     def laplace_sample(
         self,
-        data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
-        mode: Union[CmdStanMLE, str, os.PathLike, None] = None,
-        draws: Optional[int] = None,
+        data: Mapping[str, Any] | str | os.PathLike | None = None,
+        mode: CmdStanMLE | str | os.PathLike | None = None,
+        draws: int | None = None,
         *,
         jacobian: bool = True,  # NB: Different than optimize!
-        seed: Optional[int] = None,
+        seed: int | None = None,
         output_dir: OptionalPath = None,
-        sig_figs: Optional[int] = None,
+        sig_figs: int | None = None,
         save_profile: bool = False,
         show_console: bool = False,
-        refresh: Optional[int] = None,
+        refresh: int | None = None,
         time_fmt: str = "%Y%m%d%H%M%S",
-        timeout: Optional[float] = None,
-        opt_args: Optional[dict[str, Any]] = None,
+        timeout: float | None = None,
+        opt_args: dict[str, Any] | None = None,
     ) -> CmdStanLaplace:
         """
         Run a Laplace approximation around the posterior mode.
@@ -1816,8 +1816,8 @@ class CmdStanModel:
         idx: int,
         show_progress: bool = False,
         show_console: bool = False,
-        progress_hook: Optional[Callable[[str, int], None]] = None,
-        timeout: Optional[float] = None,
+        progress_hook: Callable[[str, int], None] | None = None,
+        timeout: float | None = None,
     ) -> None:
         """
         Helper function which encapsulates call to CmdStan.
@@ -1854,7 +1854,7 @@ class CmdStanModel:
                 env=os.environ,
                 universal_newlines=True,
             )
-            timer: Optional[threading.Timer]
+            timer: threading.Timer | None
             if timeout:
 
                 def _timer_target() -> None:
@@ -1916,7 +1916,7 @@ class CmdStanModel:
     def _wrap_sampler_progress_hook(
         chain_ids: list[int],
         total: int,
-    ) -> Optional[Callable[[str, int], None]]:
+    ) -> Callable[[str, int], None] | None:
         """
         Sets up tqdm callback for CmdStan sampler console msgs.
         CmdStan progress messages start with "Iteration", for single chain
@@ -1955,13 +1955,13 @@ class CmdStanModel:
 
     def diagnose(
         self,
-        inits: Union[dict[str, Any], str, os.PathLike, None] = None,
-        data: Union[Mapping[str, Any], str, os.PathLike, None] = None,
+        inits: dict[str, Any] | str | os.PathLike | None = None,
+        data: Mapping[str, Any] | str | os.PathLike | None = None,
         *,
-        epsilon: Optional[float] = None,
-        error: Optional[float] = None,
+        epsilon: float | None = None,
+        error: float | None = None,
         require_gradients_ok: bool = True,
-        sig_figs: Optional[int] = None,
+        sig_figs: int | None = None,
     ) -> pd.DataFrame:
         """
         Run diagnostics to calculate the gradients at the specified parameter
