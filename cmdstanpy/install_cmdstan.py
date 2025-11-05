@@ -31,7 +31,7 @@ import urllib.request
 from collections import OrderedDict
 from pathlib import Path
 from time import sleep
-from typing import TYPE_CHECKING, Any, Callable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable
 
 from tqdm.auto import tqdm
 
@@ -134,8 +134,8 @@ class InstallationSettings:
     def __init__(
         self,
         *,
-        version: Optional[str] = None,
-        dir: Optional[str] = None,
+        version: str | None = None,
+        dir: str | None = None,
         progress: bool = False,
         verbose: bool = False,
         overwrite: bool = False,
@@ -312,7 +312,7 @@ def build(verbose: bool = False, progress: bool = True, cores: int = 1) -> None:
 
 
 @progbar.wrap_callback
-def _wrap_build_progress_hook() -> Optional[Callable[[str], None]]:
+def _wrap_build_progress_hook() -> Callable[[str], None] | None:
     """Sets up tqdm callback for CmdStan sampler console msgs."""
     pad = ' ' * 20
     msgs_expected = 150  # hack: 2.27 make build send ~140 msgs to console
@@ -486,9 +486,9 @@ def retrieve_version(version: str, progress: bool = True) -> None:
     for i in range(6):  # always retry to allow for transient URLErrors
         try:
             if progress and progbar.allow_show_progress():
-                progress_hook: Optional[
-                    Callable[[int, int, int], None]
-                ] = wrap_url_progress_hook()
+                progress_hook: Callable[
+                    [int, int, int], None
+                ] | None = wrap_url_progress_hook()
             else:
                 progress_hook = None
             file_tmp, _ = urllib.request.urlretrieve(
@@ -590,7 +590,7 @@ def run_compiler_install(dir: str, verbose: bool, progress: bool) -> None:
     cxx_toolchain_path(cxx_version, dir)
 
 
-def run_install(args: Union[InteractiveSettings, InstallationSettings]) -> None:
+def run_install(args: InteractiveSettings | InstallationSettings) -> None:
     """
     Run a (potentially interactive) installation
     """

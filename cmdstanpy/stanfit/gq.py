@@ -10,9 +10,7 @@ from typing import (
     Hashable,
     MutableMapping,
     NoReturn,
-    Optional,
     TypeVar,
-    Union,
     overload,
 )
 
@@ -257,7 +255,7 @@ class CmdStanGQ(Generic[Fit]):
 
     def draws_pd(
         self,
-        vars: Union[list[str], str, None] = None,
+        vars: list[str] | str | None = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
     ) -> pd.DataFrame:
@@ -401,8 +399,8 @@ class CmdStanGQ(Generic[Fit]):
 
     @overload
     def draws_xr(
-        self: Union["CmdStanGQ[CmdStanMLE]", "CmdStanGQ[CmdStanVB]"],
-        vars: Union[str, list[str], None] = None,
+        self: "CmdStanGQ[CmdStanMLE]" | "CmdStanGQ[CmdStanVB]",
+        vars: str | list[str] | None = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
     ) -> NoReturn:
@@ -411,7 +409,7 @@ class CmdStanGQ(Generic[Fit]):
     @overload
     def draws_xr(
         self: "CmdStanGQ[CmdStanMCMC]",
-        vars: Union[str, list[str], None] = None,
+        vars: str | list[str] | None = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
     ) -> "xr.Dataset":
@@ -419,7 +417,7 @@ class CmdStanGQ(Generic[Fit]):
 
     def draws_xr(
         self,
-        vars: Union[str, list[str], None] = None,
+        vars: str | list[str] | None = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
     ) -> "xr.Dataset":
@@ -689,7 +687,7 @@ class CmdStanGQ(Generic[Fit]):
         self, vars: list[str], inc_warmup: bool
     ) -> pd.DataFrame:
         if vars:
-            sel: Union[list[str], slice] = vars
+            sel: list[str] | slice = vars
         else:
             sel = slice(None, None)
 
@@ -705,7 +703,7 @@ class CmdStanGQ(Generic[Fit]):
         else:  # CmdStanVB:
             return p_fit.variational_sample_pd[sel]
 
-    def save_csvfiles(self, dir: Optional[str] = None) -> None:
+    def save_csvfiles(self, dir: str | None = None) -> None:
         """
         Move output CSV files to specified directory.  If files were
         written to the temporary session directory, clean filename.
@@ -723,7 +721,7 @@ class CmdStanGQ(Generic[Fit]):
 
     # TODO(2.0): remove
     @property
-    def mcmc_sample(self) -> Union[CmdStanMCMC, CmdStanMLE, CmdStanVB]:
+    def mcmc_sample(self) -> CmdStanMCMC | CmdStanMLE | CmdStanVB:
         get_logger().warning(
             "Property `mcmc_sample` is deprecated, use `previous_fit` instead"
         )

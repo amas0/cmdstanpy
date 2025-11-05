@@ -2,7 +2,6 @@
 
 import glob
 import os
-from typing import Optional, Union
 
 from cmdstanpy.cmdstan_args import (
     CmdStanArgs,
@@ -36,11 +35,16 @@ __all__ = [
 
 
 def from_csv(
-    path: Union[str, list[str], os.PathLike, None] = None,
-    method: Optional[str] = None,
-) -> Union[
-    CmdStanMCMC, CmdStanMLE, CmdStanVB, CmdStanPathfinder, CmdStanLaplace, None
-]:
+    path: str | list[str] | os.PathLike | None = None,
+    method: str | None = None,
+) -> (
+    CmdStanMCMC
+    | CmdStanMLE
+    | CmdStanVB
+    | CmdStanPathfinder
+    | CmdStanLaplace
+    | None
+):
     """
     Instantiate a CmdStan object from a the Stan CSV files from a CmdStan run.
     CSV files are specified from either a list of Stan CSV files or a single

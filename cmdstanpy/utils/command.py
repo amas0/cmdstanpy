@@ -5,7 +5,7 @@ Run commands and handle returncodes
 import os
 import subprocess
 import sys
-from typing import Callable, Optional, TextIO
+from typing import Callable, TextIO
 
 from .filesystem import pushd
 from .logging import get_logger
@@ -13,10 +13,10 @@ from .logging import get_logger
 
 def do_command(
     cmd: list[str],
-    cwd: Optional[str] = None,
+    cwd: str | None = None,
     *,
-    fd_out: Optional[TextIO] = sys.stdout,
-    pbar: Optional[Callable[[str], None]] = None,
+    fd_out: TextIO | None = sys.stdout,
+    pbar: Callable[[str], None] | None = None,
 ) -> None:
     """
     Run command as subprocess, polls process output pipes and

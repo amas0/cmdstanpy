@@ -6,7 +6,7 @@ import functools
 import logging
 import types
 from contextlib import AbstractContextManager
-from typing import Optional, Type
+from typing import Type
 
 
 @functools.lru_cache(maxsize=None)
@@ -45,9 +45,9 @@ class ToggleLogging(AbstractContextManager):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        traceback: Optional[types.TracebackType],
+        exc_type: Type[BaseException] | None,
+        exc_value: BaseException | None,
+        traceback: types.TracebackType | None,
     ) -> None:
         self.logger.disabled = self.prev_state
 

@@ -10,7 +10,7 @@ import shutil
 import subprocess
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Iterable, Optional, Union
+from typing import Any, Iterable
 
 from cmdstanpy.utils import get_logger
 from cmdstanpy.utils.cmdstan import (
@@ -57,7 +57,7 @@ STANC_IGNORE_OPTS = [
     'version',
 ]
 
-OptionalPath = Union[str, os.PathLike, None]
+OptionalPath = str | os.PathLike | None
 
 
 class CompilerOptions:
@@ -73,8 +73,8 @@ class CompilerOptions:
     def __init__(
         self,
         *,
-        stanc_options: Optional[dict[str, Any]] = None,
-        cpp_options: Optional[dict[str, Any]] = None,
+        stanc_options: dict[str, Any] | None = None,
+        cpp_options: dict[str, Any] | None = None,
         user_header: OptionalPath = None,
     ) -> None:
         """Initialize object."""
@@ -88,14 +88,14 @@ class CompilerOptions:
         )
 
     @property
-    def stanc_options(self) -> dict[str, Union[bool, int, str, Iterable[str]]]:
+    def stanc_options(self) -> dict[str, bool | int | str | Iterable[str]]:
         """Stanc compiler options."""
         return self._stanc_options
 
     @property
-    def cpp_options(self) -> dict[str, Union[bool, int]]:
+    def cpp_options(self) -> dict[str, bool | int]:
         """C++ compiler options."""
-        return self._cpp_options
+        return self._cpp_options  # type: ignore
 
     @property
     def user_header(self) -> str:
@@ -220,7 +220,7 @@ class CompilerOptions:
 
             self._cpp_options['USER_HEADER'] = self._user_header
 
-    def compose_stanc(self, filename_in_msg: Optional[str]) -> list[str]:
+    def compose_stanc(self, filename_in_msg: str | None) -> list[str]:
         opts = []
 
         if filename_in_msg is not None:
@@ -244,7 +244,7 @@ class CompilerOptions:
                     opts.append(f'--{key}')
         return opts
 
-    def compose(self, filename_in_msg: Optional[str] = None) -> list[str]:
+    def compose(self, filename_in_msg: str | None = None) -> list[str]:
         """
         Format makefile options as list of strings.
 
@@ -266,7 +266,7 @@ class CompilerOptions:
 
 def src_info(
     stan_file: str,
-    stanc_options: Optional[dict[str, Any]] = None,
+    stanc_options: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """
     Get source info for Stan program file.
@@ -291,10 +291,10 @@ def src_info(
 
 
 def compile_stan_file(
-    src: Union[str, Path],
+    src: str | Path,
     force: bool = False,
-    stanc_options: Optional[dict[str, Any]] = None,
-    cpp_options: Optional[dict[str, Any]] = None,
+    stanc_options: dict[str, Any] | None = None,
+    cpp_options: dict[str, Any] | None = None,
     user_header: OptionalPath = None,
 ) -> str:
     """
@@ -423,13 +423,13 @@ def compile_stan_file(
 
 
 def format_stan_file(
-    stan_file: Union[str, os.PathLike],
+    stan_file: str | os.PathLike,
     *,
     overwrite_file: bool = False,
-    canonicalize: Union[bool, str, Iterable[str]] = False,
+    canonicalize: bool | str | Iterable[str] = False,
     max_line_length: int = 78,
     backup: bool = True,
-    stanc_options: Optional[dict[str, Any]] = None,
+    stanc_options: dict[str, Any] | None = None,
 ) -> None:
     """
     Run stanc's auto-formatter on the model code. Either saves directly

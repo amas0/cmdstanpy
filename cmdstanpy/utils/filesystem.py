@@ -8,7 +8,7 @@ import platform
 import re
 import shutil
 import tempfile
-from typing import Any, Iterator, Mapping, Optional, Union
+from typing import Any, Iterator, Mapping
 
 import numpy as np
 
@@ -107,8 +107,8 @@ def pushd(new_dir: str) -> Iterator[None]:
 
 
 def _temp_single_json(
-    data: Union[str, os.PathLike, Mapping[str, Any], None],
-) -> Iterator[Optional[str]]:
+    data: str | os.PathLike | Mapping[str, Any] | None,
+) -> Iterator[str | None]:
     """Context manager for json files."""
     if data is None:
         yield None
@@ -131,9 +131,9 @@ temp_single_json = contextlib.contextmanager(_temp_single_json)
 
 
 def _temp_multiinput(
-    input: Union[str, os.PathLike, Mapping[str, Any], list[Any], None],
+    input: str | os.PathLike | Mapping[str, Any] | list[Any] | None,
     base: int = 1,
-) -> Iterator[Optional[str]]:
+) -> Iterator[str | None]:
     if isinstance(input, list):
         # most complicated case: list of inits
         # for multiple chains, we need to create multiple files
@@ -169,12 +169,12 @@ def _temp_multiinput(
 
 @contextlib.contextmanager
 def temp_metrics(
-    metrics: Union[
-        str, os.PathLike, Mapping[str, Any], np.ndarray, list[Any], None
-    ],
+    metrics: (
+        str | os.PathLike | Mapping[str, Any] | np.ndarray | list[Any] | None
+    ),
     *,
     id: int = 1,
-) -> Iterator[Union[str, None]]:
+) -> Iterator[str | None]:
     if isinstance(metrics, dict):
         if 'inv_metric' not in metrics:
             raise ValueError('Entry "inv_metric" not found in metric dict.')
@@ -199,13 +199,13 @@ def temp_metrics(
 
 @contextlib.contextmanager
 def temp_inits(
-    inits: Union[
-        str, os.PathLike, Mapping[str, Any], float, int, list[Any], None
-    ],
+    inits: (
+        str | os.PathLike | Mapping[str, Any] | float | int | list[Any] | None
+    ),
     *,
     allow_multiple: bool = True,
     id: int = 1,
-) -> Iterator[Union[str, float, int, None]]:
+) -> Iterator[str | float | int | None]:
     if isinstance(inits, (float, int)):
         yield inits
         return

@@ -5,14 +5,14 @@ CmdStan arguments
 import os
 from enum import Enum, auto
 from time import time
-from typing import Any, Mapping, Optional, Union
+from typing import Any, Mapping
 
 import numpy as np
 from numpy.random import default_rng
 
 from cmdstanpy.utils import cmdstan_path, cmdstan_version_before, get_logger
 
-OptionalPath = Union[str, os.PathLike, None]
+OptionalPath = str | os.PathLike | None
 
 
 class Method(Enum):
@@ -52,19 +52,19 @@ class SamplerArgs:
 
     def __init__(
         self,
-        iter_warmup: Optional[int] = None,
-        iter_sampling: Optional[int] = None,
+        iter_warmup: int | None = None,
+        iter_sampling: int | None = None,
         save_warmup: bool = False,
-        thin: Optional[int] = None,
-        max_treedepth: Optional[int] = None,
-        metric_type: Optional[str] = None,
-        metric_file: Union[str, list[str], None] = None,
-        step_size: Union[float, list[float], None] = None,
+        thin: int | None = None,
+        max_treedepth: int | None = None,
+        metric_type: str | None = None,
+        metric_file: str | list[str] | None = None,
+        step_size: float | list[float] | None = None,
         adapt_engaged: bool = True,
-        adapt_delta: Optional[float] = None,
-        adapt_init_phase: Optional[int] = None,
-        adapt_metric_window: Optional[int] = None,
-        adapt_step_size: Optional[int] = None,
+        adapt_delta: float | None = None,
+        adapt_init_phase: int | None = None,
+        adapt_metric_window: int | None = None,
+        adapt_step_size: int | None = None,
         fixed_param: bool = False,
         num_chains: int = 1,
     ) -> None:
@@ -74,8 +74,8 @@ class SamplerArgs:
         self.save_warmup = save_warmup
         self.thin = thin
         self.max_treedepth = max_treedepth
-        self.metric_type: Optional[str] = metric_type
-        self.metric_file: Union[str, list[str], None] = metric_file
+        self.metric_type: str | None = metric_type
+        self.metric_file: str | list[str] | None = metric_file
         self.step_size = step_size
         self.adapt_engaged = adapt_engaged
         self.adapt_delta = adapt_delta
@@ -86,7 +86,7 @@ class SamplerArgs:
         self.diagnostic_file = None
         self.num_chains = num_chains
 
-    def validate(self, chains: Optional[int]) -> None:
+    def validate(self, chains: int | None) -> None:
         """
         Check arguments correctness and consistency.
 
@@ -295,16 +295,16 @@ class OptimizeArgs:
 
     def __init__(
         self,
-        algorithm: Optional[str] = None,
-        init_alpha: Optional[float] = None,
-        iter: Optional[int] = None,
+        algorithm: str | None = None,
+        init_alpha: float | None = None,
+        iter: int | None = None,
         save_iterations: bool = False,
-        tol_obj: Optional[float] = None,
-        tol_rel_obj: Optional[float] = None,
-        tol_grad: Optional[float] = None,
-        tol_rel_grad: Optional[float] = None,
-        tol_param: Optional[float] = None,
-        history_size: Optional[int] = None,
+        tol_obj: float | None = None,
+        tol_rel_obj: float | None = None,
+        tol_grad: float | None = None,
+        tol_rel_grad: float | None = None,
+        tol_param: float | None = None,
+        history_size: int | None = None,
         jacobian: bool = False,
     ) -> None:
         self.algorithm = algorithm or ""
@@ -319,7 +319,7 @@ class OptimizeArgs:
         self.history_size = history_size
         self.jacobian = jacobian
 
-    def validate(self, _chains: Optional[int] = None) -> None:
+    def validate(self, _chains: int | None = None) -> None:
         """
         Check arguments correctness and consistency.
         """
@@ -383,13 +383,13 @@ class LaplaceArgs:
     """Arguments needed for laplace method."""
 
     def __init__(
-        self, mode: str, draws: Optional[int] = None, jacobian: bool = True
+        self, mode: str, draws: int | None = None, jacobian: bool = True
     ) -> None:
         self.mode = mode
         self.jacobian = jacobian
         self.draws = draws
 
-    def validate(self, _chains: Optional[int] = None) -> None:
+    def validate(self, _chains: int | None = None) -> None:
         """Check arguments correctness and consistency."""
         if not os.path.exists(self.mode):
             raise ValueError(f'Invalid path for mode file: {self.mode}')
@@ -411,18 +411,18 @@ class PathfinderArgs:
 
     def __init__(
         self,
-        init_alpha: Optional[float] = None,
-        tol_obj: Optional[float] = None,
-        tol_rel_obj: Optional[float] = None,
-        tol_grad: Optional[float] = None,
-        tol_rel_grad: Optional[float] = None,
-        tol_param: Optional[float] = None,
-        history_size: Optional[int] = None,
-        num_psis_draws: Optional[int] = None,
-        num_paths: Optional[int] = None,
-        max_lbfgs_iters: Optional[int] = None,
-        num_draws: Optional[int] = None,
-        num_elbo_draws: Optional[int] = None,
+        init_alpha: float | None = None,
+        tol_obj: float | None = None,
+        tol_rel_obj: float | None = None,
+        tol_grad: float | None = None,
+        tol_rel_grad: float | None = None,
+        tol_param: float | None = None,
+        history_size: int | None = None,
+        num_psis_draws: int | None = None,
+        num_paths: int | None = None,
+        max_lbfgs_iters: int | None = None,
+        num_draws: int | None = None,
+        num_elbo_draws: int | None = None,
         save_single_paths: bool = False,
         psis_resample: bool = True,
         calculate_lp: bool = True,
@@ -445,7 +445,7 @@ class PathfinderArgs:
         self.psis_resample = psis_resample
         self.calculate_lp = calculate_lp
 
-    def validate(self, _chains: Optional[int] = None) -> None:
+    def validate(self, _chains: int | None = None) -> None:
         """
         Check arguments correctness and consistency.
         """
@@ -514,7 +514,7 @@ class GenerateQuantitiesArgs:
 
     def validate(
         self,
-        chains: Optional[int] = None,  # pylint: disable=unused-argument
+        chains: int | None = None,  # pylint: disable=unused-argument
     ) -> None:
         """
         Check arguments correctness and consistency.
@@ -543,16 +543,16 @@ class VariationalArgs:
 
     def __init__(
         self,
-        algorithm: Optional[str] = None,
-        iter: Optional[int] = None,
-        grad_samples: Optional[int] = None,
-        elbo_samples: Optional[int] = None,
-        eta: Optional[float] = None,
-        adapt_iter: Optional[int] = None,
+        algorithm: str | None = None,
+        iter: int | None = None,
+        grad_samples: int | None = None,
+        elbo_samples: int | None = None,
+        eta: float | None = None,
+        adapt_iter: int | None = None,
         adapt_engaged: bool = True,
-        tol_rel_obj: Optional[float] = None,
-        eval_elbo: Optional[int] = None,
-        output_samples: Optional[int] = None,
+        tol_rel_obj: float | None = None,
+        eval_elbo: int | None = None,
+        output_samples: int | None = None,
     ) -> None:
         self.algorithm = algorithm
         self.iter = iter
@@ -567,7 +567,7 @@ class VariationalArgs:
 
     def validate(
         self,
-        chains: Optional[int] = None,  # pylint: disable=unused-argument
+        chains: int | None = None,  # pylint: disable=unused-argument
     ) -> None:
         """
         Check arguments correctness and consistency.
@@ -633,23 +633,23 @@ class CmdStanArgs:
         self,
         model_name: str,
         model_exe: str,
-        chain_ids: Optional[list[int]],
-        method_args: Union[
-            SamplerArgs,
-            OptimizeArgs,
-            GenerateQuantitiesArgs,
-            VariationalArgs,
-            LaplaceArgs,
-            PathfinderArgs,
-        ],
-        data: Union[Mapping[str, Any], str, None] = None,
-        seed: Union[int, list[int], None] = None,
-        inits: Union[int, float, str, list[str], None] = None,
+        chain_ids: list[int] | None,
+        method_args: (
+            SamplerArgs
+            | OptimizeArgs
+            | GenerateQuantitiesArgs
+            | VariationalArgs
+            | LaplaceArgs
+            | PathfinderArgs
+        ),
+        data: Mapping[str, Any] | str | None = None,
+        seed: int | list[int] | None = None,
+        inits: int | float | str | list[str] | None = None,
         output_dir: OptionalPath = None,
-        sig_figs: Optional[int] = None,
+        sig_figs: int | None = None,
         save_latent_dynamics: bool = False,
         save_profile: bool = False,
-        refresh: Optional[int] = None,
+        refresh: int | None = None,
     ) -> None:
         """Initialize object."""
         self.model_name = model_name
@@ -839,8 +839,8 @@ class CmdStanArgs:
         idx: int,
         csv_file: str,
         *,
-        diagnostic_file: Optional[str] = None,
-        profile_file: Optional[str] = None,
+        diagnostic_file: str | None = None,
+        profile_file: str | None = None,
     ) -> list[str]:
         """
         Compose CmdStan command for non-default arguments.
