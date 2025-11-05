@@ -5,7 +5,7 @@ Container for the result of running the sample (MCMC) method
 import math
 import os
 from io import StringIO
-from typing import Any, Hashable, MutableMapping, Optional, Sequence, Union
+from typing import Any, Hashable, MutableMapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -97,8 +97,8 @@ class CmdStanMCMC:
             self._check_sampler_diagnostics()
 
     def create_inits(
-        self, seed: Optional[int] = None, chains: int = 4
-    ) -> Union[list[dict[str, np.ndarray]], dict[str, np.ndarray]]:
+        self, seed: int | None = None, chains: int = 4
+    ) -> list[dict[str, np.ndarray]] | dict[str, np.ndarray]:
         """
         Create initial values for the parameters of the model by
         randomly selecting draws from the MCMC samples. If the samples
@@ -211,7 +211,7 @@ class CmdStanMCMC:
         return self._metadata.column_names
 
     @property
-    def metric_type(self) -> Optional[str]:
+    def metric_type(self) -> str | None:
         """
         Metric type used for adaptation, either 'diag_e' or 'dense_e', according
         to CmdStan arg 'metric'.
@@ -225,7 +225,7 @@ class CmdStanMCMC:
 
     # TODO(2.0): remove
     @property
-    def metric(self) -> Optional[np.ndarray]:
+    def metric(self) -> np.ndarray | None:
         """Deprecated. Use ``.inv_metric`` instead."""
         get_logger().warning(
             'The "metric" property is deprecated, use "inv_metric" instead. '
@@ -234,7 +234,7 @@ class CmdStanMCMC:
         return self.inv_metric
 
     @property
-    def inv_metric(self) -> Optional[np.ndarray]:
+    def inv_metric(self) -> np.ndarray | None:
         """
         Inverse mass matrix used by sampler for each chain.
         Returns a ``nchains x nparams`` array when metric_type is 'diag_e',
@@ -248,7 +248,7 @@ class CmdStanMCMC:
         return self._metric
 
     @property
-    def step_size(self) -> Optional[np.ndarray]:
+    def step_size(self) -> np.ndarray | None:
         """
         Step size used by sampler for each chain.
         When sampler algorithm 'fixed_param' is specified, step size is None.
@@ -264,7 +264,7 @@ class CmdStanMCMC:
         return self._thin
 
     @property
-    def divergences(self) -> Optional[np.ndarray]:
+    def divergences(self) -> np.ndarray | None:
         """
         Per-chain total number of post-warmup divergent iterations.
         When sampler algorithm 'fixed_param' is specified, returns None.
@@ -272,7 +272,7 @@ class CmdStanMCMC:
         return self._divergences if not self._is_fixed_param else None
 
     @property
-    def max_treedepths(self) -> Optional[np.ndarray]:
+    def max_treedepths(self) -> np.ndarray | None:
         """
         Per-chain total number of post-warmup iterations where the NUTS sampler
         reached the maximum allowed treedepth.
@@ -564,7 +564,7 @@ class CmdStanMCMC:
         summary_data.index.name = None
         return summary_data[mask]
 
-    def diagnose(self) -> Optional[str]:
+    def diagnose(self) -> str | None:
         """
         Run cmdstan/bin/diagnose over all output CSV files,
         return console output.
@@ -586,7 +586,7 @@ class CmdStanMCMC:
 
     def draws_pd(
         self,
-        vars: Union[list[str], str, None] = None,
+        vars: list[str] | str | None = None,
         inc_warmup: bool = False,
     ) -> pd.DataFrame:
         """
@@ -664,7 +664,7 @@ class CmdStanMCMC:
         )[cols]
 
     def draws_xr(
-        self, vars: Union[str, list[str], None] = None, inc_warmup: bool = False
+        self, vars: str | list[str] | None = None, inc_warmup: bool = False
     ) -> "xr.Dataset":
         """
         Returns the sampler draws as a xarray Dataset.
@@ -822,7 +822,7 @@ class CmdStanMCMC:
             for name, var in self._metadata.method_vars.items()
         }
 
-    def save_csvfiles(self, dir: Optional[str] = None) -> None:
+    def save_csvfiles(self, dir: str | None = None) -> None:
         """
         Move output CSV files to specified directory.  If files were
         written to the temporary session directory, clean filename.

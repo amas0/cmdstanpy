@@ -6,7 +6,6 @@ import re
 import shutil
 import tempfile
 from test import check_present
-from typing import List
 from unittest.mock import patch
 
 import numpy as np
@@ -211,7 +210,7 @@ def test_compile_with_bad_includes(caplog: pytest.LogCaptureFixture) -> None:
     ],
 )
 def test_compile_with_includes(
-    caplog: pytest.LogCaptureFixture, stan_file: str, include_paths: List[str]
+    caplog: pytest.LogCaptureFixture, stan_file: str, include_paths: list[str]
 ) -> None:
     getmtime = os.path.getmtime
     stan_file = os.path.join(DATAFILES_PATH, stan_file)

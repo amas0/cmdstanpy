@@ -2,7 +2,7 @@
 Container for the result of running a laplace approximation.
 """
 
-from typing import Any, Hashable, MutableMapping, Optional, Union
+from typing import Any, Hashable, MutableMapping
 
 import numpy as np
 import pandas as pd
@@ -41,8 +41,8 @@ class CmdStanLaplace:
         self._metadata = InferenceMetadata.from_csv(self._runset.csv_files[0])
 
     def create_inits(
-        self, seed: Optional[int] = None, chains: int = 4
-    ) -> Union[list[dict[str, np.ndarray]], dict[str, np.ndarray]]:
+        self, seed: int | None = None, chains: int = 4
+    ) -> list[dict[str, np.ndarray]] | dict[str, np.ndarray]:
         """
         Create initial values for the parameters of the model
         by randomly selecting draws from the Laplace approximation.
@@ -168,7 +168,7 @@ class CmdStanLaplace:
 
     def draws_pd(
         self,
-        vars: Union[list[str], str, None] = None,
+        vars: list[str] | str | None = None,
     ) -> pd.DataFrame:
         if vars is not None:
             if isinstance(vars, str):
@@ -197,7 +197,7 @@ class CmdStanLaplace:
 
     def draws_xr(
         self,
-        vars: Union[str, list[str], None] = None,
+        vars: str | list[str] | None = None,
     ) -> "xr.Dataset":
         """
         Returns the sampler draws as a xarray Dataset.
@@ -308,7 +308,7 @@ class CmdStanLaplace:
         """
         return self._metadata.column_names
 
-    def save_csvfiles(self, dir: Optional[str] = None) -> None:
+    def save_csvfiles(self, dir: str | None = None) -> None:
         """
         Move output CSV files to specified directory.  If files were
         written to the temporary session directory, clean filename.

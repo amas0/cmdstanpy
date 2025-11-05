@@ -2,8 +2,6 @@
 Container for the result of running Pathfinder.
 """
 
-from typing import Optional, Union
-
 import numpy as np
 
 from cmdstanpy.cmdstan_args import Method
@@ -30,8 +28,8 @@ class CmdStanPathfinder:
         self._metadata = InferenceMetadata.from_csv(self._runset.csv_files[0])
 
     def create_inits(
-        self, seed: Optional[int] = None, chains: int = 4
-    ) -> Union[list[dict[str, np.ndarray]], dict[str, np.ndarray]]:
+        self, seed: int | None = None, chains: int = 4
+    ) -> list[dict[str, np.ndarray]] | dict[str, np.ndarray]:
         """
         Create initial values for the parameters of the model
         by randomly selecting draws from the Pathfinder approximation.
@@ -216,7 +214,7 @@ class CmdStanPathfinder:
             in (1, 'true')
         )
 
-    def save_csvfiles(self, dir: Optional[str] = None) -> None:
+    def save_csvfiles(self, dir: str | None = None) -> None:
         """
         Move output CSV files to specified directory.  If files were
         written to the temporary session directory, clean filename.
