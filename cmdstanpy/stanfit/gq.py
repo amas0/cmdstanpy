@@ -2,6 +2,7 @@
 Container for the result of running the
 generate quantities (GQ) method
 """
+from __future__ import annotations
 
 from collections import Counter
 from typing import (
@@ -399,7 +400,7 @@ class CmdStanGQ(Generic[Fit]):
 
     @overload
     def draws_xr(
-        self: "CmdStanGQ[CmdStanMLE]" | "CmdStanGQ[CmdStanVB]",
+        self: CmdStanGQ[CmdStanMLE] | CmdStanGQ[CmdStanVB],
         vars: str | list[str] | None = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
