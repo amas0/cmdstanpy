@@ -16,9 +16,9 @@ def get_logger() -> logging.Logger:
     if not logger.hasHandlers():
         # send all messages to handlers
         logger.setLevel(logging.DEBUG)
-        # add a default handler to the logger to INFO and higher
+        # add a default handler to the logger to WARNING and higher
         handler = logging.StreamHandler()
-        handler.setLevel(logging.INFO)
+        handler.setLevel(logging.WARNING)
         handler.setFormatter(
             logging.Formatter(
                 "%(asctime)s - %(name)s - %(levelname)s - %(message)s",

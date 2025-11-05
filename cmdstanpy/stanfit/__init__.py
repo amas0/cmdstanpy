@@ -267,7 +267,7 @@ def from_csv(
                 runset._set_retcode(i, 0)
             return CmdStanPathfinder(runset)
         else:
-            get_logger().info(
+            get_logger().warning(
                 'Unable to process CSV output files from method %s.',
                 (config_dict['method']),
             )
