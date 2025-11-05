@@ -15,7 +15,7 @@ def get_logger() -> logging.Logger:
     logger = logging.getLogger("cmdstanpy")
     if not logger.hasHandlers():
         # send all messages to handlers
-        logger.setLevel(logging.WARNING)
+        logger.setLevel(logging.DEBUG)
         # add a default handler to the logger to WARNING and higher
         handler = logging.StreamHandler()
         handler.setLevel(logging.WARNING)
