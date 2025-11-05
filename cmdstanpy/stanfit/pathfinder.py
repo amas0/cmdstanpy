@@ -206,7 +206,7 @@ class CmdStanPathfinder:
         Returns True if the draws were resampled from several Pathfinder
         approximations, False otherwise.
         """
-        return (  # type: ignore
+        return (
             self._metadata.cmdstan_config.get("num_paths", 4) > 1
             and self._metadata.cmdstan_config.get('psis_resample', 1)
             in (1, 'true')

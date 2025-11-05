@@ -8,7 +8,7 @@ import platform
 import re
 import shutil
 import tempfile
-from typing import Any, Iterator, Mapping
+from typing import Any, Iterator, Mapping, Sequence
 
 import numpy as np
 
@@ -131,10 +131,12 @@ temp_single_json = contextlib.contextmanager(_temp_single_json)
 
 
 def _temp_multiinput(
-    input: str | os.PathLike | Mapping[str, Any] | list[Any] | None,
+    input: str | os.PathLike | Mapping[str, Any] | Sequence[Any] | None,
     base: int = 1,
 ) -> Iterator[str | None]:
-    if isinstance(input, list):
+    if isinstance(input, Sequence) and not isinstance(
+        input, (str, os.PathLike)
+    ):
         # most complicated case: list of inits
         # for multiple chains, we need to create multiple files
         # which look like somename_{i}.json and then pass somename.json
@@ -170,7 +172,12 @@ def _temp_multiinput(
 @contextlib.contextmanager
 def temp_metrics(
     metrics: (
-        str | os.PathLike | Mapping[str, Any] | np.ndarray | list[Any] | None
+        str
+        | os.PathLike
+        | Mapping[str, Any]
+        | np.ndarray
+        | Sequence[Any]
+        | None
     ),
     *,
     id: int = 1,
@@ -200,7 +207,13 @@ def temp_metrics(
 @contextlib.contextmanager
 def temp_inits(
     inits: (
-        str | os.PathLike | Mapping[str, Any] | float | int | list[Any] | None
+        str
+        | os.PathLike
+        | Mapping[str, Any]
+        | float
+        | int
+        | Sequence[Any]
+        | None
     ),
     *,
     allow_multiple: bool = True,
@@ -212,7 +225,9 @@ def temp_inits(
     if allow_multiple:
         yield from _temp_multiinput(inits, base=id)
     else:
-        if isinstance(inits, list):
+        if isinstance(inits, Sequence) and not isinstance(
+            inits, (str, os.PathLike)
+        ):
             raise ValueError('Expected single initialization, got list')
         yield from _temp_single_json(inits)
 

@@ -29,9 +29,10 @@ import tarfile
 import urllib.error
 import urllib.request
 from collections import OrderedDict
+from functools import cached_property
 from pathlib import Path
 from time import sleep
-from typing import TYPE_CHECKING, Any, Callable
+from typing import Any, Callable
 
 from tqdm.auto import tqdm
 
@@ -46,18 +47,6 @@ from cmdstanpy.utils import (
 from cmdstanpy.utils.cmdstan import get_download_url
 
 from . import progress as progbar
-
-if sys.version_info >= (3, 8) or TYPE_CHECKING:
-    # mypy only knows about the new built-in cached_property
-    from functools import cached_property
-else:
-    # on older Python versions, this is the recommended
-    # way to get the same effect
-    from functools import lru_cache
-
-    def cached_property(fun):
-        return property(lru_cache(maxsize=None)(fun))
-
 
 try:
     # on MacOS and Linux, importing this

@@ -15,7 +15,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
 
 
-def test_csv_bytes_to_numpy():
+def test_csv_bytes_to_numpy() -> None:
     lines = [
         b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
         b"-6.81411,0.983499,0.787025,1,1,0,6.8147,0.20649\n",
@@ -36,7 +36,7 @@ def test_csv_bytes_to_numpy():
     assert arr_out[0].dtype == np.float64
 
 
-def test_csv_bytes_to_numpy_no_polars():
+def test_csv_bytes_to_numpy_no_polars() -> None:
     lines = [
         b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
         b"-6.81411,0.983499,0.787025,1,1,0,6.8147,0.20649\n",
@@ -58,7 +58,7 @@ def test_csv_bytes_to_numpy_no_polars():
         assert arr_out[0].dtype == np.float64
 
 
-def test_csv_bytes_to_numpy_single_element():
+def test_csv_bytes_to_numpy_single_element() -> None:
     lines = [
         b"-6.76206\n",
     ]
@@ -72,7 +72,7 @@ def test_csv_bytes_to_numpy_single_element():
     assert np.array_equal(arr_out, expected)
 
 
-def test_csv_bytes_to_numpy_single_element_no_polars():
+def test_csv_bytes_to_numpy_single_element_no_polars() -> None:
     lines = [
         b"-6.76206\n",
     ]
@@ -87,13 +87,12 @@ def test_csv_bytes_to_numpy_single_element_no_polars():
         assert np.array_equal(arr_out, expected)
 
 
-def test_csv_bytes_empty():
-    lines = []
-    arr = stancsv.csv_bytes_list_to_numpy(lines)
+def test_csv_bytes_empty() -> None:
+    arr = stancsv.csv_bytes_list_to_numpy([])
     assert np.array_equal(arr, np.empty((0, 0)))
 
 
-def test_parse_comments_header_and_draws():
+def test_parse_comments_header_and_draws() -> None:
     lines: list[bytes] = [b"# 1\n", b"a\n", b"3\n", b"# 4\n"]
     (
         comment_lines,
@@ -106,7 +105,7 @@ def test_parse_comments_header_and_draws():
     assert draws_lines == [b"3\n"]
 
 
-def test_parsing_adaptation_lines():
+def test_parsing_adaptation_lines() -> None:
     lines = [
         b"# Adaptation terminated\n",
         b"# Step size = 0.787025\n",
@@ -120,7 +119,7 @@ def test_parsing_adaptation_lines():
     assert mass_matrix == 1
 
 
-def test_parsing_adaptation_lines_diagonal():
+def test_parsing_adaptation_lines_diagonal() -> None:
     lines = [
         b"diag_e",  # Will be present in the Stan CSV config
         b"# Adaptation terminated\n",
@@ -134,7 +133,7 @@ def test_parsing_adaptation_lines_diagonal():
     assert np.array_equal(mass_matrix, np.array([1, 2, 3]))
 
 
-def test_parsing_adaptation_lines_dense():
+def test_parsing_adaptation_lines_dense() -> None:
     lines = [
         b"# Adaptation terminated\n",
         b"# Step size = 0.775147\n",
@@ -157,7 +156,7 @@ def test_parsing_adaptation_lines_dense():
     assert np.array_equal(mass_matrix, expected)
 
 
-def test_parsing_adaptation_lines_missing_everything():
+def test_parsing_adaptation_lines_missing_everything() -> None:
     lines = [
         b"# Adaptation terminated\n",
         b"# Elements of inverse mass matrix:\n",
@@ -165,7 +164,7 @@ def test_parsing_adaptation_lines_missing_everything():
     assert stancsv.parse_hmc_adaptation_lines(lines) == (None, None)
 
 
-def test_parsing_adaptation_lines_no_free_params():
+def test_parsing_adaptation_lines_no_free_params() -> None:
     lines = [
         b"# Adaptation terminated\n",
         b"# Step size = 1.77497\n",
@@ -175,7 +174,7 @@ def test_parsing_adaptation_lines_no_free_params():
     assert mass_matrix is None
 
 
-def test_csv_polars_and_numpy_equiv():
+def test_csv_polars_and_numpy_equiv() -> None:
     lines = [
         b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
         b"-6.81411,0.983499,0.787025,1,1,0,6.8147,0.20649\n",
@@ -188,7 +187,7 @@ def test_csv_polars_and_numpy_equiv():
     assert np.array_equal(arr_out_polars, arr_out_numpy)
 
 
-def test_csv_polars_and_numpy_equiv_one_line():
+def test_csv_polars_and_numpy_equiv_one_line() -> None:
     lines = [
         b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",
     ]
@@ -198,7 +197,7 @@ def test_csv_polars_and_numpy_equiv_one_line():
     assert np.array_equal(arr_out_polars, arr_out_numpy)
 
 
-def test_csv_polars_and_numpy_equiv_one_element():
+def test_csv_polars_and_numpy_equiv_one_element() -> None:
     lines = [
         b"-6.76206\n",
     ]
@@ -208,7 +207,7 @@ def test_csv_polars_and_numpy_equiv_one_element():
     assert np.array_equal(arr_out_polars, arr_out_numpy)
 
 
-def test_parse_stan_csv_from_file():
+def test_parse_stan_csv_from_file() -> None:
     csv_path = os.path.join(DATAFILES_PATH, "bernoulli_output_1.csv")
 
     (
@@ -234,7 +233,7 @@ def test_parse_stan_csv_from_file():
     assert draws_lines == draws_lines_path
 
 
-def test_config_parsing():
+def test_config_parsing() -> None:
     csv_path = os.path.join(DATAFILES_PATH, "bernoulli_output_1.csv")
 
     comment_lines, *_ = stancsv.parse_comments_header_and_draws(csv_path)
@@ -277,7 +276,7 @@ def test_config_parsing():
     assert config == expected
 
 
-def test_config_parsing_data_transforms():
+def test_config_parsing_data_transforms() -> None:
     comments = [
         b"# bool_t = true\n",
         b"# bool_f = false\n",
@@ -288,28 +287,28 @@ def test_config_parsing_data_transforms():
     assert stancsv.parse_config(comments) == expected
 
 
-def test_column_filter_basic():
+def test_column_filter_basic() -> None:
     data = [b"1,2,3\n", b"4,5,6\n"]
     indexes = [0, 2]
     expected = [b"1,3\n", b"4,6\n"]
     assert stancsv.filter_csv_bytes_by_columns(data, indexes) == expected
 
 
-def test_column_filter_empty_input():
+def test_column_filter_empty_input() -> None:
     assert not stancsv.filter_csv_bytes_by_columns([], [0])
 
 
-def test_column_filter_empty_indexes():
+def test_column_filter_empty_indexes() -> None:
     data = [b"1,2,3\n", b"4,5,6\n"]
     assert stancsv.filter_csv_bytes_by_columns(data, []) == [b"\n", b"\n"]
 
 
-def test_column_filter_single_column():
+def test_column_filter_single_column() -> None:
     data = [b"a,b,c\n", b"d,e,f\n"]
     assert stancsv.filter_csv_bytes_by_columns(data, [1]) == [b"b\n", b"e\n"]
 
 
-def test_column_filter_non_consecutive_indexes():
+def test_column_filter_non_consecutive_indexes() -> None:
     data = [b"9,8,7,6\n", b"5,4,3,2\n"]
     assert stancsv.filter_csv_bytes_by_columns(data, [2, 0]) == [
         b"7,9\n",
@@ -317,7 +316,7 @@ def test_column_filter_non_consecutive_indexes():
     ]
 
 
-def test_parse_header():
+def test_parse_header() -> None:
     header = (
         "lp__,accept_stat__,stepsize__,treedepth__"
         ",n_leapfrog__,divergent__,energy__,theta.1"
@@ -336,7 +335,7 @@ def test_parse_header():
     assert parsed == expected
 
 
-def test_extract_config_and_header_info():
+def test_extract_config_and_header_info() -> None:
     comments = [b"# stan_version_major = 2\n"]
     header = "lp__,theta.1"
     out = stancsv.construct_config_header_dict(comments, header)
@@ -345,14 +344,14 @@ def test_extract_config_and_header_info():
     assert out["column_names"] == ("lp__", "theta[1]")
 
 
-def test_parse_variational_eta():
+def test_parse_variational_eta() -> None:
     csv_path = os.path.join(DATAFILES_PATH, "variational", "eta_big_output.csv")
     comments, *_ = stancsv.parse_comments_header_and_draws(csv_path)
     eta = stancsv.parse_variational_eta(comments)
     assert eta == 100.0
 
 
-def test_parse_variational_eta_no_block():
+def test_parse_variational_eta_no_block() -> None:
     comments = [
         b"# stanc_version = stanc3 v2.28.0\n",
         b"# stancflags = \n",
@@ -366,7 +365,7 @@ def test_parse_variational_eta_no_block():
         stancsv.parse_variational_eta(comments)
 
 
-def test_max_treedepth_and_divergence_counts():
+def test_max_treedepth_and_divergence_counts() -> None:
     header = (
         "lp__,accept_stat__,stepsize__,treedepth__,"
         "n_leapfrog__,divergent__,energy__,theta\n"
@@ -387,7 +386,7 @@ def test_max_treedepth_and_divergence_counts():
     assert out == (2, 1)
 
 
-def test_max_treedepth_and_divergence_counts_warmup_draws():
+def test_max_treedepth_and_divergence_counts_warmup_draws() -> None:
     header = (
         "lp__,accept_stat__,stepsize__,treedepth__,"
         "n_leapfrog__,divergent__,energy__,theta\n"
@@ -408,19 +407,16 @@ def test_max_treedepth_and_divergence_counts_warmup_draws():
     assert out == (1, 1)
 
 
-def test_max_treedepth_and_divergence_counts_no_draws():
+def test_max_treedepth_and_divergence_counts_no_draws() -> None:
     header = (
         "lp__,accept_stat__,stepsize__,treedepth__,"
         "n_leapfrog__,divergent__,energy__,theta\n"
     )
-    draws = []
-    out = stancsv.extract_max_treedepth_and_divergence_counts(
-        header, draws, 10, 0
-    )
+    out = stancsv.extract_max_treedepth_and_divergence_counts(header, [], 10, 0)
     assert out == (0, 0)
 
 
-def test_max_treedepth_and_divergence_invalid():
+def test_max_treedepth_and_divergence_invalid() -> None:
     header = "lp__,accept_stat__,stepsize__,n_leapfrog__,energy__,theta\n"
     draws = [
         b"-4.78686,0.986298,1.09169,3,5.29492,0.550024\n",
@@ -430,7 +426,7 @@ def test_max_treedepth_and_divergence_invalid():
     ) == (0, 0)
 
 
-def test_sneaky_fixed_param_check():
+def test_sneaky_fixed_param_check() -> None:
     sneaky_header = "lp__,accept_stat__,N,y_sim.1"
     normal_header = (
         "lp__,accept_stat__,stepsize__,treedepth__,"
@@ -441,12 +437,12 @@ def test_sneaky_fixed_param_check():
     assert not stancsv.is_sneaky_fixed_param(normal_header)
 
 
-def test_warmup_sampling_draw_counts():
+def test_warmup_sampling_draw_counts() -> None:
     csv_path = os.path.join(DATAFILES_PATH, "bernoulli_output_1.csv")
     assert stancsv.count_warmup_and_sampling_draws(csv_path) == (0, 10)
 
 
-def test_warmup_sampling_draw_counts_with_warmup():
+def test_warmup_sampling_draw_counts_with_warmup() -> None:
     lines = [
         b"#     algorithm = hmc (Default)\n",
         (
@@ -466,7 +462,7 @@ def test_warmup_sampling_draw_counts_with_warmup():
     assert stancsv.count_warmup_and_sampling_draws(fio) == (1, 1)
 
 
-def test_warmup_sampling_draw_counts_fixed_param():
+def test_warmup_sampling_draw_counts_fixed_param() -> None:
     lines = [
         b"#     algorithm = fixed_param\n",
         (
@@ -482,7 +478,7 @@ def test_warmup_sampling_draw_counts_fixed_param():
     assert stancsv.count_warmup_and_sampling_draws(fio) == (0, 2)
 
 
-def test_warmup_sampling_draw_counts_no_draws():
+def test_warmup_sampling_draw_counts_no_draws() -> None:
     lines = [
         b"#     algorithm = fixed_param\n",
         (
@@ -496,7 +492,7 @@ def test_warmup_sampling_draw_counts_no_draws():
     assert stancsv.count_warmup_and_sampling_draws(fio) == (0, 0)
 
 
-def test_warmup_sampling_draw_counts_invalid():
+def test_warmup_sampling_draw_counts_invalid() -> None:
     lines = [
         b"#     algorithm = fixed_param\n",
     ]
@@ -505,25 +501,24 @@ def test_warmup_sampling_draw_counts_invalid():
         stancsv.count_warmup_and_sampling_draws(fio)
 
 
-def test_inconsistent_draws_shape():
+def test_inconsistent_draws_shape() -> None:
     header = "a,b"
     draws = [b"0,1,2\n"]
     with pytest.raises(ValueError):
         stancsv.raise_on_inconsistent_draws_shape(header, draws)
 
 
-def test_inconsistent_draws_shape_empty():
-    draws = []
-    stancsv.raise_on_inconsistent_draws_shape("", draws)
+def test_inconsistent_draws_shape_empty() -> None:
+    stancsv.raise_on_inconsistent_draws_shape("", [])
 
 
-def test_invalid_adaptation_block_good():
+def test_invalid_adaptation_block_good() -> None:
     csv_path = os.path.join(DATAFILES_PATH, "bernoulli_output_1.csv")
     comments, *_ = stancsv.parse_comments_header_and_draws(csv_path)
     stancsv.raise_on_invalid_adaptation_block(comments)
 
 
-def test_invalid_adaptation_block_missing():
+def test_invalid_adaptation_block_missing() -> None:
     lines = [
         b"#         metric = diag_e (Default)\n",
         (
@@ -538,7 +533,7 @@ def test_invalid_adaptation_block_missing():
         stancsv.raise_on_invalid_adaptation_block(lines)
 
 
-def test_invalid_adaptation_block_no_metric():
+def test_invalid_adaptation_block_no_metric() -> None:
     lines = [
         (
             b"lp__,accept_stat__,stepsize__,treedepth__,"
@@ -553,7 +548,7 @@ def test_invalid_adaptation_block_no_metric():
         stancsv.raise_on_invalid_adaptation_block(lines)
 
 
-def test_invalid_adaptation_block_invalid_step_size():
+def test_invalid_adaptation_block_invalid_step_size() -> None:
     lines = [
         b"#         metric = diag_e (Default)\n",
         (
@@ -569,7 +564,7 @@ def test_invalid_adaptation_block_invalid_step_size():
         stancsv.raise_on_invalid_adaptation_block(lines)
 
 
-def test_invalid_adaptation_block_mismatched_structure():
+def test_invalid_adaptation_block_mismatched_structure() -> None:
     lines = [
         b"#         metric = diag_e (Default)\n",
         (
@@ -585,7 +580,7 @@ def test_invalid_adaptation_block_mismatched_structure():
         stancsv.raise_on_invalid_adaptation_block(lines)
 
 
-def test_invalid_adaptation_block_missing_step_size():
+def test_invalid_adaptation_block_missing_step_size() -> None:
     lines = [
         b"#         metric = diag_e (Default)\n",
         (
@@ -600,7 +595,7 @@ def test_invalid_adaptation_block_missing_step_size():
         stancsv.raise_on_invalid_adaptation_block(lines)
 
 
-def test_invalid_adaptation_block_unit_e():
+def test_invalid_adaptation_block_unit_e() -> None:
     lines = [
         b"#         metric = unit_e\n",
         (
@@ -614,7 +609,7 @@ def test_invalid_adaptation_block_unit_e():
     stancsv.raise_on_invalid_adaptation_block(lines)
 
 
-def test_invalid_adaptation_block_dense_e_valid():
+def test_invalid_adaptation_block_dense_e_valid() -> None:
     lines = [
         b"#         metric = dense_e\n",
         (
@@ -631,7 +626,7 @@ def test_invalid_adaptation_block_dense_e_valid():
     stancsv.raise_on_invalid_adaptation_block(lines)
 
 
-def test_invalid_adaptation_block_dense_e_invalid():
+def test_invalid_adaptation_block_dense_e_invalid() -> None:
     lines = [
         b"#         metric = dense_e\n",
         (
@@ -649,7 +644,7 @@ def test_invalid_adaptation_block_dense_e_invalid():
         stancsv.raise_on_invalid_adaptation_block(lines)
 
 
-def test_parsing_timing_lines():
+def test_parsing_timing_lines() -> None:
     lines = [
         b"# \n",
         b"#  Elapsed Time: 0.001332 seconds (Warm-up)\n",
@@ -665,7 +660,7 @@ def test_parsing_timing_lines():
     assert out['Total'] == 0.001581
 
 
-def test_munge_varname():
+def test_munge_varname() -> None:
     name1 = "a"
     name2 = "a:1"
     name3 = "a:1.2"

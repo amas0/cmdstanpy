@@ -19,7 +19,7 @@ We welcome contributions!  Contributions should follow the general outlines of t
 
 * The GitHub repo organization follows the gitflow model described by Vincent Driessen in the blog post ["A successful Git branching model."](https://nvie.com/posts/a-successful-git-branching-model/).  The main developer branch is `develop`; it should always be runnable.
 
-* Unit tests must be runnable under both the [unittest](https://docs.python.org/3/library/unittest.html#module-unittest) and [PyTest](https://docs.pytest.org/en/stable/) frameworks.
+* Unit tests must be runnable under the [PyTest](https://docs.pytest.org/en/stable/) framework, and must pass against the latest release of [CmdStan](https://github.com/stan-dev/cmdstan).
 
 * Both [PyLint](https://www.pylint.org) and [Flake8](https://flake8.pycqa.org/en/latest/) are used to check code style and formatting according to rules in https://github.com/stan-dev/cmdstanpy/blob/develop/.pylintrc  and https://github.com/stan-dev/cmdstanpy/blob/a6e09190af555aa6d05993d630ebf39a3d4bb867/.travis.yml#L30. Code is formatted with [isort](https://pycqa.github.io/isort/) and [black](https://black.readthedocs.io/en/stable/).
 

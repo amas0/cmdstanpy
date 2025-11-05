@@ -1,10 +1,13 @@
 """Logging control tests"""
 
 import logging
+
+import pytest
+
 import cmdstanpy
 
 
-def test_disable_logging(caplog):
+def test_disable_logging(caplog: pytest.LogCaptureFixture) -> None:
     logger = cmdstanpy.utils.logging.get_logger()
 
     with caplog.at_level(logging.INFO, logger="cmdstanpy"):
@@ -21,7 +24,9 @@ def test_disable_logging(caplog):
     logger.disabled = False
 
 
-def test_disable_logging_context_manager(caplog):
+def test_disable_logging_context_manager(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     logger = cmdstanpy.utils.logging.get_logger()
 
     with caplog.at_level(logging.INFO, logger="cmdstanpy"):
@@ -42,7 +47,9 @@ def test_disable_logging_context_manager(caplog):
     logger.disabled = False
 
 
-def test_disable_logging_context_manager_nested(caplog):
+def test_disable_logging_context_manager_nested(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     logger = cmdstanpy.utils.logging.get_logger()
 
     with caplog.at_level(logging.INFO, logger="cmdstanpy"):

@@ -53,7 +53,7 @@ BERNOULLI_COLS = SAMPLER_STATE + ['theta']
         'path~with~tilde/bernoulli_path_with_tilde.stan',
     ],
 )
-def test_bernoulli_good(stanfile: str):
+def test_bernoulli_good(stanfile: str) -> None:
     stan = os.path.join(DATAFILES_PATH, stanfile)
     bern_model = CmdStanModel(stan_file=stan, force_compile=True)
 
@@ -88,7 +88,9 @@ def test_bernoulli_good(stanfile: str):
 
     assert bern_fit.draws().shape == (100, 2, len(BERNOULLI_COLS))
     assert bern_fit.metric_type == 'diag_e'
+    assert bern_fit.step_size is not None
     assert bern_fit.step_size.shape == (2,)
+    assert bern_fit.inv_metric is not None
     assert bern_fit.inv_metric.shape == (2, 1)
 
     assert bern_fit.draws(concat_chains=True).shape == (
@@ -124,7 +126,9 @@ def test_bernoulli_good(stanfile: str):
     bern_sample = bern_fit.draws()
     assert bern_sample.shape == (100, 2, len(BERNOULLI_COLS))
     assert bern_fit.metric_type == 'dense_e'
+    assert bern_fit.step_size is not None
     assert bern_fit.step_size.shape == (2,)
+    assert bern_fit.inv_metric is not None
     assert bern_fit.inv_metric.shape == (2, 1, 1)
 
     bern_fit = bern_model.sample(
@@ -203,6 +207,7 @@ def test_bernoulli_unit_e(stanfile: str) -> None:
     )
     assert bern_fit.metric_type == 'unit_e'
     assert bern_fit.inv_metric is None
+    assert bern_fit.step_size is not None
     assert bern_fit.step_size.shape == (2,)
 
     assert bern_fit.draws().shape == (100, 2, len(BERNOULLI_COLS))
@@ -640,6 +645,7 @@ def test_sample_no_params() -> None:
         assert datagen_fit.step_size is None
     else:
         assert 'lp__' in list(summary.index)
+        assert datagen_fit.step_size is not None
         assert np.isnan(datagen_fit.step_size).all()
 
     exe_only = os.path.join(DATAFILES_PATH, 'exe_only')
@@ -654,6 +660,7 @@ def test_sample_no_params() -> None:
         assert datagen2_fit.step_size is None
         assert 'lp__' not in list(summary.index)
     else:
+        assert datagen2_fit.step_size is not None
         assert np.isnan(datagen2_fit.step_size).all()
         assert 'lp__' in list(summary.index)
 
@@ -666,7 +673,7 @@ def test_index_bounds_error() -> None:
             oob_model.sample()
 
 
-def test_show_console(stanfile='bernoulli.stan'):
+def test_show_console(stanfile: str = 'bernoulli.stan') -> None:
     stan = os.path.join(DATAFILES_PATH, stanfile)
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
@@ -687,7 +694,7 @@ def test_show_console(stanfile='bernoulli.stan'):
     assert 'Chain [2] method = sample' in console
 
 
-def test_show_progress(stanfile='bernoulli.stan'):
+def test_show_progress(stanfile: str = 'bernoulli.stan') -> None:
     stan = os.path.join(DATAFILES_PATH, stanfile)
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
@@ -817,6 +824,7 @@ def test_validate_good_run() -> None:
         fit.summary(percentiles=[-1])
 
     diagnostics = fit.diagnose()
+    assert diagnostics is not None
     assert 'Treedepth satisfactory for all transitions.' in diagnostics
     assert 'No divergent transitions found.' in diagnostics
     assert 'E-BFMI satisfactory' in diagnostics
@@ -845,7 +853,9 @@ def test_validate_big_run() -> None:
     assert fit.num_draws_sampling == 1000
     assert fit.column_names == tuple(column_names)
     assert fit.metric_type == 'diag_e'
+    assert fit.step_size is not None
     assert fit.step_size.shape == (2,)
+    assert fit.inv_metric is not None
     assert fit.inv_metric.shape == (2, 2095)
     assert fit.draws().shape == (1000, 2, 2102)
     assert fit.draws_pd(vars=['phi']).shape == (2000, 2095)
@@ -856,6 +866,7 @@ def test_validate_big_run() -> None:
 def test_instantiate_from_csvfiles() -> None:
     csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-good')
     bern_fit = from_csv(path=csvfiles_path)
+    assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
     assert draws_pd.shape == (
         bern_fit.runset.chains * bern_fit.num_draws_sampling,
@@ -863,6 +874,7 @@ def test_instantiate_from_csvfiles() -> None:
     )
     csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-big')
     big_fit = from_csv(path=csvfiles_path)
+    assert isinstance(big_fit, CmdStanMCMC)
     draws_pd = big_fit.draws_pd()
     assert draws_pd.shape == (
         big_fit.runset.chains * big_fit.num_draws_sampling,
@@ -875,7 +887,7 @@ def test_instantiate_from_csvfiles() -> None:
         if file.endswith(".csv"):
             csvfiles.append(os.path.join(csvfiles_path, file))
     bern_fit = from_csv(path=csvfiles)
-
+    assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
     assert draws_pd.shape == (
         bern_fit.runset.chains * bern_fit.num_draws_sampling,
@@ -883,6 +895,7 @@ def test_instantiate_from_csvfiles() -> None:
     )
     # single csvfile
     bern_fit = from_csv(path=csvfiles[0])
+    assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
     assert draws_pd.shape == (
         bern_fit.num_draws_sampling,
@@ -891,6 +904,7 @@ def test_instantiate_from_csvfiles() -> None:
     # glob
     csvfiles_path = os.path.join(csvfiles_path, '*.csv')
     big_fit = from_csv(path=csvfiles_path)
+    assert isinstance(big_fit, CmdStanMCMC)
     draws_pd = big_fit.draws_pd()
     assert draws_pd.shape == (
         big_fit.runset.chains * big_fit.num_draws_sampling,
@@ -898,10 +912,10 @@ def test_instantiate_from_csvfiles() -> None:
     )
 
 
-def test_pd_xr_agreement():
+def test_pd_xr_agreement() -> None:
     csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-good', '*.csv')
     bern_fit = from_csv(path=csvfiles_path)
-
+    assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
     draws_xr = bern_fit.draws_xr()
 
@@ -933,7 +947,7 @@ def test_instantiate_from_csvfiles_fail(
     ):
         from_csv(csvfiles_path, 'optimize')
 
-    csvfiles = []
+    csvfiles: list[str] = []
     with pytest.raises(ValueError, match=r'No CSV files found'):
         from_csv(csvfiles, 'sample')
 
@@ -980,12 +994,14 @@ def test_instantiate_from_csvfiles_fail(
 def test_from_csv_fixed_param() -> None:
     csv_path = os.path.join(DATAFILES_PATH, 'fixed_param_sample.csv')
     fixed_param_sample = from_csv(path=csv_path)
+    assert isinstance(fixed_param_sample, CmdStanMCMC)
     assert fixed_param_sample.draws_pd().shape == (100, 88)
 
 
 def test_from_csv_no_param_hmc() -> None:
     csv_path = os.path.join(DATAFILES_PATH, 'no_param_hmc_sample.csv')
     no_parameters_sample = from_csv(path=csv_path)
+    assert isinstance(no_parameters_sample, CmdStanMCMC)
     assert no_parameters_sample.draws_pd().shape == (100, 93)
 
 
@@ -1012,6 +1028,7 @@ def test_custom_metric(force_one_process_per_chain: bool) -> None:
         inv_metric=jmetric,
         force_one_process_per_chain=force_one_process_per_chain,
     )
+    assert fit1.inv_metric is not None
     np.testing.assert_allclose(
         fit1.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
     )
@@ -1029,6 +1046,7 @@ def test_custom_metric(force_one_process_per_chain: bool) -> None:
         inv_metric=[jmetric, jmetric2],
         force_one_process_per_chain=force_one_process_per_chain,
     )
+    assert fit2.inv_metric is not None
     np.testing.assert_allclose(
         fit2.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
     )
@@ -1046,6 +1064,7 @@ def test_custom_metric(force_one_process_per_chain: bool) -> None:
         inv_metric=metric_dict_1,
         force_one_process_per_chain=force_one_process_per_chain,
     )
+    assert fit3.inv_metric is not None
     for i in range(4):
         np.testing.assert_allclose(
             fit3.inv_metric[i], metric_dict_1['inv_metric'], atol=1e-6
@@ -1059,6 +1078,7 @@ def test_custom_metric(force_one_process_per_chain: bool) -> None:
         inv_metric=[metric_dict_1, metric_dict_2],
         force_one_process_per_chain=force_one_process_per_chain,
     )
+    assert fit4.inv_metric is not None
     np.testing.assert_allclose(
         fit4.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
     )
@@ -1075,6 +1095,7 @@ def test_custom_metric(force_one_process_per_chain: bool) -> None:
         inv_metric=[np.array(metric_dict_1['inv_metric']), jmetric2],
         force_one_process_per_chain=force_one_process_per_chain,
     )
+    assert fit5.inv_metric is not None
     np.testing.assert_allclose(
         fit5.inv_metric[0], metric_dict_1['inv_metric'], atol=1e-6
     )
@@ -1282,6 +1303,7 @@ def test_diagnose_divergences() -> None:
     ]
 
     diagnose = fit.diagnose()
+    assert diagnose is not None
     for e in expected:
         assert e in diagnose
 
@@ -1546,6 +1568,7 @@ def test_variable_bern() -> None:
 def test_variables_2d() -> None:
     csvfiles_path = os.path.join(DATAFILES_PATH, 'lotka-volterra.csv')
     fit = from_csv(path=csvfiles_path)
+    assert isinstance(fit, CmdStanMCMC)
     assert 20 == fit.num_draws_sampling
     assert 8 == len(fit.metadata.stan_vars)
     assert 'z' in fit.metadata.stan_vars
@@ -1562,6 +1585,7 @@ def test_variables_3d() -> None:
     # construct fit using existing sampler output
     csvfiles_path = os.path.join(DATAFILES_PATH, 'multidim_vars.csv')
     fit = from_csv(path=csvfiles_path)
+    assert isinstance(fit, CmdStanMCMC)
     assert 20 == fit.num_draws_sampling
     assert 3 == len(fit.metadata.stan_vars)
     assert 'y_rep' in fit.metadata.stan_vars
@@ -1627,7 +1651,7 @@ def test_validate() -> None:
     assert bern_fit.metric_type == 'diag_e'
 
 
-def test_validate_sample_sig_figs(stanfile='bernoulli.stan'):
+def test_validate_sample_sig_figs(stanfile: str = 'bernoulli.stan') -> None:
     if not cmdstan_version_before(2, 25):
         stan = os.path.join(DATAFILES_PATH, stanfile)
         bern_model = CmdStanModel(stan_file=stan)
@@ -1680,6 +1704,7 @@ def test_validate_summary_sig_figs() -> None:
             os.path.join(DATAFILES_PATH, 'logistic_output_4.csv'),
         ]
     )
+    assert isinstance(fit, CmdStanMCMC)
 
     sum_default = fit.summary()
 
@@ -2071,7 +2096,7 @@ def test_tuple_data_in() -> None:
     data_model.sample(data, chains=1, iter_warmup=1, iter_sampling=1)
 
 
-def test_csv_roundtrip():
+def test_csv_roundtrip() -> None:
     stan = os.path.join(DATAFILES_PATH, 'matrix_var.stan')
     model = CmdStanModel(stan_file=stan)
     fit = model.sample(
@@ -2085,6 +2110,7 @@ def test_csv_roundtrip():
     # mostly just asserting that from_csv always succeeds
     # in parsing latest cmdstan headers
     fit_from_csv = from_csv(fit.runset.csv_files)
+    assert isinstance(fit_from_csv, CmdStanMCMC)
     z_from_csv = fit_from_csv.stan_variable(var="z")
     assert z_from_csv.shape == (20, 4, 3)
     z_with_warmup_from_csv = fit.stan_variable(var="z", inc_warmup=True)
@@ -2092,7 +2118,7 @@ def test_csv_roundtrip():
 
 
 @pytest.mark.order(before="test_no_xarray")
-def test_serialization(stanfile='bernoulli.stan'):
+def test_serialization(stanfile: str = 'bernoulli.stan') -> None:
     # This test must before any test that uses the `without_import` context
     # manager because the latter uses `reload` with side effects that affect
     # the consistency of classes.
@@ -2119,7 +2145,7 @@ def test_serialization(stanfile='bernoulli.stan'):
         np.testing.assert_array_equal(value1, variables2[key])
 
 
-def test_mcmc_create_inits():
+def test_mcmc_create_inits() -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = cmdstanpy.CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
@@ -2143,13 +2169,15 @@ def test_mcmc_create_inits():
 
     seeded = mcmc.create_inits(seed=1234)
     seeded2 = mcmc.create_inits(seed=1234)
+    assert isinstance(seeded, list)
+    assert isinstance(seeded2, list)
     assert all(
         init1['theta'] == init2['theta']
         for init1, init2 in zip(seeded, seeded2)
     )
 
 
-def test_mcmc_init_sampling():
+def test_mcmc_init_sampling() -> None:
     stan = os.path.join(DATAFILES_PATH, 'logistic.stan')
     logistic_model = cmdstanpy.CmdStanModel(stan_file=stan)
     logistic_data = os.path.join(DATAFILES_PATH, 'logistic.data.R')
@@ -2163,7 +2191,7 @@ def test_mcmc_init_sampling():
     assert fit.draws().shape == (1000, 4, 9)
 
 
-def test_sample_dense_mass_matrix():
+def test_sample_dense_mass_matrix() -> None:
     stan = os.path.join(DATAFILES_PATH, 'linear_regression.stan')
     jdata = os.path.join(DATAFILES_PATH, 'linear_regression.data.json')
     linear_model = CmdStanModel(stan_file=stan)
@@ -2173,7 +2201,7 @@ def test_sample_dense_mass_matrix():
     assert fit.inv_metric.shape == (2, 3, 3)
 
 
-def test_no_output_draws():
+def test_no_output_draws() -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     model = cmdstanpy.CmdStanModel(stan_file=stan)
     data = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')

@@ -13,7 +13,7 @@ from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 from multiprocessing import cpu_count
-from typing import Any, Callable, Mapping, TypeVar
+from typing import Any, Callable, Mapping, Sequence, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -461,8 +461,7 @@ class CmdStanModel:
             Mapping[str, Any]
             | float
             | str
-            | list[str]
-            | list[Mapping[str, Any]]
+            | Sequence[str | Mapping[str, Any]]
             | None
         ) = None,
         iter_warmup: int | None = None,
@@ -493,7 +492,7 @@ class CmdStanModel:
             str
             | np.ndarray
             | Mapping[str, Any]
-            | list[str | np.ndarray | Mapping[str, Any]]
+            | Sequence[str | np.ndarray | Mapping[str, Any]]
             | None
         ) = None,
     ) -> CmdStanMCMC:
@@ -1360,7 +1359,13 @@ class CmdStanModel:
         calculate_lp: bool = True,
         # arguments standard to all methods
         seed: int | None = None,
-        inits: dict[str, float] | float | str | os.PathLike | None = None,
+        inits: (
+            Mapping[str, Any]
+            | float
+            | str
+            | Sequence[str | Mapping[str, Any]]
+            | None
+        ) = None,
         output_dir: OptionalPath = None,
         sig_figs: int | None = None,
         save_profile: bool = False,

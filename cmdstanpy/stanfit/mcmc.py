@@ -348,7 +348,7 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
-                self._chain_time.append(dzero['time'])  # type: ignore
+                self._chain_time.append(dzero['time'])
                 if not self._is_fixed_param:
                     self._divergences[i] = dzero['ct_divergences']
                     self._max_treedepths[i] = dzero['ct_max_treedepth']
@@ -360,7 +360,7 @@ class CmdStanMCMC:
                     save_warmup=self._save_warmup,
                     thin=self._thin,
                 )
-                self._chain_time.append(drest['time'])  # type: ignore
+                self._chain_time.append(drest['time'])
                 for key in dzero:
                     # check args that matter for parsing, plus name, version
                     if (

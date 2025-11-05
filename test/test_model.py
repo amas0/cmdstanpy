@@ -64,6 +64,7 @@ def test_ctor_compile_arg() -> None:
         os.remove(BERN_EXE)
 
     model = CmdStanModel(stan_file=BERN_STAN)
+    assert model.stan_file is not None
     assert os.path.samefile(model.stan_file, BERN_STAN)
     assert os.path.samefile(model.exe_file, BERN_EXE)
     exe_time = os.path.getmtime(model.exe_file)
@@ -144,7 +145,7 @@ def test_bad_stanc_options() -> None:
         bad_opts = {'include-paths': True}
         CmdStanModel(stan_file=BERN_STAN, stanc_options=bad_opts)
     with pytest.raises(ValueError):
-        bad_opts = {'include-paths': 'lkjdf'}
+        bad_opts = {'include-paths': 'lkjdf'}  # type: ignore
         CmdStanModel(stan_file=BERN_STAN, stanc_options=bad_opts)
 
 
@@ -440,7 +441,7 @@ def test_model_includes_implicit() -> None:
     assert os.path.samefile(model2.exe_file, exe)
 
 
-def test_diagnose():
+def test_diagnose() -> None:
     # Check the gradients.
     model = CmdStanModel(stan_file=BERN_STAN)
     gradients = model.diagnose(data=BERN_DATA)

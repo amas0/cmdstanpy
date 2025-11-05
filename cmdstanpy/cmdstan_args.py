@@ -643,7 +643,7 @@ class CmdStanArgs:
             | PathfinderArgs
         ),
         data: Mapping[str, Any] | str | None = None,
-        seed: int | list[int] | None = None,
+        seed: int | np.integer | list[int] | list[np.integer] | None = None,
         inits: int | float | str | list[str] | None = None,
         output_dir: OptionalPath = None,
         sig_figs: int | None = None,
