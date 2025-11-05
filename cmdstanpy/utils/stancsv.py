@@ -634,10 +634,12 @@ def parse_rdump_value(rhs: str) -> int | float | np.ndarray:
 
 
 def try_deduce_metric_type(
-    inv_metric: str
-    | np.ndarray
-    | Mapping[str, Any]
-    | Sequence[str | np.ndarray | Mapping[str, Any]],
+    inv_metric: (
+        str
+        | np.ndarray
+        | Mapping[str, Any]
+        | Sequence[str | np.ndarray | Mapping[str, Any]]
+    ),
 ) -> str | None:
     """Given a user-supplied metric, try to infer the correct metric type."""
     if isinstance(inv_metric, Sequence) and not isinstance(

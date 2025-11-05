@@ -475,9 +475,9 @@ def retrieve_version(version: str, progress: bool = True) -> None:
     for i in range(6):  # always retry to allow for transient URLErrors
         try:
             if progress and progbar.allow_show_progress():
-                progress_hook: Callable[
-                    [int, int, int], None
-                ] | None = wrap_url_progress_hook()
+                progress_hook: Callable[[int, int, int], None] | None = (
+                    wrap_url_progress_hook()
+                )
             else:
                 progress_hook = None
             file_tmp, _ = urllib.request.urlretrieve(

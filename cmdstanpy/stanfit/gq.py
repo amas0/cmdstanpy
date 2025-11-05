@@ -2,6 +2,7 @@
 Container for the result of running the
 generate quantities (GQ) method
 """
+
 from __future__ import annotations
 
 from collections import Counter
@@ -404,8 +405,7 @@ class CmdStanGQ(Generic[Fit]):
         vars: str | list[str] | None = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
-    ) -> NoReturn:
-        ...
+    ) -> NoReturn: ...
 
     @overload
     def draws_xr(
@@ -413,8 +413,7 @@ class CmdStanGQ(Generic[Fit]):
         vars: str | list[str] | None = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
-    ) -> "xr.Dataset":
-        ...
+    ) -> "xr.Dataset": ...
 
     def draws_xr(
         self,
