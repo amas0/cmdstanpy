@@ -1,4 +1,5 @@
 """The global configuration for the test suite"""
+
 import os
 import subprocess
 from typing import Generator

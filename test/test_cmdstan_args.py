@@ -1,9 +1,7 @@
 """CmdStan argument tests"""
 
-import logging
 import os
 import platform
-from test import check_present
 from time import time
 
 import numpy as np
@@ -20,7 +18,6 @@ from cmdstanpy.cmdstan_args import (
     SamplerArgs,
     VariationalArgs,
 )
-from cmdstanpy.utils import cmdstan_version_before
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
@@ -586,51 +583,35 @@ def test_args_bad() -> None:
         )
 
 
-def test_args_sig_figs(caplog: pytest.LogCaptureFixture) -> None:
+def test_args_sig_figs() -> None:
     sampler_args = SamplerArgs()
     cmdstan_path()  # sets os.environ['CMDSTAN']
-    if cmdstan_version_before(2, 25):
-        with caplog.at_level(logging.WARNING):
-            logging.getLogger()
-            CmdStanArgs(
-                model_name='bernoulli',
-                model_exe='bernoulli.exe',
-                chain_ids=[1, 2, 3, 4],
-                sig_figs=12,
-                method_args=sampler_args,
-            )
-        expect = (
-            'Argument "sig_figs" invalid for CmdStan versions < 2.25, using '
-            f'version {os.path.basename(cmdstan_path())} in directory '
-            f'{os.path.dirname(cmdstan_path())}'
-        )
-        check_present(caplog, ('cmdstanpy', 'WARNING', expect))
-    else:
-        cmdstan_args = CmdStanArgs(
+
+    cmdstan_args = CmdStanArgs(
+        model_name='bernoulli',
+        model_exe='bernoulli.exe',
+        chain_ids=[1, 2, 3, 4],
+        sig_figs=12,
+        method_args=sampler_args,
+    )
+    cmd = cmdstan_args.compose_command(idx=0, csv_file='bern-output-1.csv')
+    assert 'sig_figs=' in ' '.join(cmd)
+    with pytest.raises(ValueError):
+        CmdStanArgs(
             model_name='bernoulli',
             model_exe='bernoulli.exe',
             chain_ids=[1, 2, 3, 4],
-            sig_figs=12,
+            sig_figs=-1,
             method_args=sampler_args,
         )
-        cmd = cmdstan_args.compose_command(idx=0, csv_file='bern-output-1.csv')
-        assert 'sig_figs=' in ' '.join(cmd)
-        with pytest.raises(ValueError):
-            CmdStanArgs(
-                model_name='bernoulli',
-                model_exe='bernoulli.exe',
-                chain_ids=[1, 2, 3, 4],
-                sig_figs=-1,
-                method_args=sampler_args,
-            )
-        with pytest.raises(ValueError):
-            CmdStanArgs(
-                model_name='bernoulli',
-                model_exe='bernoulli.exe',
-                chain_ids=[1, 2, 3, 4],
-                sig_figs=20,
-                method_args=sampler_args,
-            )
+    with pytest.raises(ValueError):
+        CmdStanArgs(
+            model_name='bernoulli',
+            model_exe='bernoulli.exe',
+            chain_ids=[1, 2, 3, 4],
+            sig_figs=20,
+            method_args=sampler_args,
+        )
 
 
 def test_args_fitted_params() -> None:

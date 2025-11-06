@@ -4,14 +4,12 @@ import contextlib
 import io
 import logging
 import os
-from test import check_present, raises_nested
+from test import check_present
 from typing import Any
-from unittest.mock import MagicMock, patch
 
 import pytest
 
 from cmdstanpy.compilation import CompilerOptions, format_stan_file
-from cmdstanpy.utils import cmdstan_version_before
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
@@ -227,19 +225,3 @@ def test_model_format_options() -> None:
     formatted = sys_stdout.getvalue()
     assert formatted.count('{') == 3
     assert formatted.count('(') == 1
-
-
-@patch(
-    'cmdstanpy.utils.cmdstan.cmdstan_version',
-    MagicMock(return_value=(2, 27)),
-)
-def test_format_old_version() -> None:
-    assert cmdstan_version_before(2, 28)
-
-    stan = os.path.join(DATAFILES_PATH, 'format_me.stan')
-    with raises_nested(RuntimeError, r"--canonicalize"):
-        format_stan_file(stan, canonicalize='braces')
-    with raises_nested(RuntimeError, r"--max-line"):
-        format_stan_file(stan, max_line_length=88)
-
-    format_stan_file(stan, canonicalize=True)

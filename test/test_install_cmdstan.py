@@ -1,4 +1,5 @@
 """install_cmdstan test"""
+
 from unittest import mock
 
 import pytest

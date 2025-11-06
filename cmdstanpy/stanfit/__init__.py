@@ -13,7 +13,7 @@ from cmdstanpy.cmdstan_args import (
 )
 from cmdstanpy.utils import check_sampler_csv, get_logger, stancsv
 
-from .gq import CmdStanGQ
+from .gq import CmdStanGQ, PrevFit
 from .laplace import CmdStanLaplace
 from .mcmc import CmdStanMCMC
 from .metadata import InferenceMetadata
@@ -31,6 +31,7 @@ __all__ = [
     "CmdStanGQ",
     "CmdStanLaplace",
     "CmdStanPathfinder",
+    "PrevFit",
 ]
 
 

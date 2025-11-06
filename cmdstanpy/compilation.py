@@ -17,7 +17,6 @@ from cmdstanpy.utils.cmdstan import (
     EXTENSION,
     cmdstan_path,
     cmdstan_version,
-    cmdstan_version_before,
     stanc_path,
 )
 from cmdstanpy.utils.command import do_command
@@ -463,32 +462,13 @@ def format_stan_file(
         )
 
         if canonicalize:
-            if cmdstan_version_before(2, 29):
-                if isinstance(canonicalize, bool):
-                    cmd.append('--print-canonical')
-                else:
-                    raise ValueError(
-                        "Invalid arguments passed for current CmdStan"
-                        + " version({})\n".format(
-                            cmdstan_version() or "Unknown"
-                        )
-                        + "--canonicalize requires 2.29 or higher"
-                    )
+            if isinstance(canonicalize, str):
+                cmd.append('--canonicalize=' + canonicalize)
+            elif isinstance(canonicalize, Iterable):
+                cmd.append('--canonicalize=' + ','.join(canonicalize))
             else:
-                if isinstance(canonicalize, str):
-                    cmd.append('--canonicalize=' + canonicalize)
-                elif isinstance(canonicalize, Iterable):
-                    cmd.append('--canonicalize=' + ','.join(canonicalize))
-                else:
-                    cmd.append('--print-canonical')
+                cmd.append('--print-canonical')
 
-        # before 2.29, having both --print-canonical
-        # and --auto-format printed twice
-        if not (cmdstan_version_before(2, 29) and canonicalize):
-            cmd.append('--auto-format')
-
-        if not cmdstan_version_before(2, 29):
-            cmd.append(f'--max-line-length={max_line_length}')
         elif max_line_length != 78:
             raise ValueError(
                 "Invalid arguments passed for current CmdStan version"
