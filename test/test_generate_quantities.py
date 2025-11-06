@@ -626,7 +626,7 @@ def test_opt_save_iterations(caplog: pytest.LogCaptureFixture) -> None:
 
     # stan_variable
     theta = bern_gqs.stan_variable(var='theta')
-    assert theta.shape == (1,)
+    assert theta.shape == ()
     y_rep = bern_gqs.stan_variable(var='y_rep')
     assert y_rep.shape == (1, 10)
     theta = bern_gqs.stan_variable(var='theta', inc_iterations=True)
