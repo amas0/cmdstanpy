@@ -13,12 +13,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 from cmdstanpy.utils import get_logger
-from cmdstanpy.utils.cmdstan import (
-    EXTENSION,
-    cmdstan_path,
-    cmdstan_version,
-    stanc_path,
-)
+from cmdstanpy.utils.cmdstan import EXTENSION, cmdstan_path, stanc_path
 from cmdstanpy.utils.command import do_command
 from cmdstanpy.utils.filesystem import SanitizedOrTmpFilePath
 
@@ -469,12 +464,8 @@ def format_stan_file(
             else:
                 cmd.append('--print-canonical')
 
-        elif max_line_length != 78:
-            raise ValueError(
-                "Invalid arguments passed for current CmdStan version"
-                + " ({})\n".format(cmdstan_version() or "Unknown")
-                + "--max-line-length requires 2.29 or higher"
-            )
+        cmd.append('--auto-format')
+        cmd.append(f'--max-line-length={max_line_length}')
 
         out = subprocess.run(cmd, capture_output=True, text=True, check=True)
         if out.stderr:
