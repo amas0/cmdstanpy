@@ -771,3 +771,80 @@ def test_vb_xarray() -> None:
     bern_gqs = model.generate_quantities(data=jdata, previous_fit=bern_fit)
     with pytest.raises(RuntimeError, match="via Sampling"):
         _ = bern_gqs.draws_xr()
+
+
+def test_from_pathfinder() -> None:
+    stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
+    bern_model = CmdStanModel(stan_file=stan)
+    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+    bern_fit = bern_model.pathfinder(
+        data=jdata,
+        seed=12345,
+    )
+
+    # gq_model
+    stan = os.path.join(DATAFILES_PATH, 'bernoulli_ppc.stan')
+    model = CmdStanModel(stan_file=stan)
+
+    bern_gqs = model.generate_quantities(data=jdata, previous_fit=bern_fit)
+
+    assert bern_gqs.runset._args.method == Method.GENERATE_QUANTITIES
+    assert 'CmdStanGQ: model=bernoulli_ppc' in repr(bern_gqs)
+    assert 'method=generate_quantities' in repr(bern_gqs)
+    assert bern_gqs.runset.chains == 1
+    assert bern_gqs.runset._retcode(0) == 0
+    csv_file = bern_gqs.runset.csv_files[0]
+    assert os.path.exists(csv_file)
+
+    assert bern_gqs.draws().shape == (1000, 1, 10)
+    assert bern_gqs.draws(inc_sample=True).shape == (1000, 1, 14)
+
+    # draws_pd()
+    assert bern_gqs.draws_pd().shape == (1000, 13)
+
+    # stan_variable
+    theta = bern_gqs.stan_variable(var='theta')
+    assert theta.shape == (1000,)
+    y_rep = bern_gqs.stan_variable(var='y_rep')
+    assert y_rep.shape == (1000, 10)
+
+
+def test_from_laplace() -> None:
+    stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
+    bern_model = CmdStanModel(stan_file=stan)
+    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+    bern_fit = bern_model.laplace_sample(
+        data=jdata,
+        seed=12345,
+    )
+
+    # gq_model
+    stan = os.path.join(DATAFILES_PATH, 'bernoulli_ppc.stan')
+    model = CmdStanModel(stan_file=stan)
+
+    bern_gqs = model.generate_quantities(data=jdata, previous_fit=bern_fit)
+
+    assert bern_gqs.runset._args.method == Method.GENERATE_QUANTITIES
+    assert 'CmdStanGQ: model=bernoulli_ppc' in repr(bern_gqs)
+    assert 'method=generate_quantities' in repr(bern_gqs)
+    assert bern_gqs.runset.chains == 1
+    assert bern_gqs.runset._retcode(0) == 0
+    csv_file = bern_gqs.runset.csv_files[0]
+    assert os.path.exists(csv_file)
+
+    assert bern_gqs.draws().shape == (1000, 1, 10)
+    assert bern_gqs.draws(inc_sample=True).shape == (1000, 1, 13)
+
+    # draws_pd()
+    assert bern_gqs.draws_pd().shape == (1000, 13)
+    assert (
+        bern_gqs.draws_pd(inc_sample=True).shape[1]
+        == bern_gqs.previous_fit.draws_pd().shape[1]
+        + bern_gqs.draws_pd().shape[1]
+    )
+
+    # stan_variable
+    theta = bern_gqs.stan_variable(var='theta')
+    assert theta.shape == (1000,)
+    y_rep = bern_gqs.stan_variable(var='y_rep')
+    assert y_rep.shape == (1000, 10)

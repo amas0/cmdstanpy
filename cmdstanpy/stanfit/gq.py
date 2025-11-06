@@ -690,12 +690,14 @@ class CmdStanGQ(Generic[PrevFit]):
             return np.atleast_2d(  # type: ignore
                 p_fit.optimized_params_np,
             )[:, None]
-        else:  # CmdStanVB:
+        elif isinstance(p_fit, CmdStanVB):
             if inc_warmup:
                 return np.vstack(
                     [p_fit.variational_params_np, p_fit.variational_sample]
                 )[:, None]
             return p_fit.variational_sample[:, None]
+        else:  # CmdStanLaplace, CmdStanPathfinder
+            return p_fit.draws()[:, None, :]
 
     def _previous_draws_pd(
         self, vars: list[str], inc_warmup: bool
@@ -714,8 +716,12 @@ class CmdStanGQ(Generic[PrevFit]):
                 return p_fit.optimized_iterations_pd[sel]  # type: ignore
             else:
                 return p_fit.optimized_params_pd[sel]
-        else:  # CmdStanVB:
+        elif isinstance(p_fit, CmdStanVB):
             return p_fit.variational_sample_pd[sel]
+        elif isinstance(p_fit, CmdStanLaplace):
+            return p_fit.draws_pd(vars or None)
+        else:  # CmdStanPathfinder
+            return pd.DataFrame(p_fit.draws(), columns=p_fit.column_names)[sel]
 
     def save_csvfiles(self, dir: str | None = None) -> None:
         """
