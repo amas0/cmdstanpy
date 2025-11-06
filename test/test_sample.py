@@ -2135,7 +2135,7 @@ def test_serialization(stanfile: str = 'bernoulli.stan') -> None:
     )
     # Dump the result (which assembles draws) and delete the source files.
     dumped = pickle.dumps(bern_fit1)
-    shutil.rmtree(bern_fit1.runset._output_dir)
+    shutil.rmtree(bern_fit1.runset._outdir)
     # Load the serialized result and compare results.
     bern_fit2: CmdStanMCMC = pickle.loads(dumped)
     variables1 = bern_fit1.stan_variables()

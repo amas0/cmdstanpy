@@ -38,10 +38,7 @@ class RunSet:
         self._args = args
         self._chains = chains
         self._one_process_per_chain = one_process_per_chain
-        if one_process_per_chain:
-            self._num_procs = chains
-        else:
-            self._num_procs = 1
+        self._num_procs = chains if one_process_per_chain else 1
         self._retcodes = [-1 for _ in range(self._num_procs)]
         self._timeout_flags = [False for _ in range(self._num_procs)]
         if chain_ids is None:
@@ -49,51 +46,51 @@ class RunSet:
         self._chain_ids = chain_ids
 
         if args.output_dir is not None:
-            self._output_dir = args.output_dir
-        else:
-            # make a per-run subdirectory of our master temp directory
-            self._output_dir = tempfile.mkdtemp(
-                prefix=args.model_name, dir=_TMPDIR
-            )
+            self._outdir = args.output_dir
+        else:  # make a per-run subdirectory of our master temp directory
+            self._outdir = tempfile.mkdtemp(prefix=args.model_name, dir=_TMPDIR)
 
         # output files prefix: ``<model_name>-<YYYYMMDDHHMM>_<chain_id>``
         self._base_outfile = (
             f'{args.model_name}-{datetime.now().strftime(time_fmt)}'
         )
-        # per-process outputs
-        self._stdout_files = [''] * self._num_procs
-        self._profile_files = [''] * self._num_procs  # optional
+        self._stdout_files, self._profile_files = [], []
+        self._csv_files, self._diagnostic_files = [], []
+
+        # per-process output files
         if one_process_per_chain:
-            for i in range(chains):
-                self._stdout_files[i] = self.file_path("-stdout.txt", id=i)
-                if args.save_profile:
-                    self._profile_files[i] = self.file_path(
-                        ".csv", extra="-profile", id=chain_ids[i]
-                    )
-        else:
-            self._stdout_files[0] = self.file_path("-stdout.txt")
+            self._stdout_files = [
+                self.gen_file_name(".txt", extra="stdout", id=id)
+                for id in self._chain_ids
+            ]
             if args.save_profile:
-                self._profile_files[0] = self.file_path(
-                    ".csv", extra="-profile"
-                )
+                self._profile_files = [
+                    self.gen_file_name(".csv", extra="profile", id=id)
+                    for id in self._chain_ids
+                ]
+        else:
+            self._stdout_files = [self.gen_file_name(".txt", extra="stdout")]
+            if args.save_profile:
+                self._profile_files = [
+                    self.gen_file_name(".csv", extra="profile")
+                ]
 
         # per-chain output files
-        self._csv_files: list[str] = [''] * chains
-        self._diagnostic_files = [''] * chains  # optional
-
         if chains == 1:
-            self._csv_files[0] = self.file_path(".csv")
+            self._csv_files = [self.gen_file_name(".csv")]
             if args.save_latent_dynamics:
-                self._diagnostic_files[0] = self.file_path(
-                    ".csv", extra="-diagnostic"
-                )
+                self._diagnostic_files = [
+                    self.gen_file_name(".csv", extra="diagnostic")
+                ]
         else:
-            for i in range(chains):
-                self._csv_files[i] = self.file_path(".csv", id=chain_ids[i])
-                if args.save_latent_dynamics:
-                    self._diagnostic_files[i] = self.file_path(
-                        ".csv", extra="-diagnostic", id=chain_ids[i]
-                    )
+            self._csv_files = [
+                self.gen_file_name(".csv", id=id) for id in self._chain_ids
+            ]
+            if args.save_latent_dynamics:
+                self._diagnostic_files = [
+                    self.gen_file_name(".csv", extra="diagnostic", id=id)
+                    for id in self._chain_ids
+                ]
 
     def __repr__(self) -> str:
         repr = 'RunSet: chains={}, chain_ids={}, num_processes={}'.format(
@@ -173,14 +170,14 @@ class RunSet:
         else:
             return self._args.compose_command(
                 idx,
-                csv_file=self.file_path('.csv'),
+                csv_file=self.gen_file_name('.csv'),
                 diagnostic_file=(
-                    self.file_path(".csv", extra="-diagnostic")
+                    self.gen_file_name(".csv", extra="diagnostic")
                     if self._args.save_latent_dynamics
                     else None
                 ),
                 profile_file=(
-                    self.file_path(".csv", extra="-profile")
+                    self.gen_file_name(".csv", extra="profile")
                     if self._args.save_profile
                     else None
                 ),
@@ -216,16 +213,22 @@ class RunSet:
         """List of paths to CmdStan profiler files."""
         return self._profile_files
 
-    # pylint: disable=invalid-name
-    def file_path(
+    def gen_file_name(
         self, suffix: str, *, extra: str = "", id: int | None = None
     ) -> str:
-        if id is not None:
-            suffix = f"_{id}{suffix}"
-        file = os.path.join(
-            self._output_dir, f"{self._base_outfile}{extra}{suffix}"
-        )
-        return file
+        """Generate a standard file name according to CmdStan output pattern"""
+        match (id, extra):
+            case (None, ""):
+                file = f"{self._base_outfile}{suffix}"
+            case (None, extra) if extra != "":
+                file = f"{self._base_outfile}_{extra}{suffix}"
+            case (id, ""):
+                file = f"{self._base_outfile}_{id}{suffix}"
+            case (id, extra) if extra != "":
+                file = f"{self._base_outfile}_{id}_{extra}{suffix}"
+            case _:
+                raise ValueError("Cannot construct valid file name")
+        return os.path.join(self._outdir, file)
 
     def _retcode(self, idx: int) -> int:
         """Get retcode for process[idx]."""
