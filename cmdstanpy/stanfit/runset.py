@@ -222,7 +222,7 @@ class RunSet:
             case (id, ""):
                 file = f"{self._base_outfile}_{id}{suffix}"
             case (id, extra) if extra != "":
-                file = f"{self._base_outfile}_{id}_{extra}{suffix}"
+                file = f"{self._base_outfile}_{extra}_{id}{suffix}"
             case _:
                 raise ValueError("Cannot construct valid file name")
         return os.path.join(self._outdir, file)
