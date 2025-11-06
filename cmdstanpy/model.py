@@ -2,14 +2,12 @@
 
 import io
 import os
-import platform
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import threading
-from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 from multiprocessing import cpu_count
@@ -41,12 +39,8 @@ from cmdstanpy.stanfit import (
     RunSet,
     from_csv,
 )
-from cmdstanpy.utils import (
-    cmdstan_path,
-    cmdstan_version_before,
-    do_command,
-    get_logger,
-)
+from cmdstanpy.utils import do_command, get_logger
+from cmdstanpy.utils.cmdstan import cmdstan_version_before, windows_tbb_path
 from cmdstanpy.utils.filesystem import (
     temp_inits,
     temp_metrics,
@@ -118,6 +112,8 @@ class CmdStanModel:
 
         self._fixed_param = False
 
+        windows_tbb_path()
+
         if exe_file is not None:
             self._exe_file = os.path.realpath(os.path.expanduser(exe_file))
             if not os.path.exists(self._exe_file):
@@ -169,26 +165,21 @@ class CmdStanModel:
                 if 'parameters' in model_info:
                     self._fixed_param |= len(model_info['parameters']) == 0
 
-        if platform.system() == 'Windows':
-            try:
-                do_command(['where.exe', 'tbb.dll'], fd_out=None)
-            except RuntimeError:
-                # Add tbb to the $PATH on Windows
-                libtbb = os.environ.get('STAN_TBB')
-                if libtbb is None:
-                    libtbb = os.path.join(
-                        cmdstan_path(), 'stan', 'lib', 'stan_math', 'lib', 'tbb'
-                    )
-                get_logger().debug("Adding TBB (%s) to PATH", libtbb)
-                os.environ['PATH'] = ';'.join(
-                    list(
-                        OrderedDict.fromkeys(
-                            [libtbb] + os.environ.get('PATH', '').split(';')
-                        )
-                    )
-                )
-            else:
-                get_logger().debug("TBB already found in load path")
+        # check CmdStan version compatibility
+        exe_info = None
+        try:
+            exe_info = self.exe_info()
+        # pylint: disable=broad-except
+        except Exception as e:
+            get_logger().warning(
+                'Could not get exe info for model %s, error: %s',
+                self._name,
+                str(e),
+            )
+        if cmdstan_version_before(2, 35, exe_info):
+            raise RuntimeError(
+                "This version of CmdStanPy requires CmdStan 2.35 or higher."
+            )
 
     def __repr__(self) -> str:
         return (

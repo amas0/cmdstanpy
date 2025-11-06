@@ -1,11 +1,13 @@
 Installation
 ============
 
-CmdStanPy is a pure-Python3 package which wraps CmdStan,
+CmdStanPy is a pure-Python package which wraps CmdStan,
 the command-line interface to Stan which is written in C++.
-Therefore, in addition to Python3,
-CmdStanPy requires a modern C++ toolchain in order to build and run Stan models.
-There are several ways to install CmdStanPy and the underlying CmdStan components.
+
+Therefore, CmdStanPy requires a modern C++ toolchain in order to build and run
+Stan models, as well as a recent version of CmdStan (released within the year
+prior to the release of the CmdStanPy version being used). There are several
+ways to install CmdStanPy and the underlying CmdStan components.
 
 * You can download CmdStanPy, CmdStan, and the C++ toolchain from conda-forge.
 
