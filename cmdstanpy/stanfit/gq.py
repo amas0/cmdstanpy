@@ -664,11 +664,14 @@ class CmdStanGQ(Generic[PrevFit]):
                     num_draws = opt_iters
                 else:
                     draw1 = opt_iters - 1
-        else:  # CmdStanVB:
+        elif isinstance(p_fit, CmdStanVB):
             draw1 = 1  # skip mean
             num_draws = p_fit.variational_sample.shape[0]
             if inc_warmup:
                 num_draws += 1
+        else:
+            num_draws = p_fit.draws().shape[0]
+            draw1 = 0
 
         return draw1, num_draws
 

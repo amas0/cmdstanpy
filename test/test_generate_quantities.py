@@ -8,7 +8,6 @@ import os
 import pickle
 import shutil
 from test import check_present, without_import
-from unittest.mock import MagicMock, patch
 
 import numpy as np
 import pandas as pd
@@ -578,7 +577,7 @@ def test_from_optimization() -> None:
 
     # stan_variable
     theta = bern_gqs.stan_variable(var='theta')
-    assert theta.shape == (1,)
+    assert theta.shape == ()
     y_rep = bern_gqs.stan_variable(var='y_rep')
     assert y_rep.shape == (1, 10)
 
@@ -772,34 +771,3 @@ def test_vb_xarray() -> None:
     bern_gqs = model.generate_quantities(data=jdata, previous_fit=bern_fit)
     with pytest.raises(RuntimeError, match="via Sampling"):
         _ = bern_gqs.draws_xr()
-
-
-@patch(
-    'cmdstanpy.utils.cmdstan.cmdstan_version',
-    MagicMock(return_value=(2, 27)),
-)
-def test_from_non_hmc_old() -> None:
-    stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
-    bern_model = CmdStanModel(stan_file=stan)
-    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
-    bern_fit_v = bern_model.variational(
-        data=jdata,
-        show_console=True,
-        require_converged=False,
-        seed=12345,
-    )
-
-    # gq_model
-    stan = os.path.join(DATAFILES_PATH, 'bernoulli_ppc.stan')
-    model = CmdStanModel(stan_file=stan)
-
-    with pytest.raises(RuntimeError, match="2.31"):
-        model.generate_quantities(data=jdata, previous_fit=bern_fit_v)
-
-    bern_fit_opt = bern_model.optimize(
-        data=jdata,
-        seed=12345,
-    )
-
-    with pytest.raises(RuntimeError, match="2.31"):
-        model.generate_quantities(data=jdata, previous_fit=bern_fit_opt)
