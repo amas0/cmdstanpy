@@ -198,10 +198,7 @@ class RunSet:
 
     def _check_retcodes(self) -> bool:
         """Returns ``True`` when all chains have retcode 0."""
-        for code in self._retcodes:
-            if code != 0:
-                return False
-        return True
+        return all(retcode == 0 for retcode in self._retcodes)
 
     @property
     def diagnostic_files(self) -> list[str]:
