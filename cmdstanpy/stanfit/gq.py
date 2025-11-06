@@ -35,16 +35,25 @@ from cmdstanpy.utils import (
     stancsv,
 )
 
+from .laplace import CmdStanLaplace
 from .mcmc import CmdStanMCMC
 from .metadata import InferenceMetadata
 from .mle import CmdStanMLE
+from .pathfinder import CmdStanPathfinder
 from .runset import RunSet
 from .vb import CmdStanVB
 
-Fit = TypeVar('Fit', CmdStanMCMC, CmdStanMLE, CmdStanVB)
+PrevFit = TypeVar(
+    'PrevFit',
+    CmdStanMCMC,
+    CmdStanMLE,
+    CmdStanVB,
+    CmdStanLaplace,
+    CmdStanPathfinder,
+)
 
 
-class CmdStanGQ(Generic[Fit]):
+class CmdStanGQ(Generic[PrevFit]):
     """
     Container for outputs from CmdStan generate_quantities run.
     Created by :meth:`CmdStanModel.generate_quantities`.
@@ -53,7 +62,7 @@ class CmdStanGQ(Generic[Fit]):
     def __init__(
         self,
         runset: RunSet,
-        previous_fit: Fit,
+        previous_fit: PrevFit,
     ) -> None:
         """Initialize object."""
         if not runset.method == Method.GENERATE_QUANTITIES:
@@ -63,7 +72,7 @@ class CmdStanGQ(Generic[Fit]):
             )
         self.runset = runset
 
-        self.previous_fit: Fit = previous_fit
+        self.previous_fit: PrevFit = previous_fit
 
         self._draws: np.ndarray = np.array(())
         self._metadata = self._validate_csv_files()
@@ -401,7 +410,12 @@ class CmdStanGQ(Generic[Fit]):
 
     @overload
     def draws_xr(
-        self: CmdStanGQ[CmdStanMLE] | CmdStanGQ[CmdStanVB],
+        self: (
+            CmdStanGQ[CmdStanMLE]
+            | CmdStanGQ[CmdStanVB]
+            | CmdStanGQ[CmdStanLaplace]
+            | CmdStanGQ[CmdStanPathfinder]
+        ),
         vars: str | list[str] | None = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
@@ -565,10 +579,7 @@ class CmdStanGQ(Generic[Fit]):
                 + ", ".join(model_var_names | gq_var_names)
             )
         if var not in gq_var_names:
-            # TODO(2.0) atleast1d may not be needed
-            return np.atleast_1d(  # type: ignore
-                self.previous_fit.stan_variable(var, **kwargs)
-            )
+            return self.previous_fit.stan_variable(var, **kwargs)
 
         # is gq variable
         self._assemble_generated_quantities()
@@ -653,11 +664,14 @@ class CmdStanGQ(Generic[Fit]):
                     num_draws = opt_iters
                 else:
                     draw1 = opt_iters - 1
-        else:  # CmdStanVB:
+        elif isinstance(p_fit, CmdStanVB):
             draw1 = 1  # skip mean
             num_draws = p_fit.variational_sample.shape[0]
             if inc_warmup:
                 num_draws += 1
+        else:
+            num_draws = p_fit.draws().shape[0]
+            draw1 = 0
 
         return draw1, num_draws
 
@@ -676,12 +690,14 @@ class CmdStanGQ(Generic[Fit]):
             return np.atleast_2d(  # type: ignore
                 p_fit.optimized_params_np,
             )[:, None]
-        else:  # CmdStanVB:
+        elif isinstance(p_fit, CmdStanVB):
             if inc_warmup:
                 return np.vstack(
                     [p_fit.variational_params_np, p_fit.variational_sample]
                 )[:, None]
             return p_fit.variational_sample[:, None]
+        else:  # CmdStanLaplace, CmdStanPathfinder
+            return p_fit.draws()[:, None, :]
 
     def _previous_draws_pd(
         self, vars: list[str], inc_warmup: bool
@@ -700,8 +716,12 @@ class CmdStanGQ(Generic[Fit]):
                 return p_fit.optimized_iterations_pd[sel]  # type: ignore
             else:
                 return p_fit.optimized_params_pd[sel]
-        else:  # CmdStanVB:
+        elif isinstance(p_fit, CmdStanVB):
             return p_fit.variational_sample_pd[sel]
+        elif isinstance(p_fit, CmdStanLaplace):
+            return p_fit.draws_pd(vars or None)
+        else:  # CmdStanPathfinder
+            return pd.DataFrame(p_fit.draws(), columns=p_fit.column_names)[sel]
 
     def save_csvfiles(self, dir: str | None = None) -> None:
         """
@@ -718,11 +738,3 @@ class CmdStanGQ(Generic[Fit]):
         cmdstanpy.from_csv
         """
         self.runset.save_csvfiles(dir)
-
-    # TODO(2.0): remove
-    @property
-    def mcmc_sample(self) -> CmdStanMCMC | CmdStanMLE | CmdStanVB:
-        get_logger().warning(
-            "Property `mcmc_sample` is deprecated, use `previous_fit` instead"
-        )
-        return self.previous_fit

@@ -236,7 +236,7 @@ def get_toolchain_name() -> str:
     return ''
 
 
-# TODO(2.0): drop 3.5 support
+# TODO(2.0): consider something other than RTools
 def get_url(version: str) -> str:
     """Return URL for toolchain."""
     url = ''

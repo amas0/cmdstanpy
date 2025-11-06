@@ -1,11 +1,13 @@
 Installation
 ============
 
-CmdStanPy is a pure-Python3 package which wraps CmdStan,
+CmdStanPy is a pure-Python package which wraps CmdStan,
 the command-line interface to Stan which is written in C++.
-Therefore, in addition to Python3,
-CmdStanPy requires a modern C++ toolchain in order to build and run Stan models.
-There are several ways to install CmdStanPy and the underlying CmdStan components.
+
+Therefore, CmdStanPy requires a modern C++ toolchain in order to build and run
+Stan models, as well as a recent version of CmdStan (released within the year
+prior to the release of the CmdStanPy version being used). There are several
+ways to install CmdStanPy and the underlying CmdStan components.
 
 * You can download CmdStanPy, CmdStan, and the C++ toolchain from conda-forge.
 
@@ -55,12 +57,8 @@ run the command
 
 
 By default, the latest release of CmdStan is installed.
-If you require a specific release of CmdStan, CmdStan versions
-2.26.1 and *newer* can be installed by specifying
+If you require a specific release of CmdStan, versions can be installed by specifying
 ``cmdstan==VERSION`` in the install command.
-Versions before 2.26.1 are not available from conda
-but can be downloaded from the CmdStan
-`releases <https://github.com/stan-dev/cmdstan/releases>`_ page.
 
 A Conda environment is a directory that contains a specific collection of Conda packages.
 To see the locations of your conda environments, use the command
@@ -206,14 +204,14 @@ can be used to override these defaults:
 
 .. code-block:: bash
 
-    install_cmdstan -d my_local_cmdstan -v 2.33.0
+    install_cmdstan -d my_local_cmdstan -v 2.36.0
     ls -F my_local_cmdstan
 
 Alternate Linux Architectures
 .............................
 
 CmdStan can be installed on Linux for the following non-x86 architectures:
-``arm64``, ``armel``, ``armhf``, ``mips64el``, ``ppc64el`` and ``s390x``.
+``arm64``, ``armel``, ``armhf``, ``ppc64el`` and ``s390x``.
 
 CmdStanPy will do its best to determine which of these is applicable for your
 machine when running ``install_cmdstan``. If the wrong choice is made, or if you

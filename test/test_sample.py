@@ -317,19 +317,18 @@ def test_init_types() -> None:
             force_one_process_per_chain=True,
             show_progress=False,
         )
-    if not cmdstan_version_before(2, 33):
-        # https://github.com/stan-dev/cmdstan/pull/1191
-        with pytest.raises(RuntimeError):
-            bern_fit = bern_model.sample(
-                data=jdata,
-                chains=2,
-                seed=12345,
-                inits=[init_1, init_2],
-                iter_warmup=100,
-                iter_sampling=100,
-                force_one_process_per_chain=False,
-                show_progress=False,
-            )
+    # https://github.com/stan-dev/cmdstan/pull/1191
+    with pytest.raises(RuntimeError):
+        bern_fit = bern_model.sample(
+            data=jdata,
+            chains=2,
+            seed=12345,
+            inits=[init_1, init_2],
+            iter_warmup=100,
+            iter_sampling=100,
+            force_one_process_per_chain=False,
+            show_progress=False,
+        )
 
 
 def test_bernoulli_bad() -> None:
@@ -471,34 +470,33 @@ def test_num_threads_msgs(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def test_multi_proc_threads(caplog: pytest.LogCaptureFixture) -> None:
-    # 2.28 compile with cpp_options={'STAN_THREADS':'true'}
-    if not cmdstan_version_before(2, 28):
-        logistic_stan = os.path.join(DATAFILES_PATH, 'logistic.stan')
-        logistic_model = CmdStanModel(
-            stan_file=logistic_stan,
-            cpp_options={'STAN_THREADS': 'TRUE'},
-            force_compile=True,
-        )
-        info_dict = logistic_model.exe_info()
-        assert info_dict is not None
-        assert 'STAN_THREADS' in info_dict
-        assert info_dict['STAN_THREADS'] == 'true'
 
-        logistic_data = os.path.join(DATAFILES_PATH, 'logistic.data.R')
-        with caplog.at_level(logging.DEBUG):
-            logging.getLogger()
-            logistic_model.sample(
-                data=logistic_data,
-                chains=4,
-                parallel_chains=4,
-                threads_per_chain=5,
-                iter_sampling=200,
-                iter_warmup=200,
-                show_progress=False,
-            )
-        check_present(
-            caplog, ('cmdstanpy', 'DEBUG', 'running CmdStan, num_threads: 20')
+    logistic_stan = os.path.join(DATAFILES_PATH, 'logistic.stan')
+    logistic_model = CmdStanModel(
+        stan_file=logistic_stan,
+        cpp_options={'STAN_THREADS': 'TRUE'},
+        force_compile=True,
+    )
+    info_dict = logistic_model.exe_info()
+    assert info_dict is not None
+    assert 'STAN_THREADS' in info_dict
+    assert info_dict['STAN_THREADS'] == 'true'
+
+    logistic_data = os.path.join(DATAFILES_PATH, 'logistic.data.R')
+    with caplog.at_level(logging.DEBUG):
+        logging.getLogger()
+        logistic_model.sample(
+            data=logistic_data,
+            chains=4,
+            parallel_chains=4,
+            threads_per_chain=5,
+            iter_sampling=200,
+            iter_warmup=200,
+            show_progress=False,
         )
+    check_present(
+        caplog, ('cmdstanpy', 'DEBUG', 'running CmdStan, num_threads: 20')
+    )
 
 
 def test_multi_proc_err_msgs() -> None:
@@ -666,11 +664,10 @@ def test_sample_no_params() -> None:
 
 
 def test_index_bounds_error() -> None:
-    if not cmdstan_version_before(2, 27):
-        oob_stan = os.path.join(DATAFILES_PATH, 'out_of_bounds.stan')
-        oob_model = CmdStanModel(stan_file=oob_stan)
-        with pytest.raises(RuntimeError):
-            oob_model.sample()
+    oob_stan = os.path.join(DATAFILES_PATH, 'out_of_bounds.stan')
+    oob_model = CmdStanModel(stan_file=oob_stan)
+    with pytest.raises(RuntimeError):
+        oob_model.sample()
 
 
 def test_show_console(stanfile: str = 'bernoulli.stan') -> None:
@@ -1652,46 +1649,45 @@ def test_validate() -> None:
 
 
 def test_validate_sample_sig_figs(stanfile: str = 'bernoulli.stan') -> None:
-    if not cmdstan_version_before(2, 25):
-        stan = os.path.join(DATAFILES_PATH, stanfile)
-        bern_model = CmdStanModel(stan_file=stan)
+    stan = os.path.join(DATAFILES_PATH, stanfile)
+    bern_model = CmdStanModel(stan_file=stan)
 
-        jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
-        bern_fit = bern_model.sample(
+    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+    bern_fit = bern_model.sample(
+        data=jdata,
+        chains=1,
+        seed=12345,
+        iter_sampling=100,
+    )
+    bern_draws = bern_fit.draws()
+    theta = format(bern_draws[99, 0, 7], '.18g')
+    assert not theta.startswith('0.21238045821757600')
+
+    bern_fit_17 = bern_model.sample(
+        data=jdata,
+        chains=1,
+        seed=12345,
+        iter_sampling=100,
+        sig_figs=17,
+    )
+    assert bern_fit_17.draws().size
+
+    with pytest.raises(ValueError):
+        bern_model.sample(
             data=jdata,
             chains=1,
             seed=12345,
             iter_sampling=100,
+            sig_figs=27,
         )
-        bern_draws = bern_fit.draws()
-        theta = format(bern_draws[99, 0, 7], '.18g')
-        assert not theta.startswith('0.21238045821757600')
-
-        bern_fit_17 = bern_model.sample(
-            data=jdata,
-            chains=1,
-            seed=12345,
-            iter_sampling=100,
-            sig_figs=17,
-        )
-        assert bern_fit_17.draws().size
-
         with pytest.raises(ValueError):
             bern_model.sample(
                 data=jdata,
                 chains=1,
                 seed=12345,
                 iter_sampling=100,
-                sig_figs=27,
+                sig_figs=-1,
             )
-            with pytest.raises(ValueError):
-                bern_model.sample(
-                    data=jdata,
-                    chains=1,
-                    seed=12345,
-                    iter_sampling=100,
-                    sig_figs=-1,
-                )
 
 
 def test_validate_summary_sig_figs() -> None:
@@ -1711,14 +1707,13 @@ def test_validate_summary_sig_figs() -> None:
     beta1_default = format(sum_default.iloc[1, 0], '.18g')
     assert beta1_default.startswith('1.3')
 
-    if not cmdstan_version_before(2, 25):
-        sum_17 = fit.summary(sig_figs=17)
-        beta1_17 = format(sum_17.iloc[1, 0], '.18g')
-        assert beta1_17.startswith('1.345767078273')
+    sum_17 = fit.summary(sig_figs=17)
+    beta1_17 = format(sum_17.iloc[1, 0], '.18g')
+    assert beta1_17.startswith('1.345767078273')
 
-        sum_10 = fit.summary(sig_figs=10)
-        beta1_10 = format(sum_10.iloc[1, 0], '.18g')
-        assert beta1_10.startswith('1.34576707')
+    sum_10 = fit.summary(sig_figs=10)
+    beta1_10 = format(sum_10.iloc[1, 0], '.18g')
+    assert beta1_10.startswith('1.34576707')
 
     with pytest.raises(ValueError):
         fit.summary(sig_figs=20)

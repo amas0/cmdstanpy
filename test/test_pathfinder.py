@@ -1,5 +1,5 @@
 """
-    Tests for the Pathfinder method.
+Tests for the Pathfinder method.
 """
 
 import contextlib

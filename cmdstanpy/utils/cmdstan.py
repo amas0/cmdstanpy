@@ -12,6 +12,7 @@ from typing import Callable
 from tqdm.auto import tqdm
 
 from cmdstanpy import _DOT_CMDSTAN
+from cmdstanpy.utils.command import do_command
 
 from .. import progress as progbar
 from .logging import get_logger
@@ -37,8 +38,6 @@ def determine_linux_arch() -> str:
             arch = "armel"
         else:
             arch = "armhf"
-    elif machine == "mips64":
-        arch = "mips64el"
     elif machine == "ppc64el" or machine == "ppc64le":
         arch = "ppc64el"
     elif machine == "s390x":
@@ -431,6 +430,29 @@ def cxx_toolchain_path(
         )
     )
     return compiler_path, tool_path
+
+
+def windows_tbb_path() -> None:
+    if platform.system() == 'Windows':
+        try:
+            do_command(['where.exe', 'tbb.dll'], fd_out=None)
+        except RuntimeError:
+            # Add tbb to the $PATH on Windows
+            libtbb = os.environ.get('STAN_TBB')
+            if libtbb is None:
+                libtbb = os.path.join(
+                    cmdstan_path(), 'stan', 'lib', 'stan_math', 'lib', 'tbb'
+                )
+            get_logger().debug("Adding TBB (%s) to PATH", libtbb)
+            os.environ['PATH'] = ';'.join(
+                list(
+                    OrderedDict.fromkeys(
+                        [libtbb] + os.environ.get('PATH', '').split(';')
+                    )
+                )
+            )
+        else:
+            get_logger().debug("TBB already found in load path")
 
 
 def install_cmdstan(

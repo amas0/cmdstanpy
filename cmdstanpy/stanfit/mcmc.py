@@ -24,7 +24,6 @@ from cmdstanpy.utils import (
     build_xarray_data,
     check_sampler_csv,
     cmdstan_path,
-    cmdstan_version_before,
     create_named_text_file,
     do_command,
     flatten_chains,
@@ -222,16 +221,6 @@ class CmdStanMCMC:
             if not self._is_fixed_param
             else None
         )
-
-    # TODO(2.0): remove
-    @property
-    def metric(self) -> np.ndarray | None:
-        """Deprecated. Use ``.inv_metric`` instead."""
-        get_logger().warning(
-            'The "metric" property is deprecated, use "inv_metric" instead. '
-            'This will be the same quantity, but with a more accurate name.'
-        )
-        return self.inv_metric
 
     @property
     def inv_metric(self) -> np.ndarray | None:
@@ -535,9 +524,7 @@ class CmdStanMCMC:
             dir=_TMPDIR, prefix=tmp_csv_file, suffix='.csv', name_only=True
         )
         csv_str = '--csv_filename={}'.format(tmp_csv_path)
-        # TODO: remove at some future release
-        if cmdstan_version_before(2, 24):
-            csv_str = '--csv_file={}'.format(tmp_csv_path)
+
         cmd = [
             cmd_path,
             percentiles_str,

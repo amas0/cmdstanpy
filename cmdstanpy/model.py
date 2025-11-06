@@ -2,18 +2,16 @@
 
 import io
 import os
-import platform
 import re
 import shutil
 import subprocess
 import sys
 import tempfile
 import threading
-from collections import OrderedDict
 from concurrent.futures import ThreadPoolExecutor
 from io import StringIO
 from multiprocessing import cpu_count
-from typing import Any, Callable, Mapping, Sequence, TypeVar
+from typing import Any, Callable, Mapping, Sequence
 
 import numpy as np
 import pandas as pd
@@ -37,15 +35,12 @@ from cmdstanpy.stanfit import (
     CmdStanMLE,
     CmdStanPathfinder,
     CmdStanVB,
+    PrevFit,
     RunSet,
     from_csv,
 )
-from cmdstanpy.utils import (
-    cmdstan_path,
-    cmdstan_version_before,
-    do_command,
-    get_logger,
-)
+from cmdstanpy.utils import do_command, get_logger
+from cmdstanpy.utils.cmdstan import cmdstan_version_before, windows_tbb_path
 from cmdstanpy.utils.filesystem import (
     temp_inits,
     temp_metrics,
@@ -56,7 +51,6 @@ from cmdstanpy.utils.stancsv import try_deduce_metric_type
 from . import progress as progbar
 
 OptionalPath = str | os.PathLike | None
-Fit = TypeVar('Fit', CmdStanMCMC, CmdStanMLE, CmdStanVB)
 
 
 class CmdStanModel:
@@ -118,6 +112,8 @@ class CmdStanModel:
 
         self._fixed_param = False
 
+        windows_tbb_path()
+
         if exe_file is not None:
             self._exe_file = os.path.realpath(os.path.expanduser(exe_file))
             if not os.path.exists(self._exe_file):
@@ -164,33 +160,26 @@ class CmdStanModel:
             )
 
             # try to detect models w/out parameters, needed for sampler
-            if (not cmdstan_version_before(2, 27)) and cmdstan_version_before(
-                2, 36
-            ):
+            if cmdstan_version_before(2, 36):
                 model_info = self.src_info()
                 if 'parameters' in model_info:
                     self._fixed_param |= len(model_info['parameters']) == 0
 
-        if platform.system() == 'Windows':
-            try:
-                do_command(['where.exe', 'tbb.dll'], fd_out=None)
-            except RuntimeError:
-                # Add tbb to the $PATH on Windows
-                libtbb = os.environ.get('STAN_TBB')
-                if libtbb is None:
-                    libtbb = os.path.join(
-                        cmdstan_path(), 'stan', 'lib', 'stan_math', 'lib', 'tbb'
-                    )
-                get_logger().debug("Adding TBB (%s) to PATH", libtbb)
-                os.environ['PATH'] = ';'.join(
-                    list(
-                        OrderedDict.fromkeys(
-                            [libtbb] + os.environ.get('PATH', '').split(';')
-                        )
-                    )
-                )
-            else:
-                get_logger().debug("TBB already found in load path")
+        # check CmdStan version compatibility
+        exe_info = None
+        try:
+            exe_info = self.exe_info()
+        # pylint: disable=broad-except
+        except Exception as e:
+            get_logger().warning(
+                'Could not get exe info for model %s, error: %s',
+                self._name,
+                str(e),
+            )
+        if cmdstan_version_before(2, 35, exe_info):
+            raise RuntimeError(
+                "This version of CmdStanPy requires CmdStan 2.35 or higher."
+            )
 
     def __repr__(self) -> str:
         return (
@@ -238,7 +227,7 @@ class CmdStanModel:
         If stanc is older than 2.27 or if the stan
         file cannot be found, returns an empty dictionary.
         """
-        if self.stan_file is None or cmdstan_version_before(2, 27):
+        if self.stan_file is None:
             return {}
         return compilation.src_info(str(self.stan_file), self._stanc_options)
 
@@ -403,12 +392,6 @@ class CmdStanModel:
             save_iterations=save_iterations,
             jacobian=jacobian,
         )
-
-        if jacobian and cmdstan_version_before(2, 32, self.exe_info()):
-            raise ValueError(
-                "Jacobian adjustment for optimization is only supported "
-                "in CmdStan 2.32 and above."
-            )
 
         with (
             temp_single_json(data) as _data,
@@ -734,34 +717,23 @@ class CmdStanModel:
         if chains == 1:
             force_one_process_per_chain = True
 
-        if (
-            force_one_process_per_chain is None
-            and not cmdstan_version_before(2, 28, info_dict)
-            and stan_threads == 'true'
-        ):
+        if force_one_process_per_chain is None and stan_threads == 'true':
             one_process_per_chain = False
             num_threads = parallel_chains * num_threads
             parallel_procs = 1
         if force_one_process_per_chain is False:
-            if not cmdstan_version_before(2, 28, info_dict):
-                one_process_per_chain = False
-                num_threads = parallel_chains * num_threads
-                parallel_procs = 1
-                if stan_threads == 'false':
-                    get_logger().warning(
-                        'Stan program not compiled for threading, '
-                        'process will run chains sequentially. '
-                        'For multi-chain parallelization, recompile '
-                        'the model with argument '
-                        '"cpp_options={\'STAN_THREADS\':\'TRUE\'}.'
-                    )
-            else:
+            one_process_per_chain = False
+            num_threads = parallel_chains * num_threads
+            parallel_procs = 1
+            if stan_threads == 'false':
                 get_logger().warning(
-                    'Installed version of CmdStan cannot multi-process '
-                    'chains, will run %d processes. '
-                    'Run "install_cmdstan" to upgrade to latest version.',
-                    chains,
+                    'Stan program not compiled for threading, '
+                    'process will run chains sequentially. '
+                    'For multi-chain parallelization, recompile '
+                    'the model with argument '
+                    '"cpp_options={\'STAN_THREADS\':\'TRUE\'}.'
                 )
+
         os.environ['STAN_NUM_THREADS'] = str(num_threads)
 
         if chain_ids is None:
@@ -958,7 +930,7 @@ class CmdStanModel:
     def generate_quantities(
         self,
         data: Mapping[str, Any] | str | os.PathLike | None = None,
-        previous_fit: Fit | list[str] | None = None,
+        previous_fit: PrevFit | list[str] | None = None,
         seed: int | None = None,
         gq_output_dir: OptionalPath = None,
         sig_figs: int | None = None,
@@ -966,7 +938,7 @@ class CmdStanModel:
         refresh: int | None = None,
         time_fmt: str = "%Y%m%d%H%M%S",
         timeout: float | None = None,
-    ) -> CmdStanGQ[Fit]:
+    ) -> CmdStanGQ[PrevFit]:
         """
         Run CmdStan's generate_quantities method which runs the generated
         quantities block of a model given an existing sample.
@@ -1032,7 +1004,16 @@ class CmdStanModel:
         :return: CmdStanGQ object
         """
 
-        if isinstance(previous_fit, (CmdStanMCMC, CmdStanMLE, CmdStanVB)):
+        if isinstance(
+            previous_fit,
+            (
+                CmdStanMCMC,
+                CmdStanMLE,
+                CmdStanVB,
+                CmdStanLaplace,
+                CmdStanPathfinder,
+            ),
+        ):
             fit_object = previous_fit
             fit_csv_files = previous_fit.runset.csv_files
         elif isinstance(previous_fit, list):
@@ -1042,7 +1023,7 @@ class CmdStanModel:
                 )
             try:
                 fit_csv_files = previous_fit
-                fit_object: Fit = from_csv(fit_csv_files)  # type: ignore
+                fit_object: PrevFit = from_csv(fit_csv_files)  # type: ignore
             except ValueError as e:
                 raise ValueError(
                     'Invalid sample from Stan CSV files, error:\n\t{}\n\t'
@@ -1064,11 +1045,6 @@ class CmdStanModel:
                     'to generate additional quantities of interest.'
                 )
         elif isinstance(fit_object, CmdStanMLE):
-            if cmdstan_version_before(2, 31):
-                raise RuntimeError(
-                    "Method generate_quantities was not "
-                    "available for non-HMC until CmdStan 2.31"
-                )
             chains = 1
             chain_ids = [1]
             if fit_object._save_iterations:
@@ -1077,11 +1053,6 @@ class CmdStanModel:
                     'to generate additional quantities of interest.'
                 )
         else:  # isinstance(fit_object, CmdStanVB)
-            if cmdstan_version_before(2, 31):
-                raise RuntimeError(
-                    "Method generate_quantities was not "
-                    "available for non-HMC until CmdStan 2.31"
-                )
             chains = 1
             chain_ids = [1]
 
@@ -1492,19 +1463,6 @@ class CmdStanModel:
         """
 
         exe_info = self.exe_info()
-        if cmdstan_version_before(2, 33, exe_info):
-            raise ValueError(
-                "Method 'pathfinder' not available for CmdStan versions "
-                "before 2.33"
-            )
-
-        if (not psis_resample or not calculate_lp) and cmdstan_version_before(
-            2, 34, exe_info
-        ):
-            raise ValueError(
-                "Arguments 'psis_resample' and 'calculate_lp' are only "
-                "available for CmdStan versions 2.34 and later"
-            )
 
         if num_threads is not None:
             if (
@@ -1613,11 +1571,6 @@ class CmdStanModel:
             unconstrained parameters of the model.
         """
 
-        if cmdstan_version_before(2, 31, self.exe_info()):
-            raise ValueError(
-                "Method 'log_prob' not available for CmdStan versions "
-                "before 2.31"
-            )
         with (
             temp_single_json(data) as _data,
             temp_single_json(params) as _params,
@@ -1729,11 +1682,7 @@ class CmdStanModel:
 
         :return: A :class:`CmdStanLaplace` object.
         """
-        if cmdstan_version_before(2, 32, self.exe_info()):
-            raise ValueError(
-                "Method 'laplace_sample' not available for CmdStan versions "
-                "before 2.32"
-            )
+
         if opt_args is not None and mode is not None:
             raise ValueError(
                 "Cannot specify both 'opt_args' and 'mode' arguments"

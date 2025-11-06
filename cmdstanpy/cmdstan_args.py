@@ -10,7 +10,7 @@ from typing import Any, Mapping
 import numpy as np
 from numpy.random import default_rng
 
-from cmdstanpy.utils import cmdstan_path, cmdstan_version_before, get_logger
+from cmdstanpy.utils import get_logger
 
 OptionalPath = str | os.PathLike | None
 
@@ -747,15 +747,6 @@ class CmdStanArgs:
                 raise ValueError(
                     'Argument "sig_figs" must be an integer between 1 and 18,'
                     ' found {}'.format(self.sig_figs)
-                )
-            # TODO: remove at some future release
-            if cmdstan_version_before(2, 25):
-                self.sig_figs = None
-                get_logger().warning(
-                    'Argument "sig_figs" invalid for CmdStan versions < 2.25, '
-                    'using version %s in directory %s',
-                    os.path.basename(cmdstan_path()),
-                    os.path.dirname(cmdstan_path()),
                 )
 
         if self.seed is None:

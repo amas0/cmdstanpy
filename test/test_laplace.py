@@ -33,7 +33,7 @@ def test_laplace_from_csv() -> None:
         data={},
         seed=1234,
     )
-    fit2 = from_csv(fit._runset.csv_files)
+    fit2 = from_csv(fit.runset.csv_files)
     assert isinstance(fit2, cmdstanpy.CmdStanLaplace)
     assert 'x' in fit2.stan_variables()
     assert 'y' in fit2.stan_variables()

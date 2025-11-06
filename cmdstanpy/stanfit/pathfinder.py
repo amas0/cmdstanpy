@@ -23,9 +23,9 @@ class CmdStanPathfinder:
                 'Wrong runset method, expecting Pathfinder runset, '
                 'found method {}'.format(runset.method)
             )
-        self._runset = runset
+        self.runset = runset
         self._draws: np.ndarray = np.array(())
-        self._metadata = InferenceMetadata.from_csv(self._runset.csv_files[0])
+        self._metadata = InferenceMetadata.from_csv(self.runset.csv_files[0])
 
     def create_inits(
         self, seed: int | None = None, chains: int = 4
@@ -62,13 +62,13 @@ class CmdStanPathfinder:
 
     def __repr__(self) -> str:
         rep = 'CmdStanPathfinder: model={}{}'.format(
-            self._runset.model,
-            self._runset._args.method_args.compose(0, cmd=[]),
+            self.runset.model,
+            self.runset._args.method_args.compose(0, cmd=[]),
         )
         rep = '{}\n csv_files:\n\t{}\n output_files:\n\t{}'.format(
             rep,
-            '\n\t'.join(self._runset.csv_files),
-            '\n\t'.join(self._runset.stdout_files),
+            '\n\t'.join(self.runset.csv_files),
+            '\n\t'.join(self.runset.stdout_files),
         )
         return rep
 
@@ -76,10 +76,10 @@ class CmdStanPathfinder:
         if self._draws.shape != (0,):
             return
 
-        csv_file = self._runset.csv_files[0]
+        csv_file = self.runset.csv_files[0]
         try:
             *_, draws = stancsv.parse_comments_header_and_draws(
-                self._runset.csv_files[0]
+                self.runset.csv_files[0]
             )
             self._draws = stancsv.csv_bytes_list_to_numpy(draws)
         except Exception as exc:
@@ -228,4 +228,4 @@ class CmdStanPathfinder:
         stanfit.RunSet.save_csvfiles
         cmdstanpy.from_csv
         """
-        self._runset.save_csvfiles(dir)
+        self.runset.save_csvfiles(dir)
