@@ -37,8 +37,6 @@ def determine_linux_arch() -> str:
             arch = "armel"
         else:
             arch = "armhf"
-    elif machine == "mips64":
-        arch = "mips64el"
     elif machine == "ppc64el" or machine == "ppc64le":
         arch = "ppc64el"
     elif machine == "s390x":

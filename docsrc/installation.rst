@@ -55,12 +55,8 @@ run the command
 
 
 By default, the latest release of CmdStan is installed.
-If you require a specific release of CmdStan, CmdStan versions
-2.26.1 and *newer* can be installed by specifying
+If you require a specific release of CmdStan, versions can be installed by specifying
 ``cmdstan==VERSION`` in the install command.
-Versions before 2.26.1 are not available from conda
-but can be downloaded from the CmdStan
-`releases <https://github.com/stan-dev/cmdstan/releases>`_ page.
 
 A Conda environment is a directory that contains a specific collection of Conda packages.
 To see the locations of your conda environments, use the command
@@ -206,14 +202,14 @@ can be used to override these defaults:
 
 .. code-block:: bash
 
-    install_cmdstan -d my_local_cmdstan -v 2.33.0
+    install_cmdstan -d my_local_cmdstan -v 2.36.0
     ls -F my_local_cmdstan
 
 Alternate Linux Architectures
 .............................
 
 CmdStan can be installed on Linux for the following non-x86 architectures:
-``arm64``, ``armel``, ``armhf``, ``mips64el``, ``ppc64el`` and ``s390x``.
+``arm64``, ``armel``, ``armhf``, ``ppc64el`` and ``s390x``.
 
 CmdStanPy will do its best to determine which of these is applicable for your
 machine when running ``install_cmdstan``. If the wrong choice is made, or if you
