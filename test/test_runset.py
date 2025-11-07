@@ -176,6 +176,57 @@ def test_output_filenames_threading() -> None:
     assert runset_other_files.profile_files[0].endswith("_profile.csv")
 
 
+def test_output_filenames_single_chain() -> None:
+    exe = os.path.join(DATAFILES_PATH, 'bernoulli' + EXTENSION)
+    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+    sampler_args = SamplerArgs()
+    chain_ids = [1]
+    cmdstan_args = CmdStanArgs(
+        model_name='bernoulli',
+        model_exe=exe,
+        chain_ids=chain_ids,
+        data=jdata,
+        method_args=sampler_args,
+    )
+    runset = RunSet(args=cmdstan_args, chains=1, one_process_per_chain=False)
+    base_file = runset._base_outfile
+    assert len(runset.csv_files) == 1
+    assert len(runset.stdout_files) == 1
+    assert runset.csv_files[0].endswith(f"{base_file}.csv")
+    assert runset.stdout_files[0].endswith(f"{base_file}_stdout.txt")
+
+    runset = RunSet(args=cmdstan_args, chains=1, one_process_per_chain=True)
+    base_file = runset._base_outfile
+    assert runset.stdout_files[0].endswith(f"{base_file}_stdout.txt")
+
+    cmdstan_args_other_files = CmdStanArgs(
+        model_name='bernoulli',
+        model_exe=exe,
+        chain_ids=chain_ids,
+        data=jdata,
+        method_args=sampler_args,
+        save_latent_dynamics=True,
+        save_profile=True,
+    )
+    runset_other_files = RunSet(
+        args=cmdstan_args_other_files, chains=1, one_process_per_chain=False
+    )
+    assert len(runset_other_files.diagnostic_files) == 1
+    assert runset_other_files.diagnostic_files[0].endswith("_diagnostic.csv")
+
+    assert len(runset_other_files.profile_files) == 1
+    assert runset_other_files.profile_files[0].endswith("_profile.csv")
+
+    runset_other_files = RunSet(
+        args=cmdstan_args_other_files, chains=1, one_process_per_chain=True
+    )
+    assert len(runset_other_files.diagnostic_files) == 1
+    assert runset_other_files.diagnostic_files[0].endswith("_diagnostic.csv")
+
+    assert len(runset_other_files.profile_files) == 1
+    assert runset_other_files.profile_files[0].endswith("_profile.csv")
+
+
 def test_commands() -> None:
     exe = os.path.join(DATAFILES_PATH, 'bernoulli' + EXTENSION)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
