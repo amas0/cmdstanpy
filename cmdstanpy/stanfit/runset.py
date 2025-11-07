@@ -214,17 +214,12 @@ class RunSet:
         self, suffix: str, *, extra: str = "", id: int | None = None
     ) -> str:
         """Generate a standard file name according to CmdStan output pattern"""
-        match (id, extra):
-            case (None, ""):
-                file = f"{self._base_outfile}{suffix}"
-            case (None, extra) if extra != "":
-                file = f"{self._base_outfile}_{extra}{suffix}"
-            case (id, ""):
-                file = f"{self._base_outfile}_{id}{suffix}"
-            case (id, extra) if extra != "":
-                file = f"{self._base_outfile}_{extra}_{id}{suffix}"
-            case _:
-                raise ValueError("Cannot construct valid file name")
+        file = self._base_outfile
+        if extra:
+            file += f"_{extra}"
+        if id is not None:
+            file += f"_{id}"
+        file += suffix
         return os.path.join(self._outdir, file)
 
     def _retcode(self, idx: int) -> int:
