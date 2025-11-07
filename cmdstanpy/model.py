@@ -299,12 +299,10 @@ class CmdStanModel:
         or to a temporary directory which is deleted upon session exit.
 
         Output files are either written to a temporary directory or to the
-        specified output directory.  Output filenames correspond to the template
-        '<model_name>-<YYYYMMDDHHMM>-<chain_id>' plus the file suffix which is
-        either '.csv' for the CmdStan output or '.txt' for
-        the console messages, e.g. 'bernoulli-201912081451-1.csv'.
-        Output files written to the temporary directory contain an additional
-        8-character random string, e.g. 'bernoulli-201912081451-1-5nm6as7u.csv'.
+        specified output directory. Optimize output filenames correspond to
+        the template '<model_name>-<YYYYMMDDHHMM>' plus the file suffix which is
+        either '.csv' for the CmdStan output or '_stdout.txt' for
+        the console messages, e.g. 'bernoulli-20251107142835.csv'.
 
         :param data: Values for all data variables in the model, specified
             either as a dictionary with entries matching the data variables,
@@ -339,7 +337,7 @@ class CmdStanModel:
 
         :param save_profile: Whether or not to profile auto-diff operations in
             labelled blocks of code.  If ``True``, CSV outputs are written to
-            file '<model_name>-<YYYYMMDDHHMM>-profile-<chain_id>'.
+            file '<model_name>-<YYYYMMDDHHMM>_profile.csv'.
             Introduced in CmdStan-2.26.
 
         :param algorithm: Algorithm to use. One of: 'BFGS', 'LBFGS', 'Newton'
@@ -514,11 +512,15 @@ class CmdStanModel:
 
         Output files are either written to a temporary directory or to the
         specified output directory.  Ouput filenames correspond to the template
-        '<model_name>-<YYYYMMDDHHMM>-<chain_id>' plus the file suffix which is
-        either '.csv' for the CmdStan output or '.txt' for
-        the console messages, e.g. 'bernoulli-201912081451-1.csv'.
-        Output files written to the temporary directory contain an additional
-        8-character random string, e.g. 'bernoulli-201912081451-1-5nm6as7u.csv'.
+        '<model_name>-<YYYYMMDDHHMM>' plus additional bits to identify which
+        output file it corresponds to. CmdStan output will suffix with
+        '_<chain_id>.csv' if there is more than one chain, and simply'.csv'
+        in the single-chain case. For example, 'bernoulli-20251107144515_1.csv'.
+        Console message output is written to a text file suffixed
+        `_stdout_<chain_id>.txt` if each chain executes in a separate process
+        (default behavior) or simply `_stdout.txt` if done so in a single
+        process, such as when STAN_THREADS is enabled and you are sampling
+        more than one chain.
 
         :param data: Values for all data variables in the model, specified
             either as a dictionary with entries matching the data variables,
@@ -651,14 +653,17 @@ class CmdStanModel:
         :param save_latent_dynamics: Whether or not to output the position and
             momentum information for the model parameters (unconstrained).
             If ``True``, CSV outputs are written to an output file
-            '<model_name>-<YYYYMMDDHHMM>-diagnostic-<chain_id>',
-            e.g. 'bernoulli-201912081451-diagnostic-1.csv', see
+            '<model_name>-<YYYYMMDDHHMM>_diagnostic_<chain_id>',
+            e.g. 'bernoulli-201912081451_diagnostic_1.csv', see
             https://mc-stan.org/docs/cmdstan-guide/stan_csv.html,
             section "Diagnostic CSV output file" for details.
 
         :param save_profile: Whether or not to profile auto-diff operations in
             labelled blocks of code.  If ``True``, CSV outputs are written to
-            file '<model_name>-<YYYYMMDDHHMM>-profile-<chain_id>'.
+            file '<model_name>-<YYYYMMDDHHMM>_profile_<chain_id>.csv' if each
+            chain runs in its own process, otherwise
+            '<model_name>-<YYYYMMDDHHMM>_profile.csv' if all chains run in a
+            single process.
             Introduced in CmdStan-2.26, see
             https://mc-stan.org/docs/cmdstan-guide/stan_csv.html,
             section "Profiling CSV output file" for details.
@@ -983,12 +988,16 @@ class CmdStanModel:
         or to a temporary directory which is deleted upon session exit.
 
         Output files are either written to a temporary directory or to the
-        specified output directory.  Output filenames correspond to the template
-        '<model_name>-<YYYYMMDDHHMM>-<chain_id>' plus the file suffix which is
-        either '.csv' for the CmdStan output or '.txt' for
-        the console messages, e.g. 'bernoulli-201912081451-1.csv'.
-        Output files written to the temporary directory contain an additional
-        8-character random string, e.g. 'bernoulli-201912081451-1-5nm6as7u.csv'.
+        specified output directory.  Ouput filenames correspond to the template
+        '<model_name>-<YYYYMMDDHHMM>' plus additional bits to identify which
+        output file it corresponds to. CmdStan output will suffix with
+        '_<chain_id>.csv' if there is more than one chain, and simply'.csv'
+        in the single-chain case. For example, 'bernoulli-20251107144515_1.csv'.
+        Console message output is written to a text file suffixed
+        `_stdout_<chain_id>.txt` if each chain executes in a separate process
+        (default behavior) or simply `_stdout.txt` if done so in a single
+        process, such as when STAN_THREADS is enabled and you are sampling
+        more than one chain.
 
         :param data: Values for all data variables in the model, specified
             either as a dictionary with entries matching the data variables,
@@ -1175,11 +1184,9 @@ class CmdStanModel:
 
         Output files are either written to a temporary directory or to the
         specified output directory.  Output filenames correspond to the template
-        '<model_name>-<YYYYMMDDHHMM>-<chain_id>' plus the file suffix which is
-        either '.csv' for the CmdStan output or '.txt' for
-        the console messages, e.g. 'bernoulli-201912081451-1.csv'.
-        Output files written to the temporary directory contain an additional
-        8-character random string, e.g. 'bernoulli-201912081451-1-5nm6as7u.csv'.
+        '<model_name>-<YYYYMMDDHHMM>' plus the file suffix which is
+        either '.csv' for the CmdStan output or '_stdout.txt' for
+        the console messages, e.g. 'bernoulli-201912081451.csv'.
 
         :param data: Values for all data variables in the model, specified
             either as a dictionary with entries matching the data variables,
@@ -1458,7 +1465,7 @@ class CmdStanModel:
 
         :param save_profile: Whether or not to profile auto-diff operations in
             labelled blocks of code.  If ``True``, CSV outputs are written to
-            file '<model_name>-<YYYYMMDDHHMM>-profile-<path_id>'.
+            file '<model_name>-<YYYYMMDDHHMM>_profile.csv'.
             Introduced in CmdStan-2.26, see
             https://mc-stan.org/docs/cmdstan-guide/stan_csv.html,
             section "Profiling CSV output file" for details.
@@ -1706,7 +1713,7 @@ class CmdStanModel:
 
         :param save_profile: Whether or not to profile auto-diff operations in
             labelled blocks of code.  If ``True``, CSV outputs are written to
-            file '<model_name>-<YYYYMMDDHHMM>-profile-<path_id>'.
+            file '<model_name>-<YYYYMMDDHHMM>_profile.csv'.
             Introduced in CmdStan-2.26, see
             https://mc-stan.org/docs/cmdstan-guide/stan_csv.html,
             section "Profiling CSV output file" for details.
