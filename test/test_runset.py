@@ -82,7 +82,7 @@ def test_get_err_msgs() -> None:
     assert 'Exception: variable does not exist' in errs
 
 
-def test_output_filenames() -> None:
+def test_output_filenames_one_proc_per_chain() -> None:
     exe = os.path.join(DATAFILES_PATH, 'bernoulli' + EXTENSION)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
     sampler_args = SamplerArgs()
@@ -94,10 +94,86 @@ def test_output_filenames() -> None:
         data=jdata,
         method_args=sampler_args,
     )
-    runset = RunSet(args=cmdstan_args, chains=4)
-    assert 'bernoulli-' in runset._csv_files[0]
-    assert '_1.csv' in runset._csv_files[0]
-    assert '_4.csv' in runset._csv_files[3]
+    runset = RunSet(args=cmdstan_args, chains=4, one_process_per_chain=True)
+
+    assert all("bernoulli-" in csv_file for csv_file in runset.csv_files)
+    assert all(
+        csv_file.endswith(f"_{id}.csv")
+        for id, csv_file in zip(chain_ids, runset.csv_files)
+    )
+    assert len(runset.stdout_files) == len(chain_ids)
+    assert all(
+        stdout_file.endswith(f"_stdout_{id}.txt")
+        for id, stdout_file in zip(chain_ids, runset.stdout_files)
+    )
+
+    cmdstan_args_other_files = CmdStanArgs(
+        model_name='bernoulli',
+        model_exe=exe,
+        chain_ids=chain_ids,
+        data=jdata,
+        method_args=sampler_args,
+        save_latent_dynamics=True,
+        save_profile=True,
+    )
+    runset_other_files = RunSet(
+        args=cmdstan_args_other_files, chains=4, one_process_per_chain=True
+    )
+    assert len(runset_other_files.diagnostic_files) == len(chain_ids)
+    assert all(
+        diag_file.endswith(f"_diagnostic_{id}.csv")
+        for id, diag_file in zip(chain_ids, runset_other_files.diagnostic_files)
+    )
+
+    assert len(runset_other_files.profile_files) == len(chain_ids)
+    assert all(
+        prof_file.endswith(f"_profile_{id}.csv")
+        for id, prof_file in zip(chain_ids, runset_other_files.profile_files)
+    )
+
+
+def test_output_filenames_threading() -> None:
+    exe = os.path.join(DATAFILES_PATH, 'bernoulli' + EXTENSION)
+    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+    sampler_args = SamplerArgs()
+    chain_ids = [1, 2, 3, 4]
+    cmdstan_args = CmdStanArgs(
+        model_name='bernoulli',
+        model_exe=exe,
+        chain_ids=chain_ids,
+        data=jdata,
+        method_args=sampler_args,
+    )
+    runset = RunSet(args=cmdstan_args, chains=4, one_process_per_chain=False)
+
+    assert all("bernoulli-" in csv_file for csv_file in runset.csv_files)
+    assert all(
+        csv_file.endswith(f"_{id}.csv")
+        for id, csv_file in zip(chain_ids, runset.csv_files)
+    )
+    assert len(runset.stdout_files) == 1
+    assert runset.stdout_files[0].endswith("_stdout.txt")
+
+    cmdstan_args_other_files = CmdStanArgs(
+        model_name='bernoulli',
+        model_exe=exe,
+        chain_ids=chain_ids,
+        data=jdata,
+        method_args=sampler_args,
+        save_latent_dynamics=True,
+        save_profile=True,
+    )
+    runset_other_files = RunSet(
+        args=cmdstan_args_other_files, chains=4, one_process_per_chain=False
+    )
+    assert len(runset_other_files.diagnostic_files) == len(chain_ids)
+    assert all(
+        diag_file.endswith(f"_diagnostic_{id}.csv")
+        for id, diag_file in zip(chain_ids, runset_other_files.diagnostic_files)
+    )
+
+    assert len(runset_other_files.profile_files) == 1
+    assert runset_other_files.profile_files[0].endswith("_profile.csv")
 
 
 def test_commands() -> None:
