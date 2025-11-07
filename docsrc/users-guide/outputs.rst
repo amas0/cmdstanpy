@@ -8,9 +8,9 @@ CSV File Outputs
 
 Underlyingly, the CmdStan outputs are a set of per-chain
 `Stan CSV files <https://mc-stan.org/docs/cmdstan-guide/stan_csv_apdx.html#mcmc-sampler-csv-output>`__.
-The filenames follow the template '<model_name>-<YYYYMMDDHHMMSS>-<chain_id>'
-plus the file suffix '.csv'.
-CmdStanPy also captures the per-chain console and error messages.
+The filenames follow the template '<model_name>-<YYYYMMDDHHMMSS>_<chain_id>'
+plus the file suffix '.csv'. CmdStanPy also captures the per-chain console and
+error messages.
 
 .. ipython:: python
 
