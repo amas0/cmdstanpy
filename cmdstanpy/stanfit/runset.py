@@ -58,7 +58,7 @@ class RunSet:
         self._csv_files, self._diagnostic_files = [], []
 
         # per-process output files
-        if one_process_per_chain:
+        if one_process_per_chain and chains > 1:
             self._stdout_files = [
                 self.gen_file_name(".txt", extra="stdout", id=id)
                 for id in self._chain_ids
