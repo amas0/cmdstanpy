@@ -335,7 +335,7 @@ def test_serialization() -> None:
     model = CmdStanModel(stan_file=stan)
     variational1 = model.variational(algorithm='meanfield', seed=999999)
     dumped = pickle.dumps(variational1)
-    shutil.rmtree(variational1.runset._output_dir)
+    shutil.rmtree(variational1.runset._outdir)
     variational2: CmdStanVB = pickle.loads(dumped)
     np.testing.assert_array_equal(
         variational1.variational_sample, variational2.variational_sample

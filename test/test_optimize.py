@@ -664,7 +664,7 @@ def test_serialization() -> None:
         history_size=5,
     )
     dumped = pickle.dumps(mle1)
-    shutil.rmtree(mle1.runset._output_dir)
+    shutil.rmtree(mle1.runset._outdir)
     mle2: CmdStanMLE = pickle.loads(dumped)
     np.testing.assert_array_equal(
         mle1.optimized_params_np, mle2.optimized_params_np

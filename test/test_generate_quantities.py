@@ -532,7 +532,7 @@ def test_serialization() -> None:
     fit1 = model.generate_quantities(data=jdata, previous_fit=fit_sampling)
 
     dumped = pickle.dumps(fit1)
-    shutil.rmtree(fit1.runset._output_dir)
+    shutil.rmtree(fit1.runset._outdir)
     fit2: CmdStanGQ[CmdStanMCMC] = pickle.loads(dumped)
     variables1 = fit1.stan_variables()
     variables2 = fit2.stan_variables()

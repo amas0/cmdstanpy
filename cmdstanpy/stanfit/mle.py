@@ -295,10 +295,7 @@ class CmdStanMLE:
 
     def save_csvfiles(self, dir: str | None = None) -> None:
         """
-        Move output CSV files to specified directory.  If files were
-        written to the temporary session directory, clean filename.
-        E.g., save 'bernoulli-201912081451-1-5nm6as7u.csv' as
-        'bernoulli-201912081451-1.csv'.
+        Move output CSV files to specified directory.
 
         :param dir: directory path
 
