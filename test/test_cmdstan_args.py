@@ -808,3 +808,15 @@ def test_args_pathfinder_bad(arg: str, require_int: bool) -> None:
         args = PathfinderArgs(**{arg: 1.1})  # type: ignore
         with pytest.raises(ValueError):
             args.validate()
+
+
+def test_save_cmdstan_config() -> None:
+    sampler_args = SamplerArgs()
+    cmdstan_args = CmdStanArgs(
+        model_name='bernoulli',
+        model_exe='',
+        chain_ids=[1, 2, 3, 4],
+        method_args=sampler_args,
+    )
+    command = cmdstan_args.compose_command(0, csv_file="foo")
+    assert "save_cmdstan_config=1" in command
