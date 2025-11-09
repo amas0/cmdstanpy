@@ -56,6 +56,7 @@ class RunSet:
         )
         self._stdout_files, self._profile_files = [], []
         self._csv_files, self._diagnostic_files = [], []
+        self._config_files = []
 
         # per-process output files
         if one_process_per_chain and chains > 1:
@@ -63,6 +64,13 @@ class RunSet:
                 self.gen_file_name(".txt", extra="stdout", id=id)
                 for id in self._chain_ids
             ]
+            self._config_files = [
+                os.path.join(
+                    self._outdir, f"{self._base_outfile}_{id}_config.json"
+                )
+                for id in self._chain_ids
+            ]
+
             if args.save_profile:
                 self._profile_files = [
                     self.gen_file_name(".csv", extra="profile", id=id)
@@ -70,6 +78,7 @@ class RunSet:
                 ]
         else:
             self._stdout_files = [self.gen_file_name(".txt", extra="stdout")]
+            self._config_files = [self.gen_file_name(".json", extra="config")]
             if args.save_profile:
                 self._profile_files = [
                     self.gen_file_name(".csv", extra="profile")
@@ -195,6 +204,13 @@ class RunSet:
         Transcripts include config information, progress, and error messages.
         """
         return self._stdout_files
+
+    @property
+    def config_files(self) -> list[str]:
+        """
+        List of paths to CmdStan config json files.
+        """
+        return self._config_files
 
     def _check_retcodes(self) -> bool:
         """Returns ``True`` when all chains have retcode 0."""
