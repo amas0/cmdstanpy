@@ -102,25 +102,21 @@ class RunSet:
                 ]
 
     def __repr__(self) -> str:
-        repr = 'RunSet: chains={}, chain_ids={}, num_processes={}'.format(
-            self._chains, self._chain_ids, self._num_procs
-        )
-        repr = '{}\n cmd (chain 1):\n\t{}'.format(repr, self.cmd(0))
-        repr = '{}\n retcodes={}'.format(repr, self._retcodes)
-        repr = f'{repr}\n per-chain output files (showing chain 1 only):'
-        repr = '{}\n csv_file:\n\t{}'.format(repr, self._csv_files[0])
+        lines = [
+            f"RunSet: chains={self._chains}, chain_ids={self._chain_ids}, "
+            f"num_processes={self._num_procs}",
+            f" cmd (chain 1):\n\t{self.cmd(0)}",
+            f" retcodes={self._retcodes}",
+            " per-chain output files (showing chain 1 only):",
+            f" csv_file:\n\t{self._csv_files[0] if self._csv_files else ''}",
+        ]
         if self._args.save_latent_dynamics:
-            repr = '{}\n diagnostics_file:\n\t{}'.format(
-                repr, self._diagnostic_files[0]
-            )
+            lines.append(f" diagnostics_file:\n\t{self._diagnostic_files[0]}")
         if self._args.save_profile:
-            repr = '{}\n profile_file:\n\t{}'.format(
-                repr, self._profile_files[0]
-            )
-        repr = '{}\n console_msgs (if any):\n\t{}'.format(
-            repr, self._stdout_files[0]
-        )
-        return repr
+            lines.append(f" profile_file:\n\t{self._profile_files[0]}")
+        lines.append(f" console_msgs (if any):\n\t{self._stdout_files[0]}")
+        lines.append(f" config_files:\n\t{self._config_files[0]}")
+        return '\n'.join(lines)
 
     @property
     def model(self) -> str:
