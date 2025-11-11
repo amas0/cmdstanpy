@@ -2204,3 +2204,27 @@ def test_no_output_draws() -> None:
     mcmc = model.sample(data=data, iter_sampling=0, save_warmup=False, chains=2)
     draws = mcmc.draws()
     assert np.array_equal(draws, np.empty((0, 2, len(mcmc.column_names))))
+
+
+def test_config_output() -> None:
+    stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
+    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+    model = CmdStanModel(stan_file=stan)
+    fit = model.sample(
+        data=jdata,
+        chains=2,
+        seed=12345,
+        iter_warmup=100,
+        iter_sampling=200,
+    )
+    assert all(os.path.exists(cf) for cf in fit.runset.config_files)
+
+    # Config file naming differs when only a single chain is output
+    fit_one_chain = model.sample(
+        data=jdata,
+        chains=1,
+        seed=12345,
+        iter_warmup=100,
+        iter_sampling=200,
+    )
+    assert all(os.path.exists(cf) for cf in fit_one_chain.runset.config_files)

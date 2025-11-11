@@ -866,6 +866,7 @@ class CmdStanArgs:
                 cmd.append(f'init={self.inits[idx]}')
         cmd.append('output')
         cmd.append(f'file={csv_file}')
+        cmd.append('save_cmdstan_config=1')
         if diagnostic_file:
             cmd.append(f'diagnostic_file={diagnostic_file}')
         if profile_file:

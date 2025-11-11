@@ -30,6 +30,7 @@ def test_check_repr() -> None:
     assert 'csv_file' in repr(runset)
     assert 'console_msgs' in repr(runset)
     assert 'diagnostics_file' not in repr(runset)
+    assert 'config_file' in repr(runset)
 
 
 def test_check_retcodes() -> None:
@@ -106,6 +107,11 @@ def test_output_filenames_one_proc_per_chain() -> None:
         stdout_file.endswith(f"_stdout_{id}.txt")
         for id, stdout_file in zip(chain_ids, runset.stdout_files)
     )
+    assert len(runset.config_files) == len(chain_ids)
+    assert all(
+        config_file.endswith(f"_{id}_config.json")
+        for id, config_file in zip(chain_ids, runset.config_files)
+    )
 
     cmdstan_args_other_files = CmdStanArgs(
         model_name='bernoulli',
@@ -153,6 +159,8 @@ def test_output_filenames_threading() -> None:
     )
     assert len(runset.stdout_files) == 1
     assert runset.stdout_files[0].endswith("_stdout.txt")
+    assert len(runset.config_files) == 1
+    assert runset.config_files[0].endswith("_config.json")
 
     cmdstan_args_other_files = CmdStanArgs(
         model_name='bernoulli',
@@ -198,6 +206,7 @@ def test_output_filenames_single_chain() -> None:
     runset = RunSet(args=cmdstan_args, chains=1, one_process_per_chain=True)
     base_file = runset._base_outfile
     assert runset.stdout_files[0].endswith(f"{base_file}_stdout.txt")
+    assert runset.config_files[0].endswith(f"{base_file}_config.json")
 
     cmdstan_args_other_files = CmdStanArgs(
         model_name='bernoulli',
