@@ -1352,6 +1352,7 @@ class CmdStanModel:
         time_fmt: str = "%Y%m%d%H%M%S",
         timeout: float | None = None,
         num_threads: int | None = None,
+        save_single_paths: bool = False,
     ) -> CmdStanPathfinder:
         """
         Run CmdStan's Pathfinder variational inference algorithm.
@@ -1458,6 +1459,10 @@ class CmdStanModel:
             A number other than ``1`` requires the model to have been compiled
             with STAN_THREADS=True.
 
+        :param save_single_paths: Save draws and ELBO evaluations from
+        individual Pathfinder runs. Draws are saved to CSV files and ELBO
+        evaluations are saved to JSON files.
+
         :return: A :class:`CmdStanPathfinder` object
 
         References
@@ -1506,6 +1511,7 @@ class CmdStanModel:
             num_elbo_draws=num_elbo_draws,
             psis_resample=psis_resample,
             calculate_lp=calculate_lp,
+            save_single_paths=save_single_paths,
         )
 
         with temp_single_json(data) as _data, temp_inits(inits) as _inits:
