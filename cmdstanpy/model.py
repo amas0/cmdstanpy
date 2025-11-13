@@ -1328,7 +1328,7 @@ class CmdStanModel:
         tol_rel_grad: float | None = None,
         tol_param: float | None = None,
         history_size: int | None = None,
-        num_paths: int | None = None,
+        num_paths: int = 4,
         max_lbfgs_iters: int | None = None,
         draws: int | None = None,
         num_single_draws: int | None = None,
