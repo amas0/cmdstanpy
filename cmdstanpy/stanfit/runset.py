@@ -350,9 +350,5 @@ class RunSet:
                     for id in range(1, num_paths + 1)
                 ]
             else:  # num_paths == 1
-                self._single_path_csv_files = [
-                    self.gen_file_name(".csv", extra="path")
-                ]
-                self._single_path_json_files = [
-                    self.gen_file_name(".csv", extra="json")
-                ]
+                self._single_path_csv_files = [self.gen_file_name(".csv")]
+                self._single_path_json_files = [self.gen_file_name(".json")]
