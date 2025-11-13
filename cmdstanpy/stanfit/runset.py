@@ -336,6 +336,8 @@ class RunSet:
             )
 
     def populate_pathfinder_single_path_files(self) -> None:
+        """Properly assigns output files for Pathfinder's
+        save_single_paths=True option"""
         if not isinstance(self._args.method_args, PathfinderArgs):
             return
         if self._args.method_args.save_single_paths:
