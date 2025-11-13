@@ -1461,7 +1461,9 @@ class CmdStanModel:
 
         :param save_single_paths: Save draws and ELBO evaluations from
         individual Pathfinder runs. Draws are saved to CSV files and ELBO
-        evaluations are saved to JSON files.
+        evaluations are saved to JSON files. If ``True``, file paths can be
+        accessed via ``CmdStanPathfinder.runset.single_path_csv_files`` and
+        ``CmdStanPathfinder.runset.single_path_json_files``.
 
         :return: A :class:`CmdStanPathfinder` object
 
