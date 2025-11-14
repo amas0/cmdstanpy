@@ -471,3 +471,29 @@ def test_diagnose() -> None:
         require_gradients_ok=False,
     )
     assert np.abs(gradients["error"]).max() > 1e-3
+
+
+def test_compilation_options_resolution() -> None:
+    model = CmdStanModel(stan_file=BERN_STAN)
+
+    out = model._resolve_cpp_options(None, multithreading=False)
+    assert not out
+    out = model._resolve_cpp_options(None, multithreading=True)
+    assert out == {"STAN_THREADS": "TRUE"}
+    out = model._resolve_cpp_options({"STAN_THREADS": ""}, multithreading=True)
+    assert out == {"STAN_THREADS": ""}
+    out = model._resolve_cpp_options(
+        {"STAN_OPENCL": "TRUE"}, multithreading=True
+    )
+    assert out == {"STAN_THREADS": "TRUE", "STAN_OPENCL": "TRUE"}
+
+    out = model._resolve_stanc_options(None, stanc_optimizations=False)
+    assert not out
+    out = model._resolve_stanc_options(None, stanc_optimizations=True)
+    assert out == {"O": 1}
+    out = model._resolve_stanc_options({"O": 0}, stanc_optimizations=True)
+    assert out == {"O": 0}
+    out = model._resolve_stanc_options(
+        {"O": "experimental"}, stanc_optimizations=True
+    )
+    assert out == {"O": "experimental"}
