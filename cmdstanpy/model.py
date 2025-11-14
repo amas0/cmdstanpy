@@ -104,8 +104,10 @@ class CmdStanModel:
         :param exe_file: Path to compiled executable file.
         :param force_compile: Whether or not to force recompilation if
             executable file already exists.
-        :param stanc_options: Options for stanc compiler.
-        :param cpp_options: Options for C++ compiler.
+        :param stanc_options: Options for stanc compiler. Note, this
+            will override the `stanc_optimizations` if in conflict.
+        :param cpp_options: Options for C++ compiler. Note, this will
+            override the `multithreading` option if in conflict.
         :param user_header: A path to a header file to include during C++
             compilation.
         :param multithreading: Enables multithreading in a Stan model.
