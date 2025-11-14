@@ -9,7 +9,12 @@ from typing import Any
 
 import pytest
 
-from cmdstanpy.compilation import CompilerOptions, format_stan_file
+from cmdstanpy.compilation import (
+    CompilerOptions,
+    format_stan_file,
+    resolve_cpp_options,
+    resolve_stanc_options,
+)
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
@@ -225,3 +230,23 @@ def test_model_format_options() -> None:
     formatted = sys_stdout.getvalue()
     assert formatted.count('{') == 3
     assert formatted.count('(') == 1
+
+
+def test_compilation_options_resolution() -> None:
+    out = resolve_cpp_options(None, multithreading=False)
+    assert not out
+    out = resolve_cpp_options(None, multithreading=True)
+    assert out == {"STAN_THREADS": "TRUE"}
+    out = resolve_cpp_options({"STAN_THREADS": ""}, multithreading=True)
+    assert out == {"STAN_THREADS": ""}
+    out = resolve_cpp_options({"STAN_OPENCL": "TRUE"}, multithreading=True)
+    assert out == {"STAN_THREADS": "TRUE", "STAN_OPENCL": "TRUE"}
+
+    out = resolve_stanc_options(None, stanc_optimizations=False)
+    assert not out
+    out = resolve_stanc_options(None, stanc_optimizations=True)
+    assert out == {"O": 1}
+    out = resolve_stanc_options({"O": 0}, stanc_optimizations=True)
+    assert out == {"O": 0}
+    out = resolve_stanc_options({"O": "experimental"}, stanc_optimizations=True)
+    assert out == {"O": "experimental"}
