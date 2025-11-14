@@ -264,19 +264,21 @@ class CmdStanModel:
     def _resolve_cpp_options(
         cpp_options: dict[str, Any] | None, multithreading: bool
     ) -> dict[str, Any]:
-        out = {}
-        if multithreading:
+        out = cpp_options or {}
+        out = out.copy()
+        if multithreading and "STAN_THREADS" not in out:
             out["STAN_THREADS"] = "TRUE"
-        return out | cpp_options if cpp_options else out
+        return out
 
     @staticmethod
     def _resolve_stanc_options(
         stanc_options: dict[str, Any] | None, stanc_optimizations: bool
     ) -> dict[str, Any]:
-        out = {}
-        if stanc_optimizations:
+        out = stanc_options or {}
+        out = out.copy()
+        if stanc_optimizations and "O" not in out:
             out["O"] = 1
-        return out | stanc_options if stanc_options else out
+        return out
 
     def optimize(
         self,
