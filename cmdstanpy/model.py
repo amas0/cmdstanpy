@@ -93,6 +93,9 @@ class CmdStanModel:
         stanc_options: dict[str, Any] | None = None,
         cpp_options: dict[str, Any] | None = None,
         user_header: OptionalPath = None,
+        *,
+        multithreading: bool = False,
+        stanc_optimizations: bool = False,
     ) -> None:
         """
         Initialize object given constructor args.
@@ -105,10 +108,19 @@ class CmdStanModel:
         :param cpp_options: Options for C++ compiler.
         :param user_header: A path to a header file to include during C++
             compilation.
+        :param multithreading: Enables multithreading in a Stan model.
+            Equivalent to `cpp_options = {"STAN_THREADS": "TRUE"}`.
+            Defaults to False.
+        :param stanc_optimizations: Enables O1 optimizations in the
+            stanc compiler. Equivalent to `stanc_options = {"O": 1}`.
+            Defaults to False.
         """
         self._name = ''
         self._stan_file = None
-        self._stanc_options: dict[str, Any] = stanc_options or {}
+        self._stanc_options = self._resolve_stanc_options(
+            stanc_options, stanc_optimizations
+        )
+        cpp_options = self._resolve_cpp_options(cpp_options, multithreading)
 
         self._fixed_param = False
 
@@ -245,6 +257,24 @@ class CmdStanModel:
                 'Cannot read file Stan file: %s', self._stan_file
             )
         return code
+
+    @staticmethod
+    def _resolve_cpp_options(
+        cpp_options: dict[str, Any] | None, multithreading: bool
+    ) -> dict[str, Any]:
+        out = {}
+        if multithreading:
+            out["STAN_THREADS"] = "TRUE"
+        return out | cpp_options if cpp_options else out
+
+    @staticmethod
+    def _resolve_stanc_options(
+        stanc_options: dict[str, Any] | None, stanc_optimizations: bool
+    ) -> dict[str, Any]:
+        out = {}
+        if stanc_optimizations:
+            out["O"] = 1
+        return out | stanc_options if stanc_options else out
 
     def optimize(
         self,
