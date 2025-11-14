@@ -93,6 +93,9 @@ class CmdStanModel:
         stanc_options: dict[str, Any] | None = None,
         cpp_options: dict[str, Any] | None = None,
         user_header: OptionalPath = None,
+        *,
+        multithreading: bool = False,
+        stanc_optimizations: bool = False,
     ) -> None:
         """
         Initialize object given constructor args.
@@ -101,14 +104,27 @@ class CmdStanModel:
         :param exe_file: Path to compiled executable file.
         :param force_compile: Whether or not to force recompilation if
             executable file already exists.
-        :param stanc_options: Options for stanc compiler.
-        :param cpp_options: Options for C++ compiler.
+        :param multithreading: Enables multithreading in a Stan model.
+            Equivalent to `cpp_options = {"STAN_THREADS": "TRUE"}`.
+            Defaults to False.
+        :param stanc_optimizations: Enables O1 optimizations in the
+            stanc compiler. Equivalent to `stanc_options = {"O": 1}`.
+            Defaults to False.
+        :param stanc_options: Options for stanc compiler. Note, this
+            will override the `stanc_optimizations` if in conflict.
+        :param cpp_options: Options for C++ compiler. Note, this will
+            override the `multithreading` option if in conflict.
         :param user_header: A path to a header file to include during C++
             compilation.
         """
         self._name = ''
         self._stan_file = None
-        self._stanc_options: dict[str, Any] = stanc_options or {}
+        self._stanc_options = compilation.resolve_stanc_options(
+            stanc_options, stanc_optimizations
+        )
+        cpp_options = compilation.resolve_cpp_options(
+            cpp_options, multithreading
+        )
 
         self._fixed_param = False
 
