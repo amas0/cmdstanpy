@@ -486,3 +486,23 @@ def format_stan_file(
 
     except (ValueError, RuntimeError) as e:
         raise RuntimeError("Stanc formatting failed") from e
+
+
+def resolve_cpp_options(
+    cpp_options: dict[str, Any] | None, multithreading: bool
+) -> dict[str, Any]:
+    out = cpp_options or {}
+    out = out.copy()
+    if multithreading and "STAN_THREADS" not in out:
+        out["STAN_THREADS"] = "TRUE"
+    return out
+
+
+def resolve_stanc_options(
+    stanc_options: dict[str, Any] | None, stanc_optimizations: bool
+) -> dict[str, Any]:
+    out = stanc_options or {}
+    out = out.copy()
+    if stanc_optimizations and "O" not in out:
+        out["O"] = 1
+    return out

@@ -119,10 +119,12 @@ class CmdStanModel:
         """
         self._name = ''
         self._stan_file = None
-        self._stanc_options = self._resolve_stanc_options(
+        self._stanc_options = compilation.resolve_stanc_options(
             stanc_options, stanc_optimizations
         )
-        cpp_options = self._resolve_cpp_options(cpp_options, multithreading)
+        cpp_options = compilation.resolve_cpp_options(
+            cpp_options, multithreading
+        )
 
         self._fixed_param = False
 
@@ -259,26 +261,6 @@ class CmdStanModel:
                 'Cannot read file Stan file: %s', self._stan_file
             )
         return code
-
-    @staticmethod
-    def _resolve_cpp_options(
-        cpp_options: dict[str, Any] | None, multithreading: bool
-    ) -> dict[str, Any]:
-        out = cpp_options or {}
-        out = out.copy()
-        if multithreading and "STAN_THREADS" not in out:
-            out["STAN_THREADS"] = "TRUE"
-        return out
-
-    @staticmethod
-    def _resolve_stanc_options(
-        stanc_options: dict[str, Any] | None, stanc_optimizations: bool
-    ) -> dict[str, Any]:
-        out = stanc_options or {}
-        out = out.copy()
-        if stanc_optimizations and "O" not in out:
-            out["O"] = 1
-        return out
 
     def optimize(
         self,
