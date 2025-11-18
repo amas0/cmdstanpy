@@ -57,6 +57,7 @@ class RunSet:
         self._stdout_files, self._profile_files = [], []
         self._csv_files, self._diagnostic_files = [], []
         self._config_files = []
+        self._metric_files = []
 
         # per-process output files
         if one_process_per_chain and chains > 1:
@@ -87,6 +88,10 @@ class RunSet:
         # per-chain output files
         if chains == 1:
             self._csv_files = [self.gen_file_name(".csv")]
+            if args.method == Method.SAMPLE:
+                self._metric_files = [
+                    self.gen_file_name(".json", extra="metric")
+                ]
             if args.save_latent_dynamics:
                 self._diagnostic_files = [
                     self.gen_file_name(".csv", extra="diagnostic")
@@ -95,6 +100,11 @@ class RunSet:
             self._csv_files = [
                 self.gen_file_name(".csv", id=id) for id in self._chain_ids
             ]
+            if args.method == Method.SAMPLE:
+                self._metric_files = [
+                    self.gen_file_name(".json", extra="metric", id=id)
+                    for id in self._chain_ids
+                ]
             if args.save_latent_dynamics:
                 self._diagnostic_files = [
                     self.gen_file_name(".csv", extra="diagnostic", id=id)
@@ -221,6 +231,11 @@ class RunSet:
     def profile_files(self) -> list[str]:
         """List of paths to CmdStan profiler files."""
         return self._profile_files
+
+    @property
+    def metric_files(self) -> list[str]:
+        """List of paths to CmdStan NUTS-HMC sampler metric files."""
+        return self._metric_files
 
     def gen_file_name(
         self, suffix: str, *, extra: str = "", id: int | None = None
