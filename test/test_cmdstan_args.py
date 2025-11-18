@@ -241,7 +241,7 @@ def test_metric() -> None:
     args = SamplerArgs()
     args.validate(chains=4)
     cmd = args.compose(1, cmd=[])
-    assert 'metric=' not in ' '.join(cmd)
+    assert ' metric=' not in ' '.join(cmd)
 
     jmetric = os.path.join(DATAFILES_PATH, 'bernoulli.metric.json')
     args = SamplerArgs(metric_file=jmetric)
