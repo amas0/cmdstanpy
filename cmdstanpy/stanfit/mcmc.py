@@ -31,7 +31,7 @@ from cmdstanpy.utils import (
     stancsv,
 )
 
-from .metadata import InferenceMetadata
+from .metadata import InferenceMetadata, MetricInfo
 from .runset import RunSet
 
 
@@ -81,6 +81,7 @@ class CmdStanMCMC:
         # info from CSV values, instantiated lazily
         self._draws: np.ndarray = np.array(())
         # only valid when not is_fixed_param
+        self._metric_type: str | None = None
         self._metric: np.ndarray = np.array(())
         self._step_size: np.ndarray = np.array(())
         self._divergences: np.ndarray = np.zeros(self.runset.chains, dtype=int)
@@ -92,7 +93,9 @@ class CmdStanMCMC:
         # info from CSV header and initial and final comment blocks
         config = self._validate_csv_files()
         self._metadata: InferenceMetadata = InferenceMetadata(config)
+        self._chain_metric_info: list[MetricInfo] = []
         if not self._is_fixed_param:
+            self._parse_metric_info()
             self._check_sampler_diagnostics()
 
     def create_inits(
@@ -216,11 +219,7 @@ class CmdStanMCMC:
         to CmdStan arg 'metric'.
         When sampler algorithm 'fixed_param' is specified, metric_type is None.
         """
-        return (
-            self._metadata.cmdstan_config['metric']
-            if not self._is_fixed_param
-            else None
-        )
+        return self._metric_type if not self._is_fixed_param else None
 
     @property
     def inv_metric(self) -> np.ndarray | None:
@@ -233,7 +232,6 @@ class CmdStanMCMC:
         if self._is_fixed_param or self.metric_type == 'unit_e':
             return None
 
-        self._assemble_draws()
         return self._metric
 
     @property
@@ -242,7 +240,6 @@ class CmdStanMCMC:
         Step size used by sampler for each chain.
         When sampler algorithm 'fixed_param' is specified, step size is None.
         """
-        self._assemble_draws()
         return self._step_size if not self._is_fixed_param else None
 
     @property
@@ -381,6 +378,26 @@ class CmdStanMCMC:
                     self._divergences[i] = drest['ct_divergences']
                     self._max_treedepths[i] = drest['ct_max_treedepth']
         return dzero
+
+    def _parse_metric_info(self) -> None:
+        """Extracts metric type, inv_metric, and step size information from the
+        parsed metric JSONs."""
+        self._chain_metric_info = [
+            MetricInfo.from_json(mf, chain_id)
+            for mf, chain_id in zip(
+                self.runset.metric_files, self.runset.chain_ids
+            )
+        ]
+        metric_types = {cmi.metric_type for cmi in self._chain_metric_info}
+        if len(metric_types) != 1:
+            raise ValueError("Inconsistent metric types found across chains")
+        self._metric_type = self._chain_metric_info[0].metric_type
+        self._metric = np.asarray(
+            [cmi.inv_metric for cmi in self._chain_metric_info]
+        )
+        self._step_size = np.asarray(
+            [cmi.stepsize for cmi in self._chain_metric_info]
+        )
 
     def _check_sampler_diagnostics(self) -> None:
         """
