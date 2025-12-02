@@ -98,7 +98,10 @@ class MetricInfo(BaseModel):
     model_config = {"arbitrary_types_allowed": True}
 
     @field_validator("inv_metric", mode="before")
-    def convert_inv_metric(self, v: Any) -> np.ndarray:
+    def convert_inv_metric(  # pylint: disable=no-self-argument
+        cls, v: Any
+    ) -> np.ndarray:
+
         return np.asarray(v)
 
     @model_validator(mode="after")
