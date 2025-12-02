@@ -273,7 +273,8 @@ class SamplerArgs:
             cmd.append(f'window={self.adapt_metric_window}')
         if self.adapt_step_size is not None:
             cmd.append('term_buffer={}'.format(self.adapt_step_size))
-        cmd.append('save_metric=1')
+        if self.adapt_engaged:
+            cmd.append('save_metric=1')
         # End adapt subsection
 
         if self.num_chains > 1:
