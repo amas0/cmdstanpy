@@ -103,44 +103,6 @@ def csv_bytes_list_to_numpy(
     return out
 
 
-def parse_hmc_adaptation_lines(
-    comment_lines: list[bytes],
-) -> tuple[float | None, npt.NDArray[np.float64] | None]:
-    """Extracts step size/mass matrix information from the Stan CSV comment
-    lines by parsing the adaptation section. If the diag_e metric is used,
-    the returned mass matrix will be a 1D array of the diagnoal elements,
-    if the dense_e metric is used, it will be a 2D array representing the
-    entire matrix, and if unit_e is used then None will be returned.
-
-    Returns a (step_size, mass_matrix) tuple"""
-    step_size, mass_matrix = None, None
-
-    cleaned_lines = (ln.lstrip(b"# ") for ln in comment_lines)
-    in_matrix_block = False
-    diag_e_metric = False
-    matrix_lines = []
-    for line in cleaned_lines:
-        if in_matrix_block and line.strip():
-            # Stop when we get to timing block
-            if line.startswith(b"Elapsed Time"):
-                break
-            matrix_lines.append(line)
-        elif line.startswith(b"Step size"):
-            _, ss_str = line.split(b" = ")
-            step_size = float(ss_str)
-        elif line.startswith(b"Diagonal") or line.startswith(b"Elements"):
-            in_matrix_block = True
-        elif line.startswith(b"No free"):
-            break
-        elif b"diag_e" in line:
-            diag_e_metric = True
-    if matrix_lines:
-        mass_matrix = csv_bytes_list_to_numpy(matrix_lines)
-        if diag_e_metric and mass_matrix.shape[0] == 1:
-            mass_matrix = mass_matrix[0]
-    return step_size, mass_matrix
-
-
 def extract_key_val_pairs(
     comment_lines: list[bytes], remove_default_text: bool = True
 ) -> Iterator[tuple[str, str]]:
@@ -346,67 +308,6 @@ def raise_on_inconsistent_draws_shape(
             )
 
 
-def raise_on_invalid_adaptation_block(comment_lines: list[bytes]) -> None:
-    """Throws ValueErrors if the parsed adaptation block is invalid, e.g.
-    the metric information is not present, consistent with the rest of
-    the file, or the step size info cannot be processed."""
-
-    def column_count(ln: bytes) -> int:
-        return ln.count(b",") + 1
-
-    ln_iter = enumerate(comment_lines, start=2)
-    metric = None
-    for _, line in ln_iter:
-        if b"metric =" in line:
-            _, val = line.split(b" = ")
-            metric = val.replace(b"(Default)", b"").strip().decode()
-        if b"Adaptation terminated" in line:
-            break
-    else:  # No adaptation block found
-        raise ValueError("No adaptation block found, expecting metric")
-
-    if metric is None:
-        raise ValueError("No reported metric found")
-    # At this point iterator should be in the adaptation block
-
-    # Ensure step size exists and is valid float
-    num, line = next(ln_iter)
-    if not line.startswith(b"# Step size"):
-        raise ValueError(
-            f"line {num}: expecting step size, found:\n\t \"{line.decode()}\""
-        )
-    _, step_size = line.split(b" = ")
-    try:
-        float(step_size.strip())
-    except ValueError as exc:
-        raise ValueError(
-            f"line {num}: invalid step size: {step_size.decode()}"
-        ) from exc
-
-    # Ensure mass matrix valid
-    num, line = next(ln_iter)
-    if metric == "unit_e":
-        return
-    if not (
-        (metric == "diag_e" and line.startswith(b"# Diagonal elements of "))
-        or (metric == "dense_e" and line.startswith(b"# Elements of inverse"))
-    ):
-        raise ValueError(
-            f"line {num}: invalid or missing mass matrix specification"
-        )
-
-    # Validating mass matrix shape
-    _, line = next(ln_iter)
-    num_unconstrained_params = column_count(line)
-    if metric == "diag_e":
-        return
-    for (num, line), _ in zip(ln_iter, range(1, num_unconstrained_params)):
-        if column_count(line) != num_unconstrained_params:
-            raise ValueError(
-                f"line {num}: invalid or missing mass matrix specification"
-            )
-
-
 def parse_timing_lines(
     comment_lines: list[bytes],
 ) -> dict[str, float]:
@@ -489,7 +390,6 @@ def parse_sampler_metadata_from_csv(
             and header
             and not is_sneaky_fixed_param(header)
         ):
-            raise_on_invalid_adaptation_block(comments)
             max_depth: int = config["max_depth"]  # type: ignore
             max_tree_hits, divs = extract_max_treedepth_and_divergence_counts(
                 header, draws, max_depth, num_warmup
