@@ -94,8 +94,8 @@ class CmdStanMCMC:
         config = self._validate_csv_files()
         self._metadata: InferenceMetadata = InferenceMetadata(config)
         self._chain_metric_info: list[MetricInfo] = []
+        self._metric_info_parsed: bool = False
         if not self._is_fixed_param:
-            self._parse_metric_info()
             self._check_sampler_diagnostics()
 
     def create_inits(
@@ -219,6 +219,8 @@ class CmdStanMCMC:
         to CmdStan arg 'metric'.
         When sampler algorithm 'fixed_param' is specified, metric_type is None.
         """
+        if not self._metric_info_parsed:
+            self._parse_metric_info()
         return self._metric_type if not self._is_fixed_param else None
 
     @property
@@ -229,6 +231,9 @@ class CmdStanMCMC:
         a ``nchains x nparams x nparams`` array when metric_type is 'dense_e',
         or ``None`` when metric_type is 'unit_e' or algorithm is 'fixed_param'.
         """
+        if not self._metric_info_parsed:
+            self._parse_metric_info()
+
         if self._is_fixed_param or self.metric_type == 'unit_e':
             return None
 
@@ -240,6 +245,9 @@ class CmdStanMCMC:
         Step size used by sampler for each chain.
         When sampler algorithm 'fixed_param' is specified, step size is None.
         """
+        if not self._metric_info_parsed:
+            self._parse_metric_info()
+
         return self._step_size if not self._is_fixed_param else None
 
     @property
@@ -398,6 +406,7 @@ class CmdStanMCMC:
         self._step_size = np.asarray(
             [cmi.stepsize for cmi in self._chain_metric_info]
         )
+        self._metric_info_parsed = True
 
     def _check_sampler_diagnostics(self) -> None:
         """
@@ -443,11 +452,10 @@ class CmdStanMCMC:
         )
         self._step_size = np.empty(self.chains, dtype=np.float64)
 
-        mass_matrix_per_chain = []
         for chain in range(self.chains):
             try:
                 (
-                    comments,
+                    _,
                     header,
                     draws,
                 ) = stancsv.parse_comments_header_and_draws(
@@ -460,19 +468,10 @@ class CmdStanMCMC:
                     draws_np = np.empty((0, n_cols))
 
                 self._draws[:, chain, :] = draws_np
-                if not self._is_fixed_param:
-                    (
-                        self._step_size[chain],
-                        mass_matrix,
-                    ) = stancsv.parse_hmc_adaptation_lines(comments)
-                    mass_matrix_per_chain.append(mass_matrix)
             except Exception as exc:
                 raise ValueError(
                     f"Parsing output from {self.runset.csv_files[chain]} failed"
                 ) from exc
-
-        if all(mm is not None for mm in mass_matrix_per_chain):
-            self._metric = np.array(mass_matrix_per_chain)
 
         assert self._draws is not None
 
