@@ -101,10 +101,19 @@ class RunSet:
                 self.gen_file_name(".csv", id=id) for id in self._chain_ids
             ]
             if args.method == Method.SAMPLE:
-                self._metric_files = [
-                    self.gen_file_name(".json", extra="metric", id=id)
-                    for id in self._chain_ids
-                ]
+                if one_process_per_chain:
+                    self._metric_files = [
+                        os.path.join(
+                            self._outdir,
+                            f"{self._base_outfile}_{id}_metric.json",
+                        )
+                        for id in self._chain_ids
+                    ]
+                else:
+                    self._metric_files = [
+                        self.gen_file_name(".json", extra="metric", id=id)
+                        for id in self._chain_ids
+                    ]
             if args.save_latent_dynamics:
                 self._diagnostic_files = [
                     self.gen_file_name(".csv", extra="diagnostic", id=id)
