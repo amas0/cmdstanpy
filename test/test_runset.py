@@ -332,6 +332,13 @@ def test_metric_output_filename() -> None:
     runset = RunSet(args=cmdstan_args, chains=2)
     assert len(runset.metric_files) == 2
     assert all(
+        f.endswith(f"{base_file}_{i}_metric.json")
+        for i, f in zip(chain_ids, runset.metric_files)
+    )
+
+    runset = RunSet(args=cmdstan_args, chains=2, one_process_per_chain=False)
+    assert len(runset.metric_files) == 2
+    assert all(
         f.endswith(f"{base_file}_metric_{i}.json")
         for i, f in zip(chain_ids, runset.metric_files)
     )
