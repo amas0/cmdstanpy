@@ -219,9 +219,13 @@ class CmdStanMCMC:
         to CmdStan arg 'metric'.
         When sampler algorithm 'fixed_param' is specified, metric_type is None.
         """
+        if self._is_fixed_param:
+            return None
+
         if not self._metric_info_parsed:
             self._parse_metric_info()
-        return self._metric_type if not self._is_fixed_param else None
+
+        return self._metric_type
 
     @property
     def inv_metric(self) -> np.ndarray | None:
@@ -231,10 +235,13 @@ class CmdStanMCMC:
         a ``nchains x nparams x nparams`` array when metric_type is 'dense_e',
         or ``None`` when metric_type is 'unit_e' or algorithm is 'fixed_param'.
         """
+        if self._is_fixed_param:
+            return None
+
         if not self._metric_info_parsed:
             self._parse_metric_info()
 
-        if self._is_fixed_param or self.metric_type == 'unit_e':
+        if self.metric_type == 'unit_e':
             return None
 
         return self._metric
@@ -245,10 +252,13 @@ class CmdStanMCMC:
         Step size used by sampler for each chain.
         When sampler algorithm 'fixed_param' is specified, step size is None.
         """
+        if self._is_fixed_param:
+            return None
+
         if not self._metric_info_parsed:
             self._parse_metric_info()
 
-        return self._step_size if not self._is_fixed_param else None
+        return self._step_size
 
     @property
     def thin(self) -> int:
