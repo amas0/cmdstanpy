@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import os
 from typing import Any, Iterator, Literal
 
@@ -91,18 +92,23 @@ class MetricInfo(BaseModel):
     as output by CmdStan"""
 
     chain_id: int = Field(gt=0)
-    stepsize: float = Field(gt=0)
+    stepsize: float
     metric_type: Literal["diag_e", "dense_e", "unit_e"]
     inv_metric: np.ndarray
 
     model_config = {"arbitrary_types_allowed": True}
 
     @field_validator("inv_metric", mode="before")
-    def convert_inv_metric(  # pylint: disable=no-self-argument
-        cls, v: Any
-    ) -> np.ndarray:
-
+    @classmethod
+    def convert_inv_metric(cls, v: Any) -> np.ndarray:
         return np.asarray(v)
+
+    @field_validator("stepsize")
+    @classmethod
+    def validate_stepsize(cls, v: float) -> float:
+        if not math.isnan(v) and v <= 0:
+            raise ValueError("stepsize must be greater than 0 or NaN")
+        return v
 
     @model_validator(mode="after")
     def validate_inv_metric_shape(self) -> MetricInfo:
