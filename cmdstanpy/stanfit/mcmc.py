@@ -450,7 +450,6 @@ class CmdStanMCMC:
             dtype=np.float64,
             order='F',
         )
-        self._step_size = np.empty(self.chains, dtype=np.float64)
 
         for chain in range(self.chains):
             try:
