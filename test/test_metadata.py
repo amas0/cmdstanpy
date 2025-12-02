@@ -1,9 +1,18 @@
 """Metadata tests"""
 
+import json
+import math
 import os
+import tempfile
+from pathlib import Path
+
+import numpy as np
+import pytest
+from pydantic import ValidationError
 
 from cmdstanpy.cmdstan_args import CmdStanArgs, SamplerArgs
 from cmdstanpy.stanfit import InferenceMetadata, RunSet
+from cmdstanpy.stanfit.metadata import MetricInfo
 from cmdstanpy.utils import EXTENSION, check_sampler_csv
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -67,3 +76,259 @@ def test_good() -> None:
     assert hmc_vars == method_vars_cols.keys()
     bern_model_vars = {'theta'}
     assert bern_model_vars == metadata.stan_vars.keys()
+
+
+class TestMetricInfoValidators:
+    """Test custom validators for MetricInfo model"""
+
+    def test_valid_diag_e_metric(self) -> None:
+        """Test valid diag_e metric with 1D array"""
+        metric = MetricInfo(
+            chain_id=1,
+            stepsize=0.5,
+            metric_type="diag_e",
+            inv_metric=[1.0, 2.0, 3.0],  # type: ignore
+        )
+        assert metric.chain_id == 1
+        assert metric.stepsize == 0.5
+        assert isinstance(metric.inv_metric, np.ndarray)
+        assert metric.inv_metric.ndim == 1
+
+    def test_valid_unit_e_metric(self) -> None:
+        """Test valid unit_e metric with 1D array"""
+        metric = MetricInfo(
+            chain_id=2,
+            stepsize=0.1,
+            metric_type="unit_e",
+            inv_metric=[1.0, 1.0, 1.0],  # type: ignore
+        )
+        assert metric.metric_type == "unit_e"
+        assert metric.inv_metric.ndim == 1
+
+    def test_valid_dense_e_metric(self) -> None:
+        """Test valid dense_e metric with 2D square array"""
+        metric = MetricInfo(
+            chain_id=1,
+            stepsize=0.3,
+            metric_type="dense_e",
+            inv_metric=[[1.0, 0.5], [0.5, 1.0]],  # type: ignore
+        )
+        assert metric.metric_type == "dense_e"
+        assert metric.inv_metric.ndim == 2
+        assert metric.inv_metric.shape == (2, 2)
+
+    def test_convert_inv_metric_from_list(self) -> None:
+        """Test that inv_metric is converted to numpy array from list"""
+        metric = MetricInfo(
+            chain_id=1,
+            stepsize=0.5,
+            metric_type="diag_e",
+            inv_metric=[1.0, 2.0, 3.0],  # type: ignore
+        )
+        assert isinstance(metric.inv_metric, np.ndarray)
+
+    def test_convert_inv_metric_from_nested_list(self) -> None:
+        """Test that inv_metric is converted to numpy array from nested list"""
+        metric = MetricInfo(
+            chain_id=1,
+            stepsize=0.5,
+            metric_type="dense_e",
+            inv_metric=[[1.0, 0.0], [0.0, 1.0]],  # type: ignore
+        )
+        assert isinstance(metric.inv_metric, np.ndarray)
+
+    def test_stepsize_positive(self) -> None:
+        """Test valid positive stepsize"""
+        metric = MetricInfo(
+            chain_id=1,
+            stepsize=0.5,
+            metric_type="diag_e",
+            inv_metric=[1.0],  # type: ignore
+        )
+        assert metric.stepsize == 0.5
+
+    def test_stepsize_nan_allowed(self) -> None:
+        """Test that NaN stepsize is allowed"""
+        metric = MetricInfo(
+            chain_id=1,
+            stepsize=math.nan,
+            metric_type="diag_e",
+            inv_metric=[1.0],  # type: ignore
+        )
+        assert math.isnan(metric.stepsize)
+
+    def test_stepsize_zero_raises_error(self) -> None:
+        """Test that zero stepsize raises ValueError"""
+        with pytest.raises(ValidationError) as exc_info:
+            MetricInfo(
+                chain_id=1,
+                stepsize=0.0,
+                metric_type="diag_e",
+                inv_metric=[1.0],  # type: ignore
+            )
+        assert "stepsize must be greater than 0 or NaN" in str(exc_info.value)
+
+    def test_stepsize_negative_raises_error(self) -> None:
+        """Test that negative stepsize raises ValueError"""
+        with pytest.raises(ValidationError) as exc_info:
+            MetricInfo(
+                chain_id=1,
+                stepsize=-0.5,
+                metric_type="diag_e",
+                inv_metric=[1.0],  # type: ignore
+            )
+        assert "stepsize must be greater than 0 or NaN" in str(exc_info.value)
+
+    def test_diag_e_with_2d_array_raises_error(self) -> None:
+        """Test that diag_e with 2D array raises ValueError"""
+        with pytest.raises(ValidationError) as exc_info:
+            MetricInfo(
+                chain_id=1,
+                stepsize=0.5,
+                metric_type="diag_e",
+                inv_metric=[[1.0, 2.0]],  # type: ignore
+            )
+        assert "inv_metric must be 1D for diag_e and unit_e" in str(
+            exc_info.value
+        )
+
+    def test_unit_e_with_2d_array_raises_error(self) -> None:
+        """Test that unit_e with 2D array raises ValueError"""
+        with pytest.raises(ValidationError) as exc_info:
+            MetricInfo(
+                chain_id=1,
+                stepsize=0.5,
+                metric_type="unit_e",
+                inv_metric=[[1.0], [1.0]],  # type: ignore
+            )
+        assert "inv_metric must be 1D for diag_e and unit_e" in str(
+            exc_info.value
+        )
+
+    def test_dense_e_with_1d_array_raises_error(self) -> None:
+        """Test that dense_e with 1D array raises ValueError"""
+        with pytest.raises(ValidationError) as exc_info:
+            MetricInfo(
+                chain_id=1,
+                stepsize=0.5,
+                metric_type="dense_e",
+                inv_metric=[1.0, 2.0],  # type: ignore
+            )
+        assert "Dense inv_metric must be 2D" in str(exc_info.value)
+
+    def test_dense_e_non_square_raises_error(self) -> None:
+        """Test that dense_e with non-square array raises ValueError"""
+        with pytest.raises(ValidationError) as exc_info:
+            MetricInfo(
+                chain_id=1,
+                stepsize=0.5,
+                metric_type="dense_e",
+                inv_metric=[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],  # type: ignore
+            )
+        assert "Dense inv_metric must be square" in str(exc_info.value)
+
+    def test_chain_id_must_be_positive(self) -> None:
+        """Test that chain_id must be greater than 0"""
+        with pytest.raises(ValidationError) as exc_info:
+            MetricInfo(
+                chain_id=0,
+                stepsize=0.5,
+                metric_type="diag_e",
+                inv_metric=[1.0],  # type: ignore
+            )
+        assert "greater than 0" in str(exc_info.value)
+
+
+class TestMetricInfoFromJson:
+    """Test from_json class method"""
+
+    def test_from_json_diag_e(self) -> None:
+        """Test loading diag_e metric from JSON file"""
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.json', delete=False
+        ) as f:
+            json.dump(
+                {
+                    'stepsize': 0.5,
+                    'metric_type': 'diag_e',
+                    'inv_metric': [1.0, 2.0, 3.0],
+                },
+                f,
+            )
+            temp_path = f.name
+
+        try:
+            metric = MetricInfo.from_json(temp_path, chain_id=1)
+            assert metric.chain_id == 1
+            assert metric.stepsize == 0.5
+            assert metric.metric_type == "diag_e"
+            assert np.array_equal(metric.inv_metric, np.array([1.0, 2.0, 3.0]))
+        finally:
+            Path(temp_path).unlink()
+
+    def test_from_json_dense_e(self) -> None:
+        """Test loading dense_e metric from JSON file"""
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.json', delete=False
+        ) as f:
+            json.dump(
+                {
+                    'stepsize': 0.3,
+                    'metric_type': 'dense_e',
+                    'inv_metric': [[1.0, 0.5], [0.5, 1.0]],
+                },
+                f,
+            )
+            temp_path = f.name
+
+        try:
+            metric = MetricInfo.from_json(temp_path, chain_id=2)
+            assert metric.chain_id == 2
+            assert metric.stepsize == 0.3
+            assert metric.metric_type == "dense_e"
+            assert metric.inv_metric.shape == (2, 2)
+        finally:
+            Path(temp_path).unlink()
+
+    def test_from_json_invalid_data_raises_error(self) -> None:
+        """Test that invalid data in JSON raises ValidationError"""
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.json', delete=False
+        ) as f:
+            json.dump(
+                {
+                    'stepsize': -0.5,  # Invalid: negative stepsize
+                    'metric_type': 'diag_e',
+                    'inv_metric': [1.0, 2.0, 3.0],
+                },
+                f,
+            )
+            temp_path = f.name
+
+        try:
+            with pytest.raises(ValidationError):
+                MetricInfo.from_json(temp_path, chain_id=1)
+        finally:
+            Path(temp_path).unlink()
+
+    def test_from_json_pathlike(self) -> None:
+        """Test from_json works with PathLike objects"""
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.json', delete=False
+        ) as f:
+            json.dump(
+                {
+                    'stepsize': 0.5,
+                    'metric_type': 'unit_e',
+                    'inv_metric': [1.0, 1.0],
+                },
+                f,
+            )
+            temp_path = Path(f.name)
+
+        try:
+            metric = MetricInfo.from_json(temp_path, chain_id=3)
+            assert metric.chain_id == 3
+            assert metric.metric_type == "unit_e"
+        finally:
+            temp_path.unlink()
