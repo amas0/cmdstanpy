@@ -1743,6 +1743,12 @@ def test_metadata() -> None:
         os.path.join(DATAFILES_PATH, 'logistic_output_3.csv'),
         os.path.join(DATAFILES_PATH, 'logistic_output_4.csv'),
     ]
+    runset._metric_files = [
+        os.path.join(DATAFILES_PATH, 'logistic_output_1_metric.json'),
+        os.path.join(DATAFILES_PATH, 'logistic_output_2_metric.json'),
+        os.path.join(DATAFILES_PATH, 'logistic_output_3_metric.json'),
+        os.path.join(DATAFILES_PATH, 'logistic_output_4_metric.json'),
+    ]
     retcodes = runset._retcodes
     for i in range(len(retcodes)):
         runset._set_retcode(i, 0)
