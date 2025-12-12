@@ -3,14 +3,13 @@
 from __future__ import annotations
 
 import copy
-import json
 import math
 import os
 from typing import Any, Iterator, Literal
 
 import numpy as np
 import stanio
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, field_validator, model_validator
 
 from cmdstanpy.utils import stancsv
 
@@ -91,7 +90,6 @@ class MetricInfo(BaseModel):
     """Structured representation of HMC-NUTS metric information,
     as output by CmdStan"""
 
-    chain_id: int = Field(gt=0)
     stepsize: float
     metric_type: Literal["diag_e", "dense_e", "unit_e"]
     inv_metric: np.ndarray
@@ -126,12 +124,3 @@ class MetricInfo(BaseModel):
                 raise ValueError("Dense inv_metric must be square")
 
         return self
-
-    @classmethod
-    def from_json(cls, file: str | os.PathLike, chain_id: int) -> MetricInfo:
-        """Parse and validate a metric json given a file path and chain_id"""
-        with open(file) as f:
-            info_dict = json.load(f)
-
-        info_dict['chain_id'] = chain_id
-        return cls.model_validate(info_dict)  # type: ignore

@@ -400,12 +400,13 @@ class CmdStanMCMC:
     def _parse_metric_info(self) -> None:
         """Extracts metric type, inv_metric, and step size information from the
         parsed metric JSONs."""
-        self._chain_metric_info = [
-            MetricInfo.from_json(mf, chain_id)
-            for mf, chain_id in zip(
-                self.runset.metric_files, self.runset.chain_ids
-            )
-        ]
+        self._chain_metric_info = []
+        for mf in self.runset.metric_files:
+            with open(mf) as f:
+                self._chain_metric_info.append(
+                    MetricInfo.model_validate_json(f.read())
+                )
+
         metric_types = {cmi.metric_type for cmi in self._chain_metric_info}
         if len(metric_types) != 1:
             raise ValueError("Inconsistent metric types found across chains")
