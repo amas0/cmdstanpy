@@ -94,6 +94,7 @@ class MetricInfo(BaseModel):
     metric_type: Literal["diag_e", "dense_e", "unit_e"]
     inv_metric: np.ndarray
 
+    # allows ndarray as pydantic attribute
     model_config = {"arbitrary_types_allowed": True}
 
     @field_validator("inv_metric", mode="before")
