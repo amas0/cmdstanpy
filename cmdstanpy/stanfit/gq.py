@@ -423,18 +423,18 @@ class CmdStanGQ(Generic[PrevFit]):
 
     @overload
     def draws_xr(
-        self: "CmdStanGQ[CmdStanMCMC]",
+        self: CmdStanGQ[CmdStanMCMC],
         vars: str | list[str] | None = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
-    ) -> "xr.Dataset": ...
+    ) -> xr.Dataset: ...
 
     def draws_xr(
         self,
         vars: str | list[str] | None = None,
         inc_warmup: bool = False,
         inc_sample: bool = False,
-    ) -> "xr.Dataset":
+    ) -> xr.Dataset:
         """
         Returns the generated quantities draws as a xarray Dataset.
 

@@ -2,6 +2,8 @@
 Container for the result of running the sample (MCMC) method
 """
 
+from __future__ import annotations
+
 import math
 import os
 from io import StringIO
@@ -678,7 +680,7 @@ class CmdStanMCMC:
 
     def draws_xr(
         self, vars: str | list[str] | None = None, inc_warmup: bool = False
-    ) -> "xr.Dataset":
+    ) -> xr.Dataset:
         """
         Returns the sampler draws as a xarray Dataset.
 

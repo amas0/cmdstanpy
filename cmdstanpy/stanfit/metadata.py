@@ -39,7 +39,7 @@ class InferenceMetadata:
     @classmethod
     def from_csv(
         cls, stan_csv: str | os.PathLike | Iterator[bytes]
-    ) -> 'InferenceMetadata':
+    ) -> InferenceMetadata:
         try:
             comments, header, _ = stancsv.parse_comments_header_and_draws(
                 stan_csv

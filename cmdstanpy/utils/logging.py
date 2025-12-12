@@ -2,6 +2,8 @@
 CmdStanPy logging
 """
 
+from __future__ import annotations
+
 import functools
 import logging
 import types
@@ -39,7 +41,7 @@ class ToggleLogging(AbstractContextManager):
     def __repr__(self) -> str:
         return ""
 
-    def __enter__(self) -> "ToggleLogging":
+    def __enter__(self) -> ToggleLogging:
         self.logger.disabled = self.disable
         return self
 

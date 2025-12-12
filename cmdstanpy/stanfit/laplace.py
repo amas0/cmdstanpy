@@ -2,6 +2,8 @@
 Container for the result of running a laplace approximation.
 """
 
+from __future__ import annotations
+
 from typing import Any, Hashable, MutableMapping
 
 import numpy as np
@@ -197,7 +199,7 @@ class CmdStanLaplace:
     def draws_xr(
         self,
         vars: str | list[str] | None = None,
-    ) -> "xr.Dataset":
+    ) -> xr.Dataset:
         """
         Returns the sampler draws as a xarray Dataset.
 
