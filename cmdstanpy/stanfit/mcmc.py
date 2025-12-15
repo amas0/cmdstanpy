@@ -96,7 +96,7 @@ class CmdStanMCMC:
         config = self._validate_csv_files()
         self._metadata: InferenceMetadata = InferenceMetadata(config)
         self._chain_metric_info: list[MetricInfo] = []
-        self._metric_info_parsed: bool = False
+
         if not self._is_fixed_param:
             self._check_sampler_diagnostics()
 
@@ -224,7 +224,7 @@ class CmdStanMCMC:
         if self._is_fixed_param:
             return None
 
-        if not self._metric_info_parsed:
+        if self._metric_type is None:
             self._parse_metric_info()
 
         return self._metric_type
@@ -240,7 +240,7 @@ class CmdStanMCMC:
         if self._is_fixed_param:
             return None
 
-        if not self._metric_info_parsed:
+        if self._metric_type is None:
             self._parse_metric_info()
 
         if self.metric_type == 'unit_e':
@@ -257,7 +257,7 @@ class CmdStanMCMC:
         if self._is_fixed_param:
             return None
 
-        if not self._metric_info_parsed:
+        if self._metric_type is None:
             self._parse_metric_info()
 
         return self._step_size
@@ -419,7 +419,6 @@ class CmdStanMCMC:
         self._step_size = np.asarray(
             [cmi.stepsize for cmi in self._chain_metric_info]
         )
-        self._metric_info_parsed = True
 
     def _check_sampler_diagnostics(self) -> None:
         """
