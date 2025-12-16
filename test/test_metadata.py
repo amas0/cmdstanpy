@@ -6,7 +6,6 @@ import os
 import tempfile
 from pathlib import Path
 
-import numpy as np
 import pytest
 from pydantic import ValidationError
 
@@ -82,61 +81,65 @@ class TestMetricInfoValidators:
     """Test custom validators for MetricInfo model"""
 
     def test_valid_diag_e_metric(self) -> None:
-        """Test valid diag_e metric with 1D array"""
+        """Test valid diag_e metric with 1D list"""
         metric = MetricInfo(
             stepsize=0.5,
             metric_type="diag_e",
-            inv_metric=[1.0, 2.0, 3.0],  # type: ignore
+            inv_metric=[1.0, 2.0, 3.0],
         )
         assert metric.stepsize == 0.5
-        assert isinstance(metric.inv_metric, np.ndarray)
-        assert metric.inv_metric.ndim == 1
+        assert isinstance(metric.inv_metric, list)
+        assert isinstance(metric.inv_metric[0], float)
+        assert len(metric.inv_metric) == 3
 
     def test_valid_unit_e_metric(self) -> None:
-        """Test valid unit_e metric with 1D array"""
+        """Test valid unit_e metric with 1D list"""
         metric = MetricInfo(
             stepsize=0.1,
             metric_type="unit_e",
-            inv_metric=[1.0, 1.0, 1.0],  # type: ignore
+            inv_metric=[1.0, 1.0, 1.0],
         )
         assert metric.metric_type == "unit_e"
-        assert metric.inv_metric.ndim == 1
+        assert isinstance(metric.inv_metric[0], float)
+        assert len(metric.inv_metric) == 3
 
     def test_valid_dense_e_metric(self) -> None:
-        """Test valid dense_e metric with 2D square array"""
+        """Test valid dense_e metric with 2D square list"""
         metric = MetricInfo(
             stepsize=0.3,
             metric_type="dense_e",
-            inv_metric=[[1.0, 0.5], [0.5, 1.0]],  # type: ignore
+            inv_metric=[[1.0, 0.5], [0.5, 1.0]],
         )
         assert metric.metric_type == "dense_e"
-        assert metric.inv_metric.ndim == 2
-        assert metric.inv_metric.shape == (2, 2)
+        assert isinstance(metric.inv_metric[0], list)
+        assert len(metric.inv_metric) == 2
+        assert len(metric.inv_metric[0]) == 2
 
-    def test_convert_inv_metric_from_list(self) -> None:
-        """Test that inv_metric is converted to numpy array from list"""
+    def test_inv_metric_stays_as_list(self) -> None:
+        """Test that inv_metric remains as list type"""
         metric = MetricInfo(
             stepsize=0.5,
             metric_type="diag_e",
-            inv_metric=[1.0, 2.0, 3.0],  # type: ignore
+            inv_metric=[1.0, 2.0, 3.0],
         )
-        assert isinstance(metric.inv_metric, np.ndarray)
+        assert isinstance(metric.inv_metric, list)
 
-    def test_convert_inv_metric_from_nested_list(self) -> None:
-        """Test that inv_metric is converted to numpy array from nested list"""
+    def test_inv_metric_nested_list(self) -> None:
+        """Test that inv_metric handles nested lists correctly"""
         metric = MetricInfo(
             stepsize=0.5,
             metric_type="dense_e",
-            inv_metric=[[1.0, 0.0], [0.0, 1.0]],  # type: ignore
+            inv_metric=[[1.0, 0.0], [0.0, 1.0]],
         )
-        assert isinstance(metric.inv_metric, np.ndarray)
+        assert isinstance(metric.inv_metric, list)
+        assert isinstance(metric.inv_metric[0], list)
 
     def test_stepsize_positive(self) -> None:
         """Test valid positive stepsize"""
         metric = MetricInfo(
             stepsize=0.5,
             metric_type="diag_e",
-            inv_metric=[1.0],  # type: ignore
+            inv_metric=[1.0],
         )
         assert metric.stepsize == 0.5
 
@@ -145,7 +148,7 @@ class TestMetricInfoValidators:
         metric = MetricInfo(
             stepsize=math.nan,
             metric_type="diag_e",
-            inv_metric=[1.0],  # type: ignore
+            inv_metric=[1.0],
         )
         assert math.isnan(metric.stepsize)
 
@@ -155,7 +158,7 @@ class TestMetricInfoValidators:
             MetricInfo(
                 stepsize=0.0,
                 metric_type="diag_e",
-                inv_metric=[1.0],  # type: ignore
+                inv_metric=[1.0],
             )
         assert "stepsize must be greater than 0 or NaN" in str(exc_info.value)
 
@@ -165,51 +168,51 @@ class TestMetricInfoValidators:
             MetricInfo(
                 stepsize=-0.5,
                 metric_type="diag_e",
-                inv_metric=[1.0],  # type: ignore
+                inv_metric=[1.0],
             )
         assert "stepsize must be greater than 0 or NaN" in str(exc_info.value)
 
-    def test_diag_e_with_2d_array_raises_error(self) -> None:
-        """Test that diag_e with 2D array raises ValueError"""
+    def test_diag_e_with_2d_list_raises_error(self) -> None:
+        """Test that diag_e with 2D list raises ValueError"""
         with pytest.raises(ValidationError) as exc_info:
             MetricInfo(
                 stepsize=0.5,
                 metric_type="diag_e",
-                inv_metric=[[1.0, 2.0]],  # type: ignore
+                inv_metric=[[1.0, 2.0]],
             )
         assert "inv_metric must be 1D for diag_e and unit_e" in str(
             exc_info.value
         )
 
-    def test_unit_e_with_2d_array_raises_error(self) -> None:
-        """Test that unit_e with 2D array raises ValueError"""
+    def test_unit_e_with_2d_list_raises_error(self) -> None:
+        """Test that unit_e with 2D list raises ValueError"""
         with pytest.raises(ValidationError) as exc_info:
             MetricInfo(
                 stepsize=0.5,
                 metric_type="unit_e",
-                inv_metric=[[1.0], [1.0]],  # type: ignore
+                inv_metric=[[1.0], [1.0]],
             )
         assert "inv_metric must be 1D for diag_e and unit_e" in str(
             exc_info.value
         )
 
-    def test_dense_e_with_1d_array_raises_error(self) -> None:
-        """Test that dense_e with 1D array raises ValueError"""
+    def test_dense_e_with_1d_list_raises_error(self) -> None:
+        """Test that dense_e with 1D list raises ValueError"""
         with pytest.raises(ValidationError) as exc_info:
             MetricInfo(
                 stepsize=0.5,
                 metric_type="dense_e",
-                inv_metric=[1.0, 2.0],  # type: ignore
+                inv_metric=[1.0, 2.0],
             )
         assert "Dense inv_metric must be 2D" in str(exc_info.value)
 
     def test_dense_e_non_square_raises_error(self) -> None:
-        """Test that dense_e with non-square array raises ValueError"""
+        """Test that dense_e with non-square list raises ValueError"""
         with pytest.raises(ValidationError) as exc_info:
             MetricInfo(
                 stepsize=0.5,
                 metric_type="dense_e",
-                inv_metric=[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],  # type: ignore
+                inv_metric=[[1.0, 2.0, 3.0], [4.0, 5.0, 6.0]],
             )
         assert "Dense inv_metric must be square" in str(exc_info.value)
 
@@ -237,7 +240,7 @@ class TestMetricInfoModelValidateJson:
                 metric = MetricInfo.model_validate_json(f.read())
             assert metric.stepsize == 0.5
             assert metric.metric_type == "diag_e"
-            assert np.array_equal(metric.inv_metric, np.array([1.0, 2.0, 3.0]))
+            assert metric.inv_metric == [1.0, 2.0, 3.0]
         finally:
             Path(temp_path).unlink()
 
@@ -261,7 +264,8 @@ class TestMetricInfoModelValidateJson:
                 metric = MetricInfo.model_validate_json(f.read())
             assert metric.stepsize == 0.3
             assert metric.metric_type == "dense_e"
-            assert metric.inv_metric.shape == (2, 2)
+            assert len(metric.inv_metric) == 2
+            assert len(metric.inv_metric[0]) == 2
         finally:
             Path(temp_path).unlink()
 
@@ -314,7 +318,7 @@ class TestMetricInfoModelValidateJson:
             MetricInfo(
                 stepsize=0.5,
                 metric_type="not_a_metric",  # type: ignore
-                inv_metric=[1.0],  # type: ignore
+                inv_metric=[1.0],
             )
 
     def test_from_json_invalid_metric_type_raises_error(self) -> None:

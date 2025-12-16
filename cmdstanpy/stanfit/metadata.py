@@ -7,7 +7,6 @@ import math
 import os
 from typing import Any, Iterator, Literal
 
-import numpy as np
 import stanio
 from pydantic import BaseModel, field_validator, model_validator
 
@@ -92,15 +91,7 @@ class MetricInfo(BaseModel):
 
     stepsize: float
     metric_type: Literal["diag_e", "dense_e", "unit_e"]
-    inv_metric: np.ndarray
-
-    # allows ndarray as pydantic attribute
-    model_config = {"arbitrary_types_allowed": True}
-
-    @field_validator("inv_metric", mode="before")
-    @classmethod
-    def convert_inv_metric(cls, v: Any) -> np.ndarray:
-        return np.asarray(v)
+    inv_metric: list[float] | list[list[float]]
 
     @field_validator("stepsize")
     @classmethod
@@ -111,17 +102,26 @@ class MetricInfo(BaseModel):
 
     @model_validator(mode="after")
     def validate_inv_metric_shape(self) -> MetricInfo:
-        if (
-            self.metric_type in ("diag_e", "unit_e")
-            and self.inv_metric.ndim != 1
-        ):
+        if not self.inv_metric:  # Empty inv_metric, e.g. from no parameters
+            return self
+
+        is_1d = isinstance(self.inv_metric[0], float)
+
+        if self.metric_type in ("diag_e", "unit_e") and not is_1d:
             raise ValueError(
                 "inv_metric must be 1D for diag_e and unit_e metric type"
             )
         if self.metric_type == "dense_e":
-            if self.inv_metric.ndim != 2:
+            if is_1d:
                 raise ValueError("Dense inv_metric must be 2D")
-            if self.inv_metric.shape[0] != self.inv_metric.shape[1]:
+
+            if any(not row for row in self.inv_metric):
+                raise ValueError("Dense inv_metric cannot contain empty rows")
+
+            n_rows = len(self.inv_metric)
+            if not all(
+                len(row) == n_rows for row in self.inv_metric  # type: ignore
+            ):
                 raise ValueError("Dense inv_metric must be square")
 
         return self
