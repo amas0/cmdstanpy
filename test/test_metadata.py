@@ -1,4 +1,4 @@
-"Metadata tests"
+"""Metadata tests"""
 
 import json
 import math
@@ -308,3 +308,32 @@ class TestMetricInfoModelValidateJson:
             assert metric.metric_type == "unit_e"
         finally:
             temp_path.unlink()
+
+    def test_invalid_metric_type_raises_error(self) -> None:
+        with pytest.raises(ValidationError):
+            MetricInfo(
+                stepsize=0.5,
+                metric_type="not_a_metric",  # type: ignore
+                inv_metric=[1.0],  # type: ignore
+            )
+
+    def test_from_json_invalid_metric_type_raises_error(self) -> None:
+        with tempfile.NamedTemporaryFile(
+            mode='w', suffix='.json', delete=False
+        ) as f:
+            json.dump(
+                {
+                    'stepsize': 0.5,
+                    'metric_type': 'not_a_metric',
+                    'inv_metric': [1.0, 2.0, 3.0],
+                },
+                f,
+            )
+            temp_path = f.name
+
+        try:
+            with pytest.raises(ValidationError):
+                with open(temp_path) as fh:
+                    MetricInfo.model_validate_json(fh.read())
+        finally:
+            Path(temp_path).unlink()
