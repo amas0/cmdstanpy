@@ -842,7 +842,15 @@ def test_validate_big_run() -> None:
     runset = RunSet(args=cmdstan_args, chains=2)
     runset._csv_files = [
         os.path.join(DATAFILES_PATH, 'runset-big', 'output_icar_nyc-1.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-big', 'output_icar_nyc-1.csv'),
+        os.path.join(DATAFILES_PATH, 'runset-big', 'output_icar_nyc-2.csv'),
+    ]
+    runset._metric_files = [
+        os.path.join(
+            DATAFILES_PATH, 'runset-big', 'output_icar_nyc-1_metric.json'
+        ),
+        os.path.join(
+            DATAFILES_PATH, 'runset-big', 'output_icar_nyc-2_metric.json'
+        ),
     ]
     fit = CmdStanMCMC(runset)
     phis = ['phi[{}]'.format(str(x + 1)) for x in range(2095)]
@@ -1742,6 +1750,12 @@ def test_metadata() -> None:
         os.path.join(DATAFILES_PATH, 'logistic_output_2.csv'),
         os.path.join(DATAFILES_PATH, 'logistic_output_3.csv'),
         os.path.join(DATAFILES_PATH, 'logistic_output_4.csv'),
+    ]
+    runset._metric_files = [
+        os.path.join(DATAFILES_PATH, 'logistic_output_1_metric.json'),
+        os.path.join(DATAFILES_PATH, 'logistic_output_2_metric.json'),
+        os.path.join(DATAFILES_PATH, 'logistic_output_3_metric.json'),
+        os.path.join(DATAFILES_PATH, 'logistic_output_4_metric.json'),
     ]
     retcodes = runset._retcodes
     for i in range(len(retcodes)):

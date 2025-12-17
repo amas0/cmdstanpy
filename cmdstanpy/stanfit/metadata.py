@@ -1,10 +1,14 @@
 """Container for metadata parsed from the output of a CmdStan run"""
 
+from __future__ import annotations
+
 import copy
+import math
 import os
-from typing import Any, Iterator
+from typing import Any, Iterator, Literal
 
 import stanio
+from pydantic import BaseModel, field_validator, model_validator
 
 from cmdstanpy.utils import stancsv
 
@@ -34,7 +38,7 @@ class InferenceMetadata:
     @classmethod
     def from_csv(
         cls, stan_csv: str | os.PathLike | Iterator[bytes]
-    ) -> 'InferenceMetadata':
+    ) -> InferenceMetadata:
         try:
             comments, header, _ = stancsv.parse_comments_header_and_draws(
                 stan_csv
@@ -79,3 +83,45 @@ class InferenceMetadata:
         These are the user-defined variables in the Stan program.
         """
         return self._stan_vars
+
+
+class MetricInfo(BaseModel):
+    """Structured representation of HMC-NUTS metric information,
+    as output by CmdStan"""
+
+    stepsize: float
+    metric_type: Literal["diag_e", "dense_e", "unit_e"]
+    inv_metric: list[float] | list[list[float]]
+
+    @field_validator("stepsize")
+    @classmethod
+    def validate_stepsize(cls, v: float) -> float:
+        if not math.isnan(v) and v <= 0:
+            raise ValueError("stepsize must be greater than 0 or NaN")
+        return v
+
+    @model_validator(mode="after")
+    def validate_inv_metric_shape(self) -> MetricInfo:
+        if not self.inv_metric:  # Empty inv_metric, e.g. from no parameters
+            return self
+
+        is_1d = isinstance(self.inv_metric[0], float)
+
+        if self.metric_type in ("diag_e", "unit_e") and not is_1d:
+            raise ValueError(
+                "inv_metric must be 1D for diag_e and unit_e metric type"
+            )
+        if self.metric_type == "dense_e":
+            if is_1d:
+                raise ValueError("Dense inv_metric must be 2D")
+
+            if any(not row for row in self.inv_metric):
+                raise ValueError("Dense inv_metric cannot contain empty rows")
+
+            n_rows = len(self.inv_metric)
+            if not all(
+                len(row) == n_rows for row in self.inv_metric  # type: ignore
+            ):
+                raise ValueError("Dense inv_metric must be square")
+
+        return self

@@ -2,6 +2,8 @@
 Container for the result of running the sample (MCMC) method
 """
 
+from __future__ import annotations
+
 import math
 import os
 from io import StringIO
@@ -31,7 +33,7 @@ from cmdstanpy.utils import (
     stancsv,
 )
 
-from .metadata import InferenceMetadata
+from .metadata import InferenceMetadata, MetricInfo
 from .runset import RunSet
 
 
@@ -81,6 +83,7 @@ class CmdStanMCMC:
         # info from CSV values, instantiated lazily
         self._draws: np.ndarray = np.array(())
         # only valid when not is_fixed_param
+        self._metric_type: str | None = None
         self._metric: np.ndarray = np.array(())
         self._step_size: np.ndarray = np.array(())
         self._divergences: np.ndarray = np.zeros(self.runset.chains, dtype=int)
@@ -92,6 +95,8 @@ class CmdStanMCMC:
         # info from CSV header and initial and final comment blocks
         config = self._validate_csv_files()
         self._metadata: InferenceMetadata = InferenceMetadata(config)
+        self._chain_metric_info: list[MetricInfo] = []
+
         if not self._is_fixed_param:
             self._check_sampler_diagnostics()
 
@@ -216,11 +221,13 @@ class CmdStanMCMC:
         to CmdStan arg 'metric'.
         When sampler algorithm 'fixed_param' is specified, metric_type is None.
         """
-        return (
-            self._metadata.cmdstan_config['metric']
-            if not self._is_fixed_param
-            else None
-        )
+        if self._is_fixed_param:
+            return None
+
+        if self._metric_type is None:
+            self._parse_metric_info()
+
+        return self._metric_type
 
     @property
     def inv_metric(self) -> np.ndarray | None:
@@ -230,10 +237,15 @@ class CmdStanMCMC:
         a ``nchains x nparams x nparams`` array when metric_type is 'dense_e',
         or ``None`` when metric_type is 'unit_e' or algorithm is 'fixed_param'.
         """
-        if self._is_fixed_param or self.metric_type == 'unit_e':
+        if self._is_fixed_param:
             return None
 
-        self._assemble_draws()
+        if self._metric_type is None:
+            self._parse_metric_info()
+
+        if self.metric_type == 'unit_e':
+            return None
+
         return self._metric
 
     @property
@@ -242,8 +254,13 @@ class CmdStanMCMC:
         Step size used by sampler for each chain.
         When sampler algorithm 'fixed_param' is specified, step size is None.
         """
-        self._assemble_draws()
-        return self._step_size if not self._is_fixed_param else None
+        if self._is_fixed_param:
+            return None
+
+        if self._metric_type is None:
+            self._parse_metric_info()
+
+        return self._step_size
 
     @property
     def thin(self) -> int:
@@ -382,6 +399,27 @@ class CmdStanMCMC:
                     self._max_treedepths[i] = drest['ct_max_treedepth']
         return dzero
 
+    def _parse_metric_info(self) -> None:
+        """Extracts metric type, inv_metric, and step size information from the
+        parsed metric JSONs."""
+        self._chain_metric_info = []
+        for mf in self.runset.metric_files:
+            with open(mf) as f:
+                self._chain_metric_info.append(
+                    MetricInfo.model_validate_json(f.read())
+                )
+
+        metric_types = {cmi.metric_type for cmi in self._chain_metric_info}
+        if len(metric_types) != 1:
+            raise ValueError("Inconsistent metric types found across chains")
+        self._metric_type = self._chain_metric_info[0].metric_type
+        self._metric = np.asarray(
+            [cmi.inv_metric for cmi in self._chain_metric_info]
+        )
+        self._step_size = np.asarray(
+            [cmi.stepsize for cmi in self._chain_metric_info]
+        )
+
     def _check_sampler_diagnostics(self) -> None:
         """
         Warn if any iterations ended in divergences or hit maxtreedepth.
@@ -424,13 +462,11 @@ class CmdStanMCMC:
             dtype=np.float64,
             order='F',
         )
-        self._step_size = np.empty(self.chains, dtype=np.float64)
 
-        mass_matrix_per_chain = []
         for chain in range(self.chains):
             try:
                 (
-                    comments,
+                    _,
                     header,
                     draws,
                 ) = stancsv.parse_comments_header_and_draws(
@@ -443,19 +479,10 @@ class CmdStanMCMC:
                     draws_np = np.empty((0, n_cols))
 
                 self._draws[:, chain, :] = draws_np
-                if not self._is_fixed_param:
-                    (
-                        self._step_size[chain],
-                        mass_matrix,
-                    ) = stancsv.parse_hmc_adaptation_lines(comments)
-                    mass_matrix_per_chain.append(mass_matrix)
             except Exception as exc:
                 raise ValueError(
                     f"Parsing output from {self.runset.csv_files[chain]} failed"
                 ) from exc
-
-        if all(mm is not None for mm in mass_matrix_per_chain):
-            self._metric = np.array(mass_matrix_per_chain)
 
         assert self._draws is not None
 
@@ -652,7 +679,7 @@ class CmdStanMCMC:
 
     def draws_xr(
         self, vars: str | list[str] | None = None, inc_warmup: bool = False
-    ) -> "xr.Dataset":
+    ) -> xr.Dataset:
         """
         Returns the sampler draws as a xarray Dataset.
 

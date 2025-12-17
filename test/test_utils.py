@@ -337,34 +337,6 @@ def test_check_sampler_csv_4() -> None:
         check_sampler_csv(csv_bad)
 
 
-def test_check_sampler_csv_metric_1() -> None:
-    csv_bad = os.path.join(DATAFILES_PATH, 'output_bad_metric_1.csv')
-    with raises_nested(Exception, 'expecting metric'):
-        check_sampler_csv(csv_bad)
-
-
-def test_check_sampler_csv_metric_2() -> None:
-    csv_bad = os.path.join(DATAFILES_PATH, 'output_bad_metric_2.csv')
-    with raises_nested(Exception, 'invalid step size'):
-        check_sampler_csv(csv_bad)
-
-
-def test_check_sampler_csv_metric_3() -> None:
-    csv_bad = os.path.join(DATAFILES_PATH, 'output_bad_metric_3.csv')
-    with raises_nested(
-        Exception, 'invalid or missing mass matrix specification'
-    ):
-        check_sampler_csv(csv_bad)
-
-
-def test_check_sampler_csv_metric_4() -> None:
-    csv_bad = os.path.join(DATAFILES_PATH, 'output_bad_metric_4.csv')
-    with raises_nested(
-        Exception, 'invalid or missing mass matrix specification'
-    ):
-        check_sampler_csv(csv_bad)
-
-
 def test_check_sampler_csv_thin() -> None:
     stan = os.path.join(DATAFILES_PATH, 'bernoulli.stan')
     bern_model = CmdStanModel(stan_file=stan)

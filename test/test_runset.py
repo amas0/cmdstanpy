@@ -3,7 +3,7 @@
 import os
 
 from cmdstanpy import _TMPDIR
-from cmdstanpy.cmdstan_args import CmdStanArgs, SamplerArgs
+from cmdstanpy.cmdstan_args import CmdStanArgs, PathfinderArgs, SamplerArgs
 from cmdstanpy.stanfit import RunSet
 from cmdstanpy.utils import EXTENSION
 
@@ -299,3 +299,60 @@ def test_chain_ids() -> None:
     assert '_11.csv' in runset._csv_files[0]
     assert 'id=14' in runset.cmd(3)
     assert '_14.csv' in runset._csv_files[3]
+
+
+def test_metric_output_filename() -> None:
+    exe = os.path.join(DATAFILES_PATH, 'bernoulli' + EXTENSION)
+    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
+
+    # Single chain
+    sampler_args = SamplerArgs()
+    chain_ids = [1]
+    cmdstan_args = CmdStanArgs(
+        model_name='bernoulli',
+        model_exe=exe,
+        chain_ids=chain_ids,
+        data=jdata,
+        method_args=sampler_args,
+    )
+    runset = RunSet(args=cmdstan_args, chains=1)
+    base_file = runset._base_outfile
+    assert len(runset.metric_files) == 1
+    assert runset.metric_files[0].endswith(f"{base_file}_metric.json")
+
+    # Multi-chain
+    chain_ids = [1, 2]
+    cmdstan_args = CmdStanArgs(
+        model_name='bernoulli',
+        model_exe=exe,
+        chain_ids=chain_ids,
+        data=jdata,
+        method_args=sampler_args,
+    )
+    runset = RunSet(args=cmdstan_args, chains=2)
+    assert len(runset.metric_files) == 2
+    correct_output_files = [
+        f.endswith(f"{base_file}_{i}_metric.json")
+        for i, f in zip(chain_ids, runset.metric_files)
+    ]
+    assert all(correct_output_files)
+
+    runset = RunSet(args=cmdstan_args, chains=2, one_process_per_chain=False)
+    assert len(runset.metric_files) == 2
+    assert all(
+        f.endswith(f"{base_file}_metric_{i}.json")
+        for i, f in zip(chain_ids, runset.metric_files)
+    )
+
+    # Non-sampler
+    pf_args = PathfinderArgs()
+    chain_ids = [1]
+    cmdstan_args = CmdStanArgs(
+        model_name='bernoulli',
+        model_exe=exe,
+        chain_ids=chain_ids,
+        data=jdata,
+        method_args=pf_args,
+    )
+    runset = RunSet(args=cmdstan_args, chains=1)
+    assert len(runset.metric_files) == 0
