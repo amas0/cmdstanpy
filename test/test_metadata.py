@@ -265,7 +265,7 @@ class TestMetricInfoModelValidateJson:
             assert metric.stepsize == 0.3
             assert metric.metric_type == "dense_e"
             assert len(metric.inv_metric) == 2
-            assert len(metric.inv_metric[0]) == 2
+            assert len(metric.inv_metric[0]) == 2  # type: ignore
         finally:
             Path(temp_path).unlink()
 
