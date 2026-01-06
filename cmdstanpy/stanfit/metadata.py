@@ -8,7 +8,13 @@ import os
 from typing import Any, Iterator, Literal
 
 import stanio
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    NonNegativeInt,
+    field_validator,
+    model_validator,
+)
 
 from cmdstanpy.utils import stancsv
 
@@ -125,3 +131,15 @@ class MetricInfo(BaseModel):
                 raise ValueError("Dense inv_metric must be square")
 
         return self
+
+
+class ConfigInfo(BaseModel):
+    """Structured representation of a config JSON file output as part of a
+    Stan inference run. Only required fields are fully validated."""
+
+    model_config = ConfigDict(extra="allow")
+
+    stan_major_version: NonNegativeInt
+    stan_minor_version: NonNegativeInt
+    stan_patch_version: NonNegativeInt
+    model_name: str
