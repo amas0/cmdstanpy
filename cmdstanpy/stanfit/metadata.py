@@ -3,15 +3,16 @@
 from __future__ import annotations
 
 import copy
+import json
 import math
 import os
-from typing import Any, Iterator, Literal
+from typing import Annotated, Any, Iterator, Literal
 
 import stanio
 from pydantic import (
     BaseModel,
     ConfigDict,
-    NonNegativeInt,
+    Discriminator,
     field_validator,
     model_validator,
 )
@@ -133,13 +134,112 @@ class MetricInfo(BaseModel):
         return self
 
 
-class ConfigInfo(BaseModel):
-    """Structured representation of a config JSON file output as part of a
-    Stan inference run. Only required fields are fully validated."""
+class SampleConfig(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    method: Literal["sample"] = "sample"
+    algorithm: str
+    num_samples: int
+    num_warmup: int
+    save_warmup: bool = False
+    thin: int = 1
+    max_depth: int | None = None
+
+
+class OptimizeConfig(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    method: Literal["optimize"] = "optimize"
+    algorithm: str
+    save_iterations: bool = False
+    jacobian: bool = False
+
+
+class StanConfig(BaseModel):
+    """Common representation of a config JSON file output as part of a
+    Stan inference run. Separate method-specific config classes handle
+    the variation of output between methods."""
 
     model_config = ConfigDict(extra="allow")
 
-    stan_major_version: NonNegativeInt
-    stan_minor_version: NonNegativeInt
-    stan_patch_version: NonNegativeInt
     model_name: str
+    stan_major_version: str
+    stan_minor_version: str
+    stan_patch_version: str
+
+    method_config: Annotated[
+        SampleConfig | OptimizeConfig,
+        Discriminator('method'),
+    ]
+
+
+def flatten_value_dict(data: dict[str, Any]) -> dict[str, Any]:
+    """Recursively flatten CmdStan's nested value/subdict structure.
+
+    CmdStan uses a pattern where a field contains:
+        {"value": "val", "val": {"k1": v1, "k2": v2}}
+
+    This flattens it to the parent level as:
+        {"field": "val", "k1": v1, "k2": v2}
+
+    The flattening is applied recursively to any nested dicts.
+    """
+    result: dict[str, Any] = {}
+
+    for key, value in data.items():
+        if not isinstance(value, dict):
+            result[key] = value
+            continue
+
+        # Check if this is a value/subdict pattern
+        if 'value' in value:
+            value_name = value['value']
+            result[key] = value_name
+
+            # Get the nested dict matching the value name and flatten it
+            nested = value.get(value_name, {})
+            if isinstance(nested, dict):
+                # Recursively flatten the nested dict first
+                flattened_nested = flatten_value_dict(nested)
+                # Merge into result (nested keys go to parent level)
+                for nested_key, nested_value in flattened_nested.items():
+                    if nested_key not in result:
+                        result[nested_key] = nested_value
+        else:
+            # Regular dict without value pattern - recurse into it
+            result[key] = flatten_value_dict(value)
+
+    return result
+
+
+def flatten_config(data: dict[str, Any]) -> dict[str, Any]:
+    """Flatten nested CmdStan config JSON structure.
+
+    CmdStan outputs config JSON with deeply nested structure like:
+        {"method": {"value": "sample", "sample": {"num_samples": 1000, ...}}}
+
+    This flattens it to:
+        {"method_config": {"method": "sample", "num_samples": 1000, ...}, ...}
+    """
+    method_data = data.get('method')
+    if not isinstance(method_data, dict):
+        return data
+
+    result = {k: v for k, v in data.items() if k != "method"}
+    method_name = method_data.get('value')
+
+    # Build method_config from the method-specific nested dict
+    nested_method = method_data.get(method_name, {})
+    method_config = flatten_value_dict(nested_method)
+    method_config['method'] = method_name
+
+    result['method_config'] = method_config
+    return result
+
+
+def parse_config(json_data: str | bytes) -> StanConfig:
+    """Parse a CmdStan config JSON string into a StanConfig."""
+
+    raw = json.loads(json_data)
+    flat = flatten_config(raw)
+    return StanConfig.model_validate(flat)  # type: ignore
