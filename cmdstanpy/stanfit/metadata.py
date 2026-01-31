@@ -174,6 +174,20 @@ class LaplaceConfig(BaseModel):
     jacobian: bool = True
 
 
+class VariationalConfig(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    method: Literal["variational"] = "variational"
+    algorithm: str
+    iter: int = 10000
+    grad_samples: int = 1
+    elbo_samples: int = 100
+    eta: float = 1.0
+    tol_rel_obj: float = 0.01
+    eval_elbo: int = 100
+    output_samples: int = 1000
+
+
 class StanConfig(BaseModel):
     """Common representation of a config JSON file output as part of a
     Stan inference run. Separate method-specific config classes handle
@@ -187,7 +201,11 @@ class StanConfig(BaseModel):
     stan_patch_version: str
 
     method_config: Annotated[
-        SampleConfig | OptimizeConfig | PathfinderConfig | LaplaceConfig,
+        SampleConfig
+        | OptimizeConfig
+        | PathfinderConfig
+        | LaplaceConfig
+        | VariationalConfig,
         Discriminator("method"),
     ]
 
