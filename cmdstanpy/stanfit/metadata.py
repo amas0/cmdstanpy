@@ -165,6 +165,15 @@ class PathfinderConfig(BaseModel):
     calculate_lp: bool = True
 
 
+class LaplaceConfig(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    method: Literal["laplace"] = "laplace"
+    mode: str
+    draws: int = 1000
+    jacobian: bool = True
+
+
 class StanConfig(BaseModel):
     """Common representation of a config JSON file output as part of a
     Stan inference run. Separate method-specific config classes handle
@@ -178,7 +187,7 @@ class StanConfig(BaseModel):
     stan_patch_version: str
 
     method_config: Annotated[
-        SampleConfig | OptimizeConfig | PathfinderConfig,
+        SampleConfig | OptimizeConfig | PathfinderConfig | LaplaceConfig,
         Discriminator("method"),
     ]
 
