@@ -188,6 +188,14 @@ class VariationalConfig(BaseModel):
     output_samples: int = 1000
 
 
+class GeneratedQuantitiesConfig(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    method: Literal["generate_quantities"] = "generate_quantities"
+    fitted_params: str
+    num_chains: int = 1
+
+
 class StanConfig(BaseModel):
     """Common representation of a config JSON file output as part of a
     Stan inference run. Separate method-specific config classes handle
@@ -205,7 +213,8 @@ class StanConfig(BaseModel):
         | OptimizeConfig
         | PathfinderConfig
         | LaplaceConfig
-        | VariationalConfig,
+        | VariationalConfig
+        | GeneratedQuantitiesConfig,
         Discriminator("method"),
     ]
 
