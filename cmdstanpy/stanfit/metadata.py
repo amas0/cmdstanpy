@@ -169,7 +169,7 @@ class StanConfig(BaseModel):
 
     method_config: Annotated[
         SampleConfig | OptimizeConfig,
-        Discriminator('method'),
+        Discriminator("method"),
     ]
 
 
@@ -186,28 +186,25 @@ def flatten_value_dict(data: dict[str, Any]) -> dict[str, Any]:
     """
     result: dict[str, Any] = {}
 
-    for key, value in data.items():
-        if not isinstance(value, dict):
-            result[key] = value
+    for key, val in data.items():
+        if not isinstance(val, dict):
+            result[key] = val
             continue
 
-        # Check if this is a value/subdict pattern
-        if 'value' in value:
-            value_name = value['value']
+        if "value" in val:
+            value_name = val['value']
             result[key] = value_name
 
             # Get the nested dict matching the value name and flatten it
-            nested = value.get(value_name, {})
+            nested = val.get(value_name, {})
             if isinstance(nested, dict):
-                # Recursively flatten the nested dict first
                 flattened_nested = flatten_value_dict(nested)
-                # Merge into result (nested keys go to parent level)
-                for nested_key, nested_value in flattened_nested.items():
+                for nested_key, nested_val in flattened_nested.items():
                     if nested_key not in result:
-                        result[nested_key] = nested_value
+                        result[nested_key] = nested_val
         else:
             # Regular dict without value pattern - recurse into it
-            result[key] = flatten_value_dict(value)
+            result[key] = flatten_value_dict(val)
 
     return result
 
