@@ -155,6 +155,16 @@ class OptimizeConfig(BaseModel):
     jacobian: bool = False
 
 
+class PathfinderConfig(BaseModel):
+    model_config = ConfigDict(extra="allow")
+
+    method: Literal["pathfinder"] = "pathfinder"
+    num_draws: int = 1000
+    num_paths: int = 4
+    psis_resample: bool = True
+    calculate_lp: bool = True
+
+
 class StanConfig(BaseModel):
     """Common representation of a config JSON file output as part of a
     Stan inference run. Separate method-specific config classes handle
@@ -168,7 +178,7 @@ class StanConfig(BaseModel):
     stan_patch_version: str
 
     method_config: Annotated[
-        SampleConfig | OptimizeConfig,
+        SampleConfig | OptimizeConfig | PathfinderConfig,
         Discriminator("method"),
     ]
 
