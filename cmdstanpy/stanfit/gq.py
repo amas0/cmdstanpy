@@ -6,15 +6,8 @@ generate quantities (GQ) method
 from __future__ import annotations
 
 from collections import Counter
-from typing import (
-    Any,
-    Generic,
-    Hashable,
-    MutableMapping,
-    NoReturn,
-    TypeVar,
-    overload,
-)
+from collections.abc import Hashable
+from typing import Any, Generic, MutableMapping, NoReturn, TypeVar, overload
 
 import numpy as np
 import pandas as pd
@@ -239,7 +232,7 @@ class CmdStanGQ(Generic[PrevFit]):
             drop_cols: list[int] = []
             for dup in dups:
                 drop_cols.extend(
-                    self.previous_fit._metadata.stan_vars[dup].columns()
+                    self.previous_fit.metadata.stan_vars[dup].columns()
                 )
 
         start_idx, _ = self._draws_start(inc_warmup)
@@ -333,10 +326,8 @@ class CmdStanGQ(Generic[PrevFit]):
                     gq_cols.extend(
                         self.column_names[info.start_idx : info.end_idx]
                     )
-                elif (
-                    inc_sample and var in self.previous_fit._metadata.stan_vars
-                ):
-                    info = self.previous_fit._metadata.stan_vars[var]
+                elif inc_sample and var in self.previous_fit.metadata.stan_vars:
+                    info = self.previous_fit.metadata.stan_vars[var]
                     mcmc_vars.extend(
                         self.previous_fit.column_names[
                             info.start_idx : info.end_idx
@@ -472,7 +463,7 @@ class CmdStanGQ(Generic[PrevFit]):
             for var in vars_list:
                 if var not in self._metadata.stan_vars:
                     if inc_sample and (
-                        var in self.previous_fit._metadata.stan_vars
+                        var in self.previous_fit.metadata.stan_vars
                     ):
                         mcmc_vars_list.append(var)
                         dup_vars.append(var)
@@ -481,7 +472,7 @@ class CmdStanGQ(Generic[PrevFit]):
         else:
             vars_list = list(self._metadata.stan_vars.keys())
             if inc_sample:
-                for var in self.previous_fit._metadata.stan_vars.keys():
+                for var in self.previous_fit.metadata.stan_vars.keys():
                     if var not in vars_list and var not in mcmc_vars_list:
                         mcmc_vars_list.append(var)
         for var in dup_vars:
@@ -490,7 +481,7 @@ class CmdStanGQ(Generic[PrevFit]):
         self._assemble_generated_quantities()
 
         num_draws = self.previous_fit.num_draws_sampling
-        sample_config = self.previous_fit._metadata.cmdstan_config
+        sample_config = self.previous_fit.metadata.cmdstan_config
         attrs: MutableMapping[Hashable, Any] = {
             "stan_version": f"{sample_config['stan_version_major']}."
             f"{sample_config['stan_version_minor']}."
@@ -518,7 +509,7 @@ class CmdStanGQ(Generic[PrevFit]):
             for var in mcmc_vars_list:
                 build_xarray_data(
                     data,
-                    self.previous_fit._metadata.stan_vars[var],
+                    self.previous_fit.metadata.stan_vars[var],
                     self.previous_fit.draws(inc_warmup=inc_warmup),
                 )
 
@@ -570,7 +561,7 @@ class CmdStanGQ(Generic[PrevFit]):
         CmdStanVB.stan_variable
         CmdStanLaplace.stan_variable
         """
-        model_var_names = self.previous_fit._metadata.stan_vars.keys()
+        model_var_names = self.previous_fit.metadata.stan_vars.keys()
         gq_var_names = self._metadata.stan_vars.keys()
         if not (var in model_var_names or var in gq_var_names):
             raise ValueError(
@@ -611,7 +602,7 @@ class CmdStanGQ(Generic[PrevFit]):
         CmdStanLaplace.stan_variables
         """
         result = {}
-        sample_var_names = self.previous_fit._metadata.stan_vars.keys()
+        sample_var_names = self.previous_fit.metadata.stan_vars.keys()
         gq_var_names = self._metadata.stan_vars.keys()
         for name in gq_var_names:
             result[name] = self.stan_variable(name, **kwargs)

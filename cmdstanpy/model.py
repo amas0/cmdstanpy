@@ -1040,7 +1040,10 @@ class CmdStanModel:
             ),
         ):
             fit_object = previous_fit
-            fit_csv_files = previous_fit.runset.csv_files
+            if isinstance(previous_fit, CmdStanPathfinder):
+                fit_csv_files = [previous_fit.csv_file]
+            else:
+                fit_csv_files = previous_fit.runset.csv_files
         elif isinstance(previous_fit, list):
             if len(previous_fit) < 1:
                 raise ValueError(
@@ -1553,7 +1556,11 @@ class CmdStanModel:
                 ' '.join(runset.cmd(0)), runset.get_err_msgs()
             )
             raise RuntimeError(msg)
-        return CmdStanPathfinder(runset)
+        return CmdStanPathfinder.from_files(
+            csv_file=runset.csv_files[0],
+            config_file=runset.config_files[0],
+            stdout_file=runset.stdout_files[0],
+        )
 
     def log_prob(
         self,

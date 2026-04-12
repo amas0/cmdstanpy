@@ -7,7 +7,6 @@ from cmdstanpy.cmdstan_args import (
     CmdStanArgs,
     LaplaceArgs,
     OptimizeArgs,
-    PathfinderArgs,
     SamplerArgs,
     VariationalArgs,
 )
@@ -256,21 +255,21 @@ def from_csv(
             )
             return CmdStanLaplace(runset, mode=mode)
         elif config_dict['method'] == 'pathfinder':
-            pathfinder_args = PathfinderArgs(
-                num_draws=config_dict['num_draws'],  # type: ignore
-                num_paths=config_dict['num_paths'],  # type: ignore
+            if len(csvfiles) != 1:
+                raise ValueError(
+                    'Expecting a single Pathfinder Stan CSV file, '
+                    f'found {len(csvfiles)}'
+                )
+            csv_file = csvfiles[0]
+            config_file = os.path.splitext(csv_file)[0] + '_config.json'
+            if not os.path.exists(config_file):
+                raise ValueError(
+                    'Pathfinder config file not found at expected path: '
+                    f'{config_file}'
+                )
+            return CmdStanPathfinder.from_files(
+                csv_file=csv_file, config_file=config_file
             )
-            cmdstan_args = CmdStanArgs(
-                model_name=model,
-                model_exe=model,
-                chain_ids=None,
-                method_args=pathfinder_args,
-            )
-            runset = RunSet(args=cmdstan_args)
-            runset._csv_files = csvfiles
-            for i in range(len(runset._retcodes)):
-                runset._set_retcode(i, 0)
-            return CmdStanPathfinder(runset)
         else:
             get_logger().warning(
                 'Unable to process CSV output files from method %s.',

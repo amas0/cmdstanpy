@@ -2,30 +2,63 @@
 Container for the result of running Pathfinder.
 """
 
+from __future__ import annotations
+
+import os
+import shutil
+from dataclasses import dataclass, field
+from pathlib import Path
+
 import numpy as np
 
-from cmdstanpy.cmdstan_args import Method
-from cmdstanpy.stanfit.metadata import InferenceMetadata
-from cmdstanpy.stanfit.runset import RunSet
+from cmdstanpy.stanfit.metadata import (
+    InferenceMetadata,
+    PathfinderConfig,
+    parse_config,
+)
 from cmdstanpy.utils import stancsv
 
 
+@dataclass
 class CmdStanPathfinder:
     """
     Container for outputs from the Pathfinder algorithm.
     Created by :meth:`CmdStanModel.pathfinder()`.
     """
 
-    def __init__(self, runset: RunSet):
-        """Initialize object."""
-        if not runset.method == Method.PATHFINDER:
+    metadata: InferenceMetadata
+    model_name: str
+    csv_file: str
+    config: PathfinderConfig
+    config_file: str | None = None
+    stdout_file: str | None = None
+    _draws: np.ndarray = field(default_factory=lambda: np.array(()), init=False)
+
+    @classmethod
+    def from_files(
+        cls,
+        csv_file: str | os.PathLike,
+        config_file: str | os.PathLike,
+        stdout_file: str | os.PathLike | None = None,
+    ) -> CmdStanPathfinder:
+        with open(config_file) as f:
+            stan_config = parse_config(f.read())
+
+        if not isinstance(stan_config.method_config, PathfinderConfig):
+            conf_name = type(stan_config.method_config).__name__
             raise ValueError(
-                'Wrong runset method, expecting Pathfinder runset, '
-                'found method {}'.format(runset.method)
+                f"Did not find Pathfinder config, instead found: {conf_name}"
             )
-        self.runset = runset
-        self._draws: np.ndarray = np.array(())
-        self._metadata = InferenceMetadata.from_csv(self.runset.csv_files[0])
+
+        metadata = InferenceMetadata.from_csv(csv_file)
+        return cls(
+            metadata=metadata,
+            csv_file=str(csv_file),
+            model_name=stan_config.model_name,
+            config=stan_config.method_config,
+            config_file=str(config_file),
+            stdout_file=str(stdout_file) if stdout_file is not None else None,
+        )
 
     def create_inits(
         self, seed: int | None = None, chains: int = 4
@@ -49,42 +82,38 @@ class CmdStanPathfinder:
             draw = self._draws[idxs[0]]
             return {
                 name: var.extract_reshape(draw)
-                for name, var in self._metadata.stan_vars.items()
+                for name, var in self.metadata.stan_vars.items()
             }
         else:
             return [
                 {
                     name: var.extract_reshape(self._draws[idx])
-                    for name, var in self._metadata.stan_vars.items()
+                    for name, var in self.metadata.stan_vars.items()
                 }
                 for idx in idxs
             ]
 
     def __repr__(self) -> str:
-        rep = 'CmdStanPathfinder: model={}{}'.format(
-            self.runset.model,
-            self.runset._args.method_args.compose(0, cmd=[]),
-        )
-        rep = '{}\n csv_files:\n\t{}\n output_files:\n\t{}'.format(
-            rep,
-            '\n\t'.join(self.runset.csv_files),
-            '\n\t'.join(self.runset.stdout_files),
-        )
-        return rep
+        lines = [
+            f'CmdStanPathfinder: model={self.model_name}',
+            f' csv_file:\n\t{self.csv_file}',
+        ]
+        if self.config_file is not None:
+            lines.append(f' config_file:\n\t{self.config_file}')
+        if self.stdout_file is not None:
+            lines.append(f' output_file:\n\t{self.stdout_file}')
+        return '\n'.join(lines)
 
     def _assemble_draws(self) -> None:
         if self._draws.shape != (0,):
             return
 
-        csv_file = self.runset.csv_files[0]
         try:
-            *_, draws = stancsv.parse_comments_header_and_draws(
-                self.runset.csv_files[0]
-            )
+            *_, draws = stancsv.parse_comments_header_and_draws(self.csv_file)
             self._draws = stancsv.csv_bytes_list_to_numpy(draws)
         except Exception as exc:
             raise ValueError(
-                f"An error occurred when parsing Stan csv {csv_file}"
+                f"An error occurred when parsing Stan csv {self.csv_file}"
             ) from exc
 
     def stan_variable(self, var: str) -> np.ndarray:
@@ -109,7 +138,7 @@ class CmdStanPathfinder:
         """
         self._assemble_draws()
         try:
-            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(
+            out: np.ndarray = self.metadata.stan_vars[var].extract_reshape(
                 self._draws
             )
             return out
@@ -118,7 +147,7 @@ class CmdStanPathfinder:
             raise ValueError(
                 f'Unknown variable name: {var}\n'
                 'Available variables are '
-                + ", ".join(self._metadata.stan_vars.keys())
+                + ", ".join(self.metadata.stan_vars.keys())
             )
 
     def stan_variables(self) -> dict[str, np.ndarray]:
@@ -136,7 +165,7 @@ class CmdStanPathfinder:
         CmdStanLaplace.stan_variables
         """
         result = {}
-        for name in self._metadata.stan_vars:
+        for name in self.metadata.stan_vars:
             result[name] = self.stan_variable(name)
         return result
 
@@ -151,7 +180,7 @@ class CmdStanPathfinder:
         self._assemble_draws()
         return {
             name: var.extract_reshape(self._draws)
-            for name, var in self._metadata.method_vars.items()
+            for name, var in self.metadata.method_vars.items()
         }
 
     def draws(self) -> np.ndarray:
@@ -182,15 +211,6 @@ class CmdStanPathfinder:
         return self.__dict__
 
     @property
-    def metadata(self) -> InferenceMetadata:
-        """
-        Returns object which contains CmdStan configuration as well as
-        information about the names and structure of the inference method
-        and model output variables.
-        """
-        return self._metadata
-
-    @property
     def column_names(self) -> tuple[str, ...]:
         """
         Names of all outputs from the sampler, comprising sampler parameters
@@ -198,7 +218,7 @@ class CmdStanPathfinder:
         and quantities of interest. Corresponds to Stan CSV file header row,
         with names munged to array notation, e.g. `beta[1]` not `beta.1`.
         """
-        return self._metadata.column_names
+        return self.metadata.column_names
 
     @property
     def is_resampled(self) -> bool:
@@ -207,22 +227,32 @@ class CmdStanPathfinder:
         approximations, False otherwise.
         """
         return (
-            self._metadata.cmdstan_config.get("num_paths", 4) > 1
-            and self._metadata.cmdstan_config.get('psis_resample', 1)
-            in (1, 'true')
-            and self._metadata.cmdstan_config.get('calculate_lp', 1)
-            in (1, 'true')
+            self.config.num_paths > 1
+            and self.config.psis_resample
+            and self.config.calculate_lp
         )
 
     def save_csvfiles(self, dir: str | None = None) -> None:
         """
-        Move output CSV files to specified directory.
+        Move output CSV file, and any associated config and stdout files,
+        to the specified directory. Updates the corresponding attributes on
+        this object to point at the new locations.
 
         :param dir: directory path
 
         See Also
         --------
-        stanfit.RunSet.save_csvfiles
         cmdstanpy.from_csv
         """
-        self.runset.save_csvfiles(dir)
+        dest = Path(dir) if dir is not None else Path.cwd()
+        dest.mkdir(parents=True, exist_ok=True)
+
+        for attr in ('csv_file', 'config_file', 'stdout_file'):
+            src = getattr(self, attr)
+            if src is None:
+                continue
+            dst = dest / Path(src).name
+            if dst.exists():
+                raise ValueError(f'File exists, not overwriting: {dst}')
+            shutil.move(src, dst)
+            setattr(self, attr, str(dst))
