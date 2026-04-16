@@ -31,7 +31,7 @@ class CmdStanPathfinder:
     model_name: str
     csv_file: str
     config: StanConfig[PathfinderConfig]
-    config_file: str | None = None
+    config_file: str | None = None  # None if config object passed directly
     stdout_file: str | None = None
     _draws: np.ndarray = field(default_factory=lambda: np.array(()), init=False)
 
