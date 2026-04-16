@@ -4,7 +4,12 @@ Container for the result of running a laplace approximation.
 
 from __future__ import annotations
 
-from typing import Any, Hashable, MutableMapping
+import os
+import shutil
+from collections.abc import Hashable
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, MutableMapping
 
 import numpy as np
 import pandas as pd
@@ -16,30 +21,60 @@ try:
 except ImportError:
     XARRAY_INSTALLED = False
 
-from cmdstanpy.cmdstan_args import Method
 from cmdstanpy.utils import stancsv
 from cmdstanpy.utils.data_munging import build_xarray_data
 
-from .metadata import InferenceMetadata
+from .metadata import InferenceMetadata, LaplaceConfig, StanConfig, parse_config
 from .mle import CmdStanMLE
-from .runset import RunSet
 
 # TODO list:
 # - docs and example notebook
 
 
+@dataclass
 class CmdStanLaplace:
-    def __init__(self, runset: RunSet, mode: CmdStanMLE) -> None:
-        """Initialize object."""
-        if not runset.method == Method.LAPLACE:
-            raise ValueError(
-                'Wrong runset method, expecting laplace runset, '
-                'found method {}'.format(runset.method)
-            )
-        self.runset = runset
-        self._mode = mode
-        self._draws: np.ndarray = np.array(())
-        self._metadata = InferenceMetadata.from_csv(self.runset.csv_files[0])
+    """
+    Container for outputs from the Laplace approximation.
+    Created by :meth:`CmdStanModel.laplace_sample`.
+    """
+
+    metadata: InferenceMetadata
+    model_name: str
+    csv_file: str
+    config: StanConfig[LaplaceConfig]
+    mode: CmdStanMLE
+    config_file: str | None = None  # None if config object passed directly
+    stdout_file: str | None = None
+    _draws: np.ndarray = field(default_factory=lambda: np.array(()), init=False)
+
+    @classmethod
+    def from_files(
+        cls,
+        csv_file: str | os.PathLike,
+        config_file: str | os.PathLike,
+        stdout_file: str | os.PathLike | None = None,
+    ) -> CmdStanLaplace:
+        # Local import to avoid circular dependency with stanfit.__init__
+        from cmdstanpy.stanfit import from_csv
+
+        with open(config_file) as f:
+            stan_config = parse_config(f.read(), LaplaceConfig)
+
+        metadata = InferenceMetadata.from_csv(csv_file)
+        # temporary - should have done CmdStanMLE first
+        mode = from_csv(stan_config.method_config.mode, method='optimize')
+        assert isinstance(mode, CmdStanMLE)
+        return cls(
+            metadata=metadata,
+            csv_file=os.fspath(csv_file),
+            model_name=stan_config.model_name,
+            config=stan_config,
+            mode=mode,
+            config_file=os.fspath(config_file),
+            stdout_file=(
+                os.fspath(stdout_file) if stdout_file is not None else None
+            ),
+        )
 
     def create_inits(
         self, seed: int | None = None, chains: int = 4
@@ -63,13 +98,13 @@ class CmdStanLaplace:
             draw = self._draws[idxs[0]]
             return {
                 name: var.extract_reshape(draw)
-                for name, var in self._metadata.stan_vars.items()
+                for name, var in self.metadata.stan_vars.items()
             }
         else:
             return [
                 {
                     name: var.extract_reshape(self._draws[idx])
-                    for name, var in self._metadata.stan_vars.items()
+                    for name, var in self.metadata.stan_vars.items()
                 }
                 for idx in idxs
             ]
@@ -78,15 +113,12 @@ class CmdStanLaplace:
         if self._draws.shape != (0,):
             return
 
-        csv_file = self.runset.csv_files[0]
         try:
-            *_, draws = stancsv.parse_comments_header_and_draws(
-                self.runset.csv_files[0]
-            )
+            *_, draws = stancsv.parse_comments_header_and_draws(self.csv_file)
             self._draws = stancsv.csv_bytes_list_to_numpy(draws)
         except Exception as exc:
             raise ValueError(
-                f"An error occurred when parsing Stan csv {csv_file}"
+                f"An error occurred when parsing Stan csv {self.csv_file}"
             ) from exc
 
     def stan_variable(self, var: str) -> np.ndarray:
@@ -110,7 +142,7 @@ class CmdStanLaplace:
         """
         self._assemble_draws()
         try:
-            out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(
+            out: np.ndarray = self.metadata.stan_vars[var].extract_reshape(
                 self._draws
             )
             return out
@@ -119,7 +151,7 @@ class CmdStanLaplace:
             raise ValueError(
                 f'Unknown variable name: {var}\n'
                 'Available variables are '
-                + ", ".join(self._metadata.stan_vars.keys())
+                + ", ".join(self.metadata.stan_vars.keys())
             )
 
     def stan_variables(self) -> dict[str, np.ndarray]:
@@ -140,7 +172,7 @@ class CmdStanLaplace:
         CmdStanVB.stan_variables
         """
         result = {}
-        for name in self._metadata.stan_vars:
+        for name in self.metadata.stan_vars:
             result[name] = self.stan_variable(name)
         return result
 
@@ -155,7 +187,7 @@ class CmdStanLaplace:
         self._assemble_draws()
         return {
             name: var.extract_reshape(self._draws)
-            for name, var in self._metadata.method_vars.items()
+            for name, var in self.metadata.method_vars.items()
         }
 
     def draws(self) -> np.ndarray:
@@ -181,10 +213,10 @@ class CmdStanLaplace:
         cols = []
         if vars is not None:
             for var in dict.fromkeys(vars_list):
-                if var in self._metadata.method_vars:
+                if var in self.metadata.method_vars:
                     cols.append(var)
-                elif var in self._metadata.stan_vars:
-                    info = self._metadata.stan_vars[var]
+                elif var in self.metadata.stan_vars:
+                    info = self.metadata.stan_vars[var]
                     cols.extend(
                         self.column_names[info.start_idx : info.end_idx]
                     )
@@ -216,7 +248,7 @@ class CmdStanLaplace:
             )
 
         if vars is None:
-            vars_list = list(self._metadata.stan_vars.keys())
+            vars_list = list(self.metadata.stan_vars.keys())
         elif isinstance(vars, str):
             vars_list = [vars]
         else:
@@ -224,7 +256,7 @@ class CmdStanLaplace:
 
         self._assemble_draws()
 
-        meta = self._metadata.cmdstan_config
+        meta = self.metadata.cmdstan_config
         attrs: MutableMapping[Hashable, Any] = {
             "stan_version": f"{meta['stan_version_major']}."
             f"{meta['stan_version_minor']}.{meta['stan_version_patch']}",
@@ -239,7 +271,7 @@ class CmdStanLaplace:
         for var in vars_list:
             build_xarray_data(
                 data,
-                self._metadata.stan_vars[var],
+                self.metadata.stan_vars[var],
                 self._draws[:, np.newaxis, :],
             )
         return (
@@ -248,38 +280,20 @@ class CmdStanLaplace:
             .squeeze()
         )
 
-    @property
-    def mode(self) -> CmdStanMLE:
-        """
-        Return the maximum a posteriori estimate (mode)
-        as a :class:`CmdStanMLE` object.
-        """
-        return self._mode
-
-    @property
-    def metadata(self) -> InferenceMetadata:
-        """
-        Returns object which contains CmdStan configuration as well as
-        information about the names and structure of the inference method
-        and model output variables.
-        """
-        return self._metadata
-
     def __repr__(self) -> str:
-        mode = '\n'.join(
+        mode_repr = '\n'.join(
             ['\t' + line for line in repr(self.mode).splitlines()]
         )[1:]
-        rep = 'CmdStanLaplace: model={} \nmode=({})\n{}'.format(
-            self.runset.model,
-            mode,
-            self.runset._args.method_args.compose(0, cmd=[]),
-        )
-        rep = '{}\n csv_files:\n\t{}\n output_files:\n\t{}'.format(
-            rep,
-            '\n\t'.join(self.runset.csv_files),
-            '\n\t'.join(self.runset.stdout_files),
-        )
-        return rep
+        lines = [
+            f'CmdStanLaplace: model={self.model_name}',
+            f' mode=({mode_repr})',
+            f' csv_file:\n\t{self.csv_file}',
+        ]
+        if self.config_file is not None:
+            lines.append(f' config_file:\n\t{self.config_file}')
+        if self.stdout_file is not None:
+            lines.append(f' output_file:\n\t{self.stdout_file}')
+        return '\n'.join(lines)
 
     def __getattr__(self, attr: str) -> np.ndarray:
         """Synonymous with ``fit.stan_variable(attr)"""
@@ -307,17 +321,29 @@ class CmdStanLaplace:
         and quantities of interest. Corresponds to Stan CSV file header row,
         with names munged to array notation, e.g. `beta[1]` not `beta.1`.
         """
-        return self._metadata.column_names
+        return self.metadata.column_names
 
     def save_csvfiles(self, dir: str | None = None) -> None:
         """
-        Move output CSV files to specified directory.
+        Move output CSV file, and any associated config and stdout files,
+        to the specified directory. Updates the corresponding attributes on
+        this object to point at the new locations.
 
         :param dir: directory path
 
         See Also
         --------
-        stanfit.RunSet.save_csvfiles
         cmdstanpy.from_csv
         """
-        self.runset.save_csvfiles(dir)
+        dest = Path(dir) if dir is not None else Path.cwd()
+        dest.mkdir(parents=True, exist_ok=True)
+
+        for attr in ('csv_file', 'config_file', 'stdout_file'):
+            src = getattr(self, attr)
+            if src is None:
+                continue
+            dst = dest / Path(src).name
+            if dst.exists():
+                raise ValueError(f'File exists, not overwriting: {dst}')
+            shutil.move(src, dst)
+            setattr(self, attr, os.fspath(dst))

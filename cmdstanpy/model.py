@@ -1040,7 +1040,7 @@ class CmdStanModel:
             ),
         ):
             fit_object = previous_fit
-            if isinstance(previous_fit, CmdStanPathfinder):
+            if isinstance(previous_fit, (CmdStanPathfinder, CmdStanLaplace)):
                 fit_csv_files = [previous_fit.csv_file]
             else:
                 fit_csv_files = previous_fit.runset.csv_files
@@ -1787,7 +1787,11 @@ class CmdStanModel:
                 timeout=timeout,
             )
         runset.raise_for_timeouts()
-        return CmdStanLaplace(runset, cmdstan_mode)
+        return CmdStanLaplace.from_files(
+            csv_file=runset.csv_files[0],
+            config_file=runset.config_files[0],
+            stdout_file=runset.stdout_files[0],
+        )
 
     def _run_cmdstan(
         self,

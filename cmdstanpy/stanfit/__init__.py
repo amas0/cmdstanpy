@@ -5,7 +5,6 @@ import os
 
 from cmdstanpy.cmdstan_args import (
     CmdStanArgs,
-    LaplaceArgs,
     OptimizeArgs,
     SamplerArgs,
     VariationalArgs,
@@ -233,27 +232,21 @@ def from_csv(
                 runset._set_retcode(i, 0)
             return CmdStanVB(runset)
         elif config_dict['method'] == 'laplace':
-            jacobian = config_dict['jacobian'] == 1
-            laplace_args = LaplaceArgs(
-                mode=config_dict['mode'],  # type: ignore
-                draws=config_dict['draws'],  # type: ignore
-                jacobian=jacobian,
+            if len(csvfiles) != 1:
+                raise ValueError(
+                    'Expecting a single Laplace Stan CSV file, '
+                    f'found {len(csvfiles)}'
+                )
+            csv_file = csvfiles[0]
+            config_file = os.path.splitext(csv_file)[0] + '_config.json'
+            if not os.path.exists(config_file):
+                raise ValueError(
+                    'Laplace config file not found at expected path: '
+                    f'{config_file}'
+                )
+            return CmdStanLaplace.from_files(
+                csv_file=csv_file, config_file=config_file
             )
-            cmdstan_args = CmdStanArgs(
-                model_name=model,
-                model_exe=model,
-                chain_ids=None,
-                method_args=laplace_args,
-            )
-            runset = RunSet(args=cmdstan_args)
-            runset._csv_files = csvfiles
-            for i in range(len(runset._retcodes)):
-                runset._set_retcode(i, 0)
-            mode: CmdStanMLE = from_csv(
-                config_dict['mode'],  # type: ignore
-                method='optimize',
-            )
-            return CmdStanLaplace(runset, mode=mode)
         elif config_dict['method'] == 'pathfinder':
             if len(csvfiles) != 1:
                 raise ValueError(
