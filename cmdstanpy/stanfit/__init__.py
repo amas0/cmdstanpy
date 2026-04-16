@@ -92,7 +92,7 @@ def from_csv(
                 if os.path.splitext(file)[1] == ".csv":
                     csvfiles.append(os.path.join(path, file))
         elif os.path.exists(path):
-            csvfiles.append(str(path))
+            csvfiles.append(os.fspath(path))
         else:
             raise ValueError('Invalid path specification: {}'.format(path))
     else:

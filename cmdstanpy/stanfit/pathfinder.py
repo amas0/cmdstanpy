@@ -53,11 +53,13 @@ class CmdStanPathfinder:
         metadata = InferenceMetadata.from_csv(csv_file)
         return cls(
             metadata=metadata,
-            csv_file=str(csv_file),
+            csv_file=os.fspath(csv_file),
             model_name=stan_config.model_name,
             config=stan_config.method_config,
-            config_file=str(config_file),
-            stdout_file=str(stdout_file) if stdout_file is not None else None,
+            config_file=os.fspath(config_file),
+            stdout_file=(
+                os.fspath(stdout_file) if stdout_file is not None else None
+            ),
         )
 
     def create_inits(
@@ -255,4 +257,4 @@ class CmdStanPathfinder:
             if dst.exists():
                 raise ValueError(f'File exists, not overwriting: {dst}')
             shutil.move(src, dst)
-            setattr(self, attr, str(dst))
+            setattr(self, attr, os.fspath(dst))
