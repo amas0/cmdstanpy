@@ -6,7 +6,7 @@ import copy
 import json
 import math
 import os
-from typing import Annotated, Any, Iterator, Literal
+from typing import Annotated, Any, Generic, Iterator, Literal
 
 import stanio
 from pydantic import (
@@ -16,6 +16,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
+from typing_extensions import TypeVar
 
 from cmdstanpy.utils import stancsv
 
@@ -196,7 +197,20 @@ class GeneratedQuantitiesConfig(BaseModel):
     num_chains: int = 1
 
 
-class StanConfig(BaseModel):
+AnyMethodConfig = Annotated[
+    SampleConfig
+    | OptimizeConfig
+    | PathfinderConfig
+    | LaplaceConfig
+    | VariationalConfig
+    | GeneratedQuantitiesConfig,
+    Discriminator("method"),
+]
+
+MethodT = TypeVar("MethodT", bound=BaseModel, default=AnyMethodConfig)
+
+
+class StanConfig(BaseModel, Generic[MethodT]):
     """Common representation of a config JSON file output as part of a
     Stan inference run. Separate method-specific config classes handle
     the variation of output between methods."""
@@ -208,15 +222,7 @@ class StanConfig(BaseModel):
     stan_minor_version: str
     stan_patch_version: str
 
-    method_config: Annotated[
-        SampleConfig
-        | OptimizeConfig
-        | PathfinderConfig
-        | LaplaceConfig
-        | VariationalConfig
-        | GeneratedQuantitiesConfig,
-        Discriminator("method"),
-    ]
+    method_config: MethodT
 
 
 def flatten_value_dict(data: dict[str, Any]) -> dict[str, Any]:
@@ -280,9 +286,12 @@ def flatten_config(data: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def parse_config(json_data: str | bytes) -> StanConfig:
-    """Parse a CmdStan config JSON string into a StanConfig."""
+def parse_config(
+    json_data: str | bytes, method_type: type[MethodT]
+) -> StanConfig[MethodT]:
+    """Parse a CmdStan config JSON string into a StanConfig with the
+    given method type."""
 
     raw = json.loads(json_data)
     flat = flatten_config(raw)
-    return StanConfig.model_validate(flat)  # type: ignore
+    return StanConfig[method_type].model_validate(flat)  # type: ignore

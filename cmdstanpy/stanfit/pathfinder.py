@@ -14,6 +14,7 @@ import numpy as np
 from cmdstanpy.stanfit.metadata import (
     InferenceMetadata,
     PathfinderConfig,
+    StanConfig,
     parse_config,
 )
 from cmdstanpy.utils import stancsv
@@ -29,7 +30,7 @@ class CmdStanPathfinder:
     metadata: InferenceMetadata
     model_name: str
     csv_file: str
-    config: PathfinderConfig
+    config: StanConfig[PathfinderConfig]
     config_file: str | None = None
     stdout_file: str | None = None
     _draws: np.ndarray = field(default_factory=lambda: np.array(()), init=False)
@@ -42,20 +43,14 @@ class CmdStanPathfinder:
         stdout_file: str | os.PathLike | None = None,
     ) -> CmdStanPathfinder:
         with open(config_file) as f:
-            stan_config = parse_config(f.read())
-
-        if not isinstance(stan_config.method_config, PathfinderConfig):
-            conf_name = type(stan_config.method_config).__name__
-            raise ValueError(
-                f"Did not find Pathfinder config, instead found: {conf_name}"
-            )
+            stan_config = parse_config(f.read(), PathfinderConfig)
 
         metadata = InferenceMetadata.from_csv(csv_file)
         return cls(
             metadata=metadata,
             csv_file=os.fspath(csv_file),
             model_name=stan_config.model_name,
-            config=stan_config.method_config,
+            config=stan_config,
             config_file=os.fspath(config_file),
             stdout_file=(
                 os.fspath(stdout_file) if stdout_file is not None else None
@@ -229,9 +224,9 @@ class CmdStanPathfinder:
         approximations, False otherwise.
         """
         return (
-            self.config.num_paths > 1
-            and self.config.psis_resample
-            and self.config.calculate_lp
+            self.config.method_config.num_paths > 1
+            and self.config.method_config.psis_resample
+            and self.config.method_config.calculate_lp
         )
 
     def save_csvfiles(self, dir: str | None = None) -> None:
