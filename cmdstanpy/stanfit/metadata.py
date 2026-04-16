@@ -287,11 +287,16 @@ def flatten_config(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def parse_config(
-    json_data: str | bytes, method_type: type[MethodT]
+    json_data: str | bytes, method_type: type[MethodT] | None = None
 ) -> StanConfig[MethodT]:
-    """Parse a CmdStan config JSON string into a StanConfig with the
-    given method type."""
+    """Parse a CmdStan config JSON string into a StanConfig.
+
+    When ``method_type`` is omitted the method is auto-detected from the
+    JSON content using the discriminated union ``AnyMethodConfig``.
+    """
 
     raw = json.loads(json_data)
     flat = flatten_config(raw)
+    if method_type is None:
+        return StanConfig[AnyMethodConfig].model_validate(flat)  # type: ignore
     return StanConfig[method_type].model_validate(flat)  # type: ignore
