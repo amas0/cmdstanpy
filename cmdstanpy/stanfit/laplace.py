@@ -53,6 +53,7 @@ class CmdStanLaplace:
         csv_file: str | os.PathLike,
         config_file: str | os.PathLike,
         stdout_file: str | os.PathLike | None = None,
+        mode: CmdStanMLE | None = None,
     ) -> CmdStanLaplace:
         # Local import to avoid circular dependency with stanfit.__init__
         from cmdstanpy.stanfit import from_csv
@@ -61,9 +62,15 @@ class CmdStanLaplace:
             stan_config = parse_config(f.read(), LaplaceConfig)
 
         metadata = InferenceMetadata.from_csv(csv_file)
-        # temporary - should have done CmdStanMLE first
-        mode = from_csv(stan_config.method_config.mode, method='optimize')
-        assert isinstance(mode, CmdStanMLE)
+        if mode is None:
+            mle = from_csv(stan_config.method_config.mode, method='optimize')
+            if not isinstance(mle, CmdStanMLE):
+                raise TypeError(
+                    f'Expected CmdStanMLE from mode file '
+                    f'{stan_config.method_config.mode!r}, got '
+                    f'{type(mle).__name__}'
+                )
+            mode = mle
         return cls(
             metadata=metadata,
             csv_file=os.fspath(csv_file),

@@ -1793,6 +1793,7 @@ class CmdStanModel:
             csv_file=runset.csv_files[0],
             config_file=runset.config_files[0],
             stdout_file=runset.stdout_files[0],
+            mode=cmdstan_mode,
         )
 
     def _run_cmdstan(
