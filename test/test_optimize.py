@@ -13,30 +13,19 @@ from typing import Any
 import numpy as np
 import pytest
 
-from cmdstanpy.cmdstan_args import CmdStanArgs, OptimizeArgs
 from cmdstanpy.model import CmdStanModel
-from cmdstanpy.stanfit import CmdStanMLE, RunSet, from_csv
+from cmdstanpy.stanfit import CmdStanMLE, from_csv
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
 
 
 def test_instantiate() -> None:
-    stan = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
-    model = CmdStanModel(stan_file=stan)
-    args = OptimizeArgs(algorithm='Newton')
-    cmdstan_args = CmdStanArgs(
-        model_name=model.name,
-        model_exe=model.exe_file,
-        chain_ids=None,
-        data={},
-        method_args=args,
+    csvfiles_path = os.path.join(
+        DATAFILES_PATH, 'optimize', 'rosenbrock_mle.csv'
     )
-    runset = RunSet(args=cmdstan_args, chains=1)
-    runset._csv_files = [
-        os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock_mle.csv')
-    ]
-    mle = CmdStanMLE(runset)
+    mle = from_csv(path=csvfiles_path)
+    assert isinstance(mle, CmdStanMLE)
     assert 'CmdStanMLE: model=rosenbrock' in repr(mle)
     assert 'method=optimize' in repr(mle)
     assert mle.column_names == ('lp__', 'x', 'y')
@@ -664,7 +653,7 @@ def test_serialization() -> None:
         history_size=5,
     )
     dumped = pickle.dumps(mle1)
-    shutil.rmtree(mle1.runset._outdir)
+    shutil.rmtree(os.path.dirname(mle1.csv_file))
     mle2: CmdStanMLE = pickle.loads(dumped)
     np.testing.assert_array_equal(
         mle1.optimized_params_np, mle2.optimized_params_np

@@ -3,12 +3,7 @@
 import glob
 import os
 
-from cmdstanpy.cmdstan_args import (
-    CmdStanArgs,
-    OptimizeArgs,
-    SamplerArgs,
-    VariationalArgs,
-)
+from cmdstanpy.cmdstan_args import CmdStanArgs, SamplerArgs, VariationalArgs
 from cmdstanpy.utils import check_sampler_csv, get_logger, stancsv
 
 from .gq import CmdStanGQ, PrevFit
@@ -33,7 +28,7 @@ __all__ = [
 ]
 
 
-def from_csv(
+def from_csv(  # pylint: disable=too-many-return-statements
     path: str | list[str] | os.PathLike | None = None,
     method: str | None = None,
 ) -> (
@@ -177,32 +172,52 @@ def from_csv(
             fit.draws()
             return fit
         elif config_dict['method'] == 'optimize':
+            if len(csvfiles) != 1:
+                raise ValueError(
+                    'Expecting a single optimize Stan CSV file, '
+                    f'found {len(csvfiles)}'
+                )
+            csv_file = csvfiles[0]
+            config_file = os.path.splitext(csv_file)[0] + '_config.json'
+            if os.path.exists(config_file):
+                return CmdStanMLE.from_files(
+                    csv_file=csv_file, config_file=config_file
+                )
+            # Legacy path: no config file, build config from CSV metadata
             if 'algorithm' not in config_dict:
                 raise ValueError(
                     "Cannot find optimization algorithm in file {}.".format(
-                        csvfiles[0]
+                        csv_file
                     )
                 )
-            algorithm: str = config_dict['algorithm']  # type: ignore
-            save_iterations = config_dict['save_iterations'] == 1
-            jacobian = config_dict.get('jacobian', 0) == 1
+            from .metadata import OptimizeConfig, StanConfig
 
-            optimize_args = OptimizeArgs(
-                algorithm=algorithm,
-                save_iterations=save_iterations,
-                jacobian=jacobian,
+            opt_config = OptimizeConfig(
+                algorithm=config_dict['algorithm'],  # type: ignore
+                save_iterations=config_dict.get('save_iterations', 0) == 1,
+                jacobian=config_dict.get('jacobian', 0) == 1,
             )
-            cmdstan_args = CmdStanArgs(
-                model_name=model,
-                model_exe=model,
-                chain_ids=None,
-                method_args=optimize_args,
+            stan_config = StanConfig[OptimizeConfig].model_validate(
+                {
+                    'model_name': config_dict['model'],
+                    'stan_major_version': str(
+                        config_dict.get('stan_version_major', '')
+                    ),
+                    'stan_minor_version': str(
+                        config_dict.get('stan_version_minor', '')
+                    ),
+                    'stan_patch_version': str(
+                        config_dict.get('stan_version_patch', '')
+                    ),
+                    'method_config': opt_config.model_dump(),
+                }
             )
-            runset = RunSet(args=cmdstan_args)
-            runset._csv_files = csvfiles
-            for i in range(len(runset._retcodes)):
-                runset._set_retcode(i, 0)
-            return CmdStanMLE(runset)
+            return CmdStanMLE(
+                metadata=InferenceMetadata.from_csv(csv_file),
+                model_name=stan_config.model_name,
+                csv_file=csv_file,
+                config=stan_config,
+            )
         elif config_dict['method'] == 'variational':
             if 'algorithm' not in config_dict:
                 raise ValueError(

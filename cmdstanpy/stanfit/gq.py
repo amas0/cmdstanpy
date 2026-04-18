@@ -209,7 +209,7 @@ class CmdStanGQ(Generic[PrevFit]):
                 )
             elif (
                 isinstance(self.previous_fit, CmdStanMLE)
-                and not self.previous_fit._save_iterations
+                and not self.previous_fit.config.method_config.save_iterations
             ):
                 get_logger().warning(
                     "MLE doesn't contain draws from pre-convergence iterations,"
@@ -301,7 +301,7 @@ class CmdStanGQ(Generic[PrevFit]):
                 )
             elif (
                 isinstance(self.previous_fit, CmdStanMLE)
-                and not self.previous_fit._save_iterations
+                and not self.previous_fit.config.method_config.save_iterations
             ):
                 get_logger().warning(
                     "MLE doesn't contain draws from pre-convergence iterations,"
@@ -649,7 +649,7 @@ class CmdStanGQ(Generic[PrevFit]):
 
         elif isinstance(p_fit, CmdStanMLE):
             num_draws = 1
-            if p_fit._save_iterations:
+            if p_fit.config.method_config.save_iterations:
                 opt_iters = len(p_fit.optimized_iterations_np)  # type: ignore
                 if inc_warmup:
                     num_draws = opt_iters
@@ -675,7 +675,7 @@ class CmdStanGQ(Generic[PrevFit]):
         if isinstance(p_fit, CmdStanMCMC):
             return p_fit.draws(inc_warmup=inc_warmup)
         elif isinstance(p_fit, CmdStanMLE):
-            if inc_warmup and p_fit._save_iterations:
+            if inc_warmup and p_fit.config.method_config.save_iterations:
                 return p_fit.optimized_iterations_np[:, None]  # type: ignore
 
             return np.atleast_2d(  # type: ignore
@@ -703,7 +703,7 @@ class CmdStanGQ(Generic[PrevFit]):
             return p_fit.draws_pd(vars or None, inc_warmup=inc_warmup)
 
         elif isinstance(p_fit, CmdStanMLE):
-            if inc_warmup and p_fit._save_iterations:
+            if inc_warmup and p_fit.config.method_config.save_iterations:
                 return p_fit.optimized_iterations_pd[sel]  # type: ignore
             else:
                 return p_fit.optimized_params_pd[sel]

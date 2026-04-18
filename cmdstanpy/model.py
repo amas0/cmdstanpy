@@ -22,7 +22,6 @@ from cmdstanpy.cmdstan_args import (
     CmdStanArgs,
     GenerateQuantitiesArgs,
     LaplaceArgs,
-    Method,
     OptimizeArgs,
     PathfinderArgs,
     SamplerArgs,
@@ -434,7 +433,8 @@ class CmdStanModel:
             )
         runset.raise_for_timeouts()
 
-        if not runset._check_retcodes():
+        converged = runset._check_retcodes()
+        if not converged:
             msg = "Error during optimization! Command '{}' failed: {}".format(
                 ' '.join(runset.cmd(0)), runset.get_err_msgs()
             )
@@ -442,8 +442,12 @@ class CmdStanModel:
                 get_logger().warning(msg)
             else:
                 raise RuntimeError(msg)
-        mle = CmdStanMLE(runset)
-        return mle
+        return CmdStanMLE.from_files(
+            csv_file=runset.csv_files[0],
+            config_file=runset.config_files[0],
+            stdout_file=runset.stdout_files[0],
+            converged=converged,
+        )
 
     # pylint: disable=too-many-arguments
     def sample(
@@ -1040,7 +1044,9 @@ class CmdStanModel:
             ),
         ):
             fit_object = previous_fit
-            if isinstance(previous_fit, (CmdStanPathfinder, CmdStanLaplace)):
+            if isinstance(
+                previous_fit, (CmdStanPathfinder, CmdStanLaplace, CmdStanMLE)
+            ):
                 fit_csv_files = [previous_fit.csv_file]
             else:
                 fit_csv_files = previous_fit.runset.csv_files
@@ -1075,7 +1081,7 @@ class CmdStanModel:
         elif isinstance(fit_object, CmdStanMLE):
             chains = 1
             chain_ids = [1]
-            if fit_object._save_iterations:
+            if fit_object.config.method_config.save_iterations:
                 get_logger().warning(
                     'MLE contains saved iterations which will be used '
                     'to generate additional quantities of interest.'
@@ -1746,14 +1752,12 @@ class CmdStanModel:
         else:
             cmdstan_mode = mode
 
-        if cmdstan_mode.runset.method != Method.OPTIMIZE:
+        if not isinstance(cmdstan_mode, CmdStanMLE):
             raise ValueError(
                 "Mode must be a CmdStanMLE or a path to an optimize CSV"
             )
 
-        mode_jacobian = (
-            cmdstan_mode.runset._args.method_args.jacobian  # type: ignore
-        )
+        mode_jacobian = cmdstan_mode.config.method_config.jacobian
         if mode_jacobian != jacobian:
             raise ValueError(
                 "Jacobian argument to optimize and laplace must match!\n"
@@ -1761,9 +1765,7 @@ class CmdStanModel:
                 f"but optimize was run with jacobian={mode_jacobian}"
             )
 
-        laplace_args = LaplaceArgs(
-            cmdstan_mode.runset.csv_files[0], draws, jacobian
-        )
+        laplace_args = LaplaceArgs(cmdstan_mode.csv_file, draws, jacobian)
 
         with temp_single_json(data) as _data:
             args = CmdStanArgs(
