@@ -48,8 +48,8 @@ def test_optimize_copy_ability() -> None:
 
 
 def test_variational_pickle_ability() -> None:
-    csvfiles_path = DATAFILES_PATH / 'variational'
-    fit = cmdstanpy.from_csv(path=csvfiles_path)
+    csv_path = DATAFILES_PATH / 'variational' / 'eta_should_be_big_vb.csv'
+    fit = cmdstanpy.from_csv(path=csv_path)
     assert fit is not None
     keys = fit.stan_variables().keys()
     pickled = pickle.dumps(fit)
@@ -59,8 +59,8 @@ def test_variational_pickle_ability() -> None:
 
 
 def test_variational_copy_ability() -> None:
-    csvfiles_path = DATAFILES_PATH / 'variational'
-    fit = cmdstanpy.from_csv(path=csvfiles_path)
+    csv_path = DATAFILES_PATH / 'variational' / 'eta_should_be_big_vb.csv'
+    fit = cmdstanpy.from_csv(path=csv_path)
     assert fit is not None
     fit2 = copy.deepcopy(fit)
     assert fit.stan_variables().keys() == fit2.stan_variables().keys()

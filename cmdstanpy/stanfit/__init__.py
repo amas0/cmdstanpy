@@ -3,7 +3,7 @@
 import glob
 import os
 
-from cmdstanpy.cmdstan_args import CmdStanArgs, SamplerArgs, VariationalArgs
+from cmdstanpy.cmdstan_args import CmdStanArgs, SamplerArgs
 from cmdstanpy.utils import check_sampler_csv, get_logger, stancsv
 
 from .gq import CmdStanGQ, PrevFit
@@ -219,33 +219,21 @@ def from_csv(  # pylint: disable=too-many-return-statements
                 config=stan_config,
             )
         elif config_dict['method'] == 'variational':
-            if 'algorithm' not in config_dict:
+            if len(csvfiles) != 1:
                 raise ValueError(
-                    "Cannot find variational algorithm in file {}.".format(
-                        csvfiles[0]
-                    )
+                    'Expecting a single variational Stan CSV file, '
+                    f'found {len(csvfiles)}'
                 )
-            variational_args = VariationalArgs(
-                algorithm=config_dict['algorithm'],  # type: ignore
-                iter=config_dict['iter'],  # type: ignore
-                grad_samples=config_dict['grad_samples'],  # type: ignore
-                elbo_samples=config_dict['elbo_samples'],  # type: ignore
-                eta=config_dict['eta'],  # type: ignore
-                tol_rel_obj=config_dict['tol_rel_obj'],  # type: ignore
-                eval_elbo=config_dict['eval_elbo'],  # type: ignore
-                output_samples=config_dict['output_samples'],  # type: ignore
+            csv_file = csvfiles[0]
+            config_file = os.path.splitext(csv_file)[0] + '_config.json'
+            if not os.path.exists(config_file):
+                raise ValueError(
+                    'Variational config file not found at expected path: '
+                    f'{config_file}'
+                )
+            return CmdStanVB.from_files(
+                csv_file=csv_file, config_file=config_file
             )
-            cmdstan_args = CmdStanArgs(
-                model_name=model,
-                model_exe=model,
-                chain_ids=None,
-                method_args=variational_args,
-            )
-            runset = RunSet(args=cmdstan_args)
-            runset._csv_files = csvfiles
-            for i in range(len(runset._retcodes)):
-                runset._set_retcode(i, 0)
-            return CmdStanVB(runset)
         elif config_dict['method'] == 'laplace':
             if len(csvfiles) != 1:
                 raise ValueError(
