@@ -459,6 +459,22 @@ def test_parsing_timing_lines() -> None:
     assert out['Total'] == 0.001581
 
 
+def test_parsing_timing_lines_scientific_notation() -> None:
+    lines = [
+        b'# \n',
+        b'#  Elapsed Time: 630099e0 seconds (Warm-up)\n',
+        b'#                4358560.0e-1 seconds (Sampling)\n',
+        b'#                1.06595e+06 seconds (Total)\n',
+        b'# \n',
+    ]
+    out = stancsv.parse_timing_lines(lines)
+
+    assert len(out) == 3
+    assert out['Warm-up'] == 630099.0
+    assert out['Sampling'] == 435856.0
+    assert out['Total'] == 1065950.0
+
+
 def test_munge_varname() -> None:
     name1 = "a"
     name2 = "a:1"
