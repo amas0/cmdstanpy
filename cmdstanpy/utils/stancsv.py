@@ -324,7 +324,7 @@ def parse_timing_lines(
 
         if not in_timing_block:
             continue
-        match = re.findall(r"([\d\.]+) seconds \((.+)\)", str(line))
+        match = re.findall(r"([\d\.e\+\-]+) seconds \((.+)\)", str(line))
         if match:
             seconds = float(match[0][0])
             phase = match[0][1]
