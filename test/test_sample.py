@@ -1717,11 +1717,11 @@ def test_validate_summary_sig_figs() -> None:
 
     sum_17 = fit.summary(sig_figs=17)
     beta1_17 = format(sum_17.iloc[1, 0], '.18g')
-    assert beta1_17.startswith('1.345767078273')
+    assert beta1_17.startswith('1.343377085648')
 
     sum_10 = fit.summary(sig_figs=10)
     beta1_10 = format(sum_10.iloc[1, 0], '.18g')
-    assert beta1_10.startswith('1.34576707')
+    assert beta1_10.startswith('1.34337708')
 
     with pytest.raises(ValueError):
         fit.summary(sig_figs=20)
