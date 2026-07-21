@@ -147,10 +147,18 @@ def test_bernoulli_good(stanfile: str) -> None:
         assert os.path.exists(csv_file)
         assert os.path.exists(stdout_file)
     assert bern_fit.draws().shape == (100, 2, len(BERNOULLI_COLS))
-    for i in range(bern_fit.runset.chains):  # cleanup datafile_path dir
-        os.remove(bern_fit.runset.csv_files[i])
-        if os.path.exists(bern_fit.runset.stdout_files[i]):
-            os.remove(bern_fit.runset.stdout_files[i])
+    for attr in (  # cleanup datafile_path dir
+        'csv_files',
+        'stdout_files',
+        'config_files',
+        'metric_files',
+    ):
+        files = getattr(bern_fit.runset, attr)
+        if files is None:
+            continue
+        for f in files:
+            if os.path.exists(f):
+                os.remove(f)
     rdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.R')
     bern_fit = bern_model.sample(
         data=rdata,
