@@ -352,7 +352,7 @@ def test_check_sampler_csv_thin() -> None:
         max_treedepth=11,
         adapt_delta=0.98,
     )
-    csv_file = bern_fit.runset.csv_files[0]
+    csv_file = bern_fit.csv_files[0]
     dict = check_sampler_csv(
         path=csv_file,
         iter_sampling=490,

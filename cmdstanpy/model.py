@@ -949,7 +949,16 @@ class CmdStanModel:
                     )
                 get_logger().warning(msg)
 
-            mcmc = CmdStanMCMC(runset)
+            mcmc = CmdStanMCMC.from_files(
+                csv_files=runset.csv_files,
+                config_files=runset.config_files,
+                metric_files=runset.metric_files or None,
+                stdout_files=runset.stdout_files,
+                diagnostic_files=runset.diagnostic_files or None,
+                profile_files=runset.profile_files or None,
+                chain_ids=runset.chain_ids,
+                sig_figs=runset._args.sig_figs,
+            )
         return mcmc
 
     def generate_quantities(
@@ -1050,7 +1059,7 @@ class CmdStanModel:
             ):
                 fit_csv_files = [previous_fit.csv_file]
             else:
-                fit_csv_files = previous_fit.runset.csv_files
+                fit_csv_files = previous_fit.csv_files
         elif isinstance(previous_fit, list):
             if len(previous_fit) < 1:
                 raise ValueError(

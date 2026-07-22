@@ -3,8 +3,7 @@
 import glob
 import os
 
-from cmdstanpy.cmdstan_args import CmdStanArgs, SamplerArgs
-from cmdstanpy.utils import check_sampler_csv, get_logger, stancsv
+from cmdstanpy.utils import get_logger, stancsv
 
 from .gq import CmdStanGQ, PrevFit
 from .laplace import CmdStanLaplace
@@ -114,61 +113,27 @@ def from_csv(  # pylint: disable=too-many-return-statements
                 method, config_dict['method']
             )
         )
-    model: str = config_dict['model']  # type: ignore
     try:
         if config_dict['method'] == 'sample':
-            save_warmup = config_dict['save_warmup'] == 1
-            chains = len(csvfiles)
-            num_samples: int = config_dict['num_samples']  # type: ignore
-            num_warmup: int = config_dict['num_warmup']  # type: ignore
-            thin: int = config_dict['thin']  # type: ignore
-            sampler_args = SamplerArgs(
-                iter_sampling=num_samples,
-                iter_warmup=num_warmup,
-                thin=thin,
-                save_warmup=save_warmup,
-            )
-            # bugfix 425, check for fixed_params output
-            try:
-                check_sampler_csv(
-                    csvfiles[0],
-                    iter_sampling=num_samples,
-                    iter_warmup=num_warmup,
-                    thin=thin,
-                    save_warmup=save_warmup,
-                )
-            except ValueError:
-                try:
-                    check_sampler_csv(
-                        csvfiles[0],
-                        iter_sampling=num_samples,
-                        iter_warmup=num_warmup,
-                        thin=thin,
-                        save_warmup=save_warmup,
-                    )
-                    sampler_args = SamplerArgs(
-                        iter_sampling=num_samples,
-                        iter_warmup=num_warmup,
-                        thin=thin,
-                        save_warmup=save_warmup,
-                        fixed_param=True,
-                    )
-                except ValueError as e:
+            config_files: list[str] = []
+            metric_files: list[str] = []
+            for cf in csvfiles:
+                stem = os.path.splitext(cf)[0]
+                cfg = stem + '_config.json'
+                if not os.path.exists(cfg):
                     raise ValueError(
-                        'Invalid or corrupt Stan CSV output file, '
-                    ) from e
-
-            cmdstan_args = CmdStanArgs(
-                model_name=model,
-                model_exe=model,
-                chain_ids=[x + 1 for x in range(chains)],
-                method_args=sampler_args,
+                        'Sample config file not found at expected path: '
+                        f'{cfg}'
+                    )
+                config_files.append(cfg)
+                metric = stem + '_metric.json'
+                if os.path.exists(metric):
+                    metric_files.append(metric)
+            fit = CmdStanMCMC.from_files(
+                csv_files=csvfiles,
+                config_files=config_files,
+                metric_files=metric_files or None,
             )
-            runset = RunSet(args=cmdstan_args, chains=chains)
-            runset._csv_files = csvfiles
-            for i in range(len(runset._retcodes)):
-                runset._set_retcode(i, 0)
-            fit = CmdStanMCMC(runset)
             fit.draws()
             return fit
         elif config_dict['method'] == 'optimize':

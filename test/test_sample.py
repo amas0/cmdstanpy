@@ -20,10 +20,9 @@ import pytest
 
 import cmdstanpy.stanfit
 from cmdstanpy import _TMPDIR
-from cmdstanpy.cmdstan_args import CmdStanArgs, Method, SamplerArgs
 from cmdstanpy.model import CmdStanModel
-from cmdstanpy.stanfit import CmdStanMCMC, RunSet, from_csv
-from cmdstanpy.utils import EXTENSION, cmdstan_version_before
+from cmdstanpy.stanfit import CmdStanMCMC, from_csv
+from cmdstanpy.utils import cmdstan_version_before
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
@@ -67,16 +66,16 @@ def test_bernoulli_good(stanfile: str) -> None:
         iter_sampling=100,
         show_progress=False,
     )
-    assert 'CmdStanMCMC: model=bernoulli' in repr(bern_fit)
+    assert 'CmdStanMCMC: model=' in repr(bern_fit)
     assert 'method=sample' in repr(bern_fit)
 
-    assert bern_fit.runset._args.method == Method.SAMPLE
+    assert bern_fit.config.method_config.method == 'sample'
 
-    for i in range(bern_fit.runset.chains):
-        csv_file = bern_fit.runset.csv_files[i]
+    for i in range(bern_fit.chains):
+        csv_file = bern_fit.csv_files[i]
         # NB: This will fail if STAN_THREADS is enabled
         # due to sampling only producing 1 stdout file in that case
-        stdout_file = bern_fit.runset.stdout_files[i]
+        stdout_file = bern_fit.stdout_files[i]  # type: ignore
         assert os.path.exists(csv_file)
         assert os.path.exists(stdout_file)
 
@@ -108,18 +107,18 @@ def test_bernoulli_good(stanfile: str) -> None:
         metric='dense_e',
         show_progress=False,
     )
-    assert 'CmdStanMCMC: model=bernoulli' in repr(bern_fit)
+    assert 'CmdStanMCMC: model=' in repr(bern_fit)
     assert 'method=sample' in repr(bern_fit)
 
-    assert bern_fit.runset._args.method == Method.SAMPLE
+    assert bern_fit.config.method_config.method == 'sample'
 
-    for i in range(bern_fit.runset.chains):
-        csv_file = bern_fit.runset.csv_files[i]
-        stdout_file = bern_fit.runset.stdout_files[i]
+    for i in range(bern_fit.chains):
+        csv_file = bern_fit.csv_files[i]
+        stdout_file = bern_fit.stdout_files[i]  # type: ignore
         assert os.path.exists(csv_file)
         assert os.path.exists(stdout_file)
 
-    assert bern_fit.runset.chains == 2
+    assert bern_fit.chains == 2
     assert bern_fit.num_draws_sampling == 100
     assert bern_fit.column_names == tuple(BERNOULLI_COLS)
 
@@ -141,9 +140,9 @@ def test_bernoulli_good(stanfile: str) -> None:
         output_dir=DATAFILES_PATH,
         show_progress=False,
     )
-    for i in range(bern_fit.runset.chains):
-        csv_file = bern_fit.runset.csv_files[i]
-        stdout_file = bern_fit.runset.stdout_files[i]
+    for i in range(bern_fit.chains):
+        csv_file = bern_fit.csv_files[i]
+        stdout_file = bern_fit.stdout_files[i]  # type: ignore
         assert os.path.exists(csv_file)
         assert os.path.exists(stdout_file)
     assert bern_fit.draws().shape == (100, 2, len(BERNOULLI_COLS))
@@ -153,7 +152,7 @@ def test_bernoulli_good(stanfile: str) -> None:
         'config_files',
         'metric_files',
     ):
-        files = getattr(bern_fit.runset, attr)
+        files = getattr(bern_fit, attr)
         if files is None:
             continue
         for f in files:
@@ -226,7 +225,7 @@ def test_init_types() -> None:
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
 
-    bern_fit = bern_model.sample(
+    bern_model.sample(
         data=jdata,
         chains=2,
         parallel_chains=2,
@@ -236,9 +235,8 @@ def test_init_types() -> None:
         inits=1.1,
         show_progress=False,
     )
-    assert 'init=1.1' in repr(bern_fit.runset)
 
-    bern_fit = bern_model.sample(
+    bern_model.sample(
         data=jdata,
         chains=2,
         parallel_chains=2,
@@ -248,7 +246,6 @@ def test_init_types() -> None:
         inits=1,
         show_progress=False,
     )
-    assert 'init=1' in repr(bern_fit.runset)
 
     # Save init to json
     inits_path1 = os.path.join(_TMPDIR, 'inits_test_1.json')
@@ -258,7 +255,7 @@ def test_init_types() -> None:
     with open(inits_path2, 'w') as fd:
         json.dump({'theta': 0.9}, fd)
 
-    bern_fit = bern_model.sample(
+    bern_model.sample(
         data=jdata,
         chains=2,
         parallel_chains=2,
@@ -268,11 +265,8 @@ def test_init_types() -> None:
         inits=inits_path1,
         show_progress=False,
     )
-    assert 'init={}'.format(inits_path1.replace('\\', '\\\\')) in repr(
-        bern_fit.runset
-    )
 
-    bern_fit = bern_model.sample(
+    bern_model.sample(
         data=jdata,
         chains=2,
         parallel_chains=2,
@@ -284,10 +278,7 @@ def test_init_types() -> None:
         force_one_process_per_chain=False,
     )
 
-    # will be copied, given basename
-    assert isinstance(bern_fit.runset._args.inits, str)
-
-    bern_fit = bern_model.sample(
+    bern_model.sample(
         data=jdata,
         chains=2,
         seed=12345,
@@ -297,8 +288,6 @@ def test_init_types() -> None:
         show_progress=False,
         force_one_process_per_chain=True,
     )
-    # one per process
-    assert isinstance(bern_fit.runset._args.inits, list)
 
     with pytest.raises(ValueError):
         bern_model.sample(
@@ -315,7 +304,7 @@ def test_init_types() -> None:
     init_1 = {"theta": 0.2}
     init_2 = {"theta": 4.0}
     with pytest.raises(RuntimeError):
-        bern_fit = bern_model.sample(
+        bern_model.sample(
             data=jdata,
             chains=2,
             seed=12345,
@@ -327,7 +316,7 @@ def test_init_types() -> None:
         )
     # https://github.com/stan-dev/cmdstan/pull/1191
     with pytest.raises(RuntimeError):
-        bern_fit = bern_model.sample(
+        bern_model.sample(
             data=jdata,
             chains=2,
             seed=12345,
@@ -530,20 +519,20 @@ def test_fixed_param_good() -> None:
     datagen_fit = datagen_model.sample(
         seed=12345, chains=1, iter_sampling=100, fixed_param=True
     )
-    assert datagen_fit.runset._args.method == Method.SAMPLE
+    assert datagen_fit.config.method_config.method == 'sample'
     assert datagen_fit.metric_type is None
     assert datagen_fit.inv_metric is None
     assert datagen_fit.step_size is None
     assert datagen_fit.divergences is None
     assert datagen_fit.max_treedepths is None
 
-    for i in range(datagen_fit.runset.chains):
-        csv_file = datagen_fit.runset.csv_files[i]
-        stdout_file = datagen_fit.runset.stdout_files[i]
+    for i in range(datagen_fit.chains):
+        csv_file = datagen_fit.csv_files[i]
+        stdout_file = datagen_fit.stdout_files[i]  # type: ignore
         assert os.path.exists(csv_file)
         assert os.path.exists(stdout_file)
 
-    assert datagen_fit.runset.chains == 1
+    assert datagen_fit.chains == 1
 
     column_names = [
         'lp__',
@@ -751,34 +740,18 @@ def test_show_progress(stanfile: str = 'bernoulli.stan') -> None:
 
 def test_validate_good_run() -> None:
     # construct fit using existing sampler output
-    exe = os.path.join(DATAFILES_PATH, 'bernoulli' + EXTENSION)
-    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
-    sampler_args = SamplerArgs(
-        iter_sampling=100, max_treedepth=11, adapt_delta=0.95
-    )
-    cmdstan_args = CmdStanArgs(
-        model_name='bernoulli',
-        model_exe=exe,
-        chain_ids=[1, 2, 3, 4],
-        seed=12345,
-        data=jdata,
-        output_dir=DATAFILES_PATH,
-        method_args=sampler_args,
-    )
-    runset = RunSet(args=cmdstan_args, chains=4)
-    runset._csv_files = [
-        os.path.join(DATAFILES_PATH, 'runset-good', 'bern-1.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-good', 'bern-2.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-good', 'bern-3.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-good', 'bern-4.csv'),
+    csv_files = [
+        os.path.join(DATAFILES_PATH, 'runset-good', f'bern-{i}.csv')
+        for i in range(1, 5)
     ]
-    assert 4 == runset.chains
-    retcodes = runset._retcodes
-    for i in range(len(retcodes)):
-        runset._set_retcode(i, 0)
-    assert runset._check_retcodes()
-
-    fit = CmdStanMCMC(runset)
+    config_files = [
+        os.path.join(DATAFILES_PATH, 'runset-good', f'bern-{i}_config.json')
+        for i in range(1, 5)
+    ]
+    fit = CmdStanMCMC.from_files(
+        csv_files=csv_files,
+        config_files=config_files,
+    )
     assert 1000 == fit.num_draws_warmup
     assert 100 == fit.num_draws_sampling
     assert len(BERNOULLI_COLS) == len(fit.column_names)
@@ -786,7 +759,7 @@ def test_validate_good_run() -> None:
 
     draws_pd = fit.draws_pd()
     assert draws_pd.shape == (
-        fit.runset.chains * fit.num_draws_sampling,
+        fit.chains * fit.num_draws_sampling,
         len(fit.column_names) + 3,
     )
     assert fit.draws_pd(vars=['theta']).shape == (400, 1)
@@ -837,30 +810,27 @@ def test_validate_good_run() -> None:
 
 
 def test_validate_big_run() -> None:
-    exe = os.path.join(DATAFILES_PATH, 'bernoulli' + EXTENSION)
-    sampler_args = SamplerArgs(iter_warmup=1500, iter_sampling=1000)
-    cmdstan_args = CmdStanArgs(
-        model_name='bernoulli',
-        model_exe=exe,
-        chain_ids=[1, 2],
-        seed=12345,
-        output_dir=DATAFILES_PATH,
-        method_args=sampler_args,
+    csv_files = [
+        os.path.join(DATAFILES_PATH, 'runset-big', f'output_icar_nyc-{i}.csv')
+        for i in (1, 2)
+    ]
+    config_files = [
+        os.path.join(
+            DATAFILES_PATH, 'runset-big', f'output_icar_nyc-{i}_config.json'
+        )
+        for i in (1, 2)
+    ]
+    metric_files = [
+        os.path.join(
+            DATAFILES_PATH, 'runset-big', f'output_icar_nyc-{i}_metric.json'
+        )
+        for i in (1, 2)
+    ]
+    fit = CmdStanMCMC.from_files(
+        csv_files=csv_files,
+        config_files=config_files,
+        metric_files=metric_files,
     )
-    runset = RunSet(args=cmdstan_args, chains=2)
-    runset._csv_files = [
-        os.path.join(DATAFILES_PATH, 'runset-big', 'output_icar_nyc-1.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-big', 'output_icar_nyc-2.csv'),
-    ]
-    runset._metric_files = [
-        os.path.join(
-            DATAFILES_PATH, 'runset-big', 'output_icar_nyc-1_metric.json'
-        ),
-        os.path.join(
-            DATAFILES_PATH, 'runset-big', 'output_icar_nyc-2_metric.json'
-        ),
-    ]
-    fit = CmdStanMCMC(runset)
     phis = ['phi[{}]'.format(str(x + 1)) for x in range(2095)]
     column_names = list(fit.metadata.method_vars.keys()) + phis
     assert fit.num_draws_sampling == 1000
@@ -882,7 +852,7 @@ def test_instantiate_from_csvfiles() -> None:
     assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
     assert draws_pd.shape == (
-        bern_fit.runset.chains * bern_fit.num_draws_sampling,
+        bern_fit.chains * bern_fit.num_draws_sampling,
         len(bern_fit.column_names) + 3,
     )
     csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-big')
@@ -890,7 +860,7 @@ def test_instantiate_from_csvfiles() -> None:
     assert isinstance(big_fit, CmdStanMCMC)
     draws_pd = big_fit.draws_pd()
     assert draws_pd.shape == (
-        big_fit.runset.chains * big_fit.num_draws_sampling,
+        big_fit.chains * big_fit.num_draws_sampling,
         len(big_fit.column_names) + 3,
     )
     # list
@@ -903,7 +873,7 @@ def test_instantiate_from_csvfiles() -> None:
     assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
     assert draws_pd.shape == (
-        bern_fit.runset.chains * bern_fit.num_draws_sampling,
+        bern_fit.chains * bern_fit.num_draws_sampling,
         len(bern_fit.column_names) + 3,
     )
     # single csvfile
@@ -920,7 +890,7 @@ def test_instantiate_from_csvfiles() -> None:
     assert isinstance(big_fit, CmdStanMCMC)
     draws_pd = big_fit.draws_pd()
     assert draws_pd.shape == (
-        big_fit.runset.chains * big_fit.num_draws_sampling,
+        big_fit.chains * big_fit.num_draws_sampling,
         len(big_fit.column_names) + 3,
     )
 
@@ -1216,7 +1186,7 @@ def test_adapt_schedule() -> None:
         adapt_metric_window=12,
         adapt_step_size=13,
     )
-    txt_file = bern_fit.runset.stdout_files[0]
+    txt_file = bern_fit.stdout_files[0]  # type: ignore
     with open(txt_file, 'r') as fd:
         lines = fd.readlines()
         stripped = [line.strip() for line in lines]
@@ -1237,16 +1207,16 @@ def test_save_csv() -> None:
         iter_warmup=100,
         iter_sampling=200,
     )
-    for i in range(bern_fit.runset.chains):
-        csv_file = bern_fit.runset.csv_files[i]
-        stdout_file = bern_fit.runset.stdout_files[i]
+    for i in range(bern_fit.chains):
+        csv_file = bern_fit.csv_files[i]
+        stdout_file = bern_fit.stdout_files[i]  # type: ignore
         assert os.path.exists(csv_file)
         assert os.path.exists(stdout_file)
 
     # save files to good dir
     bern_fit.save_csvfiles(dir=DATAFILES_PATH)
-    for i in range(bern_fit.runset.chains):
-        csv_file = bern_fit.runset.csv_files[i]
+    for i in range(bern_fit.chains):
+        csv_file = bern_fit.csv_files[i]
         assert os.path.exists(csv_file)
     with pytest.raises(ValueError, match='File exists, not overwriting: '):
         bern_fit.save_csvfiles(dir=DATAFILES_PATH)
@@ -1254,13 +1224,21 @@ def test_save_csv() -> None:
     tmp2_dir = os.path.join(HERE, 'tmp2')
     os.mkdir(tmp2_dir)
     bern_fit.save_csvfiles(dir=tmp2_dir)
-    for i in range(bern_fit.runset.chains):
-        csv_file = bern_fit.runset.csv_files[i]
+    for i in range(bern_fit.chains):
+        csv_file = bern_fit.csv_files[i]
         assert os.path.exists(csv_file)
-    for i in range(bern_fit.runset.chains):  # cleanup datafile_path dir
-        os.remove(bern_fit.runset.csv_files[i])
-        if os.path.exists(bern_fit.runset.stdout_files[i]):
-            os.remove(bern_fit.runset.stdout_files[i])
+    for attr in (  # cleanup datafile_path dir
+        'csv_files',
+        'stdout_files',
+        'config_files',
+        'metric_files',
+    ):
+        files = getattr(bern_fit, attr)
+        if files is None:
+            continue
+        for f in files:
+            if os.path.exists(f):
+                os.remove(f)
     shutil.rmtree(tmp2_dir, ignore_errors=True)
 
     # regenerate to tmpdir, save to good dir
@@ -1272,13 +1250,21 @@ def test_save_csv() -> None:
         iter_sampling=200,
     )
     bern_fit.save_csvfiles()  # default dir
-    for i in range(bern_fit.runset.chains):
-        csv_file = bern_fit.runset.csv_files[i]
+    for i in range(bern_fit.chains):
+        csv_file = bern_fit.csv_files[i]
         assert os.path.exists(csv_file)
-    for i in range(bern_fit.runset.chains):  # cleanup default dir
-        os.remove(bern_fit.runset.csv_files[i])
-        if os.path.exists(bern_fit.runset.stdout_files[i]):
-            os.remove(bern_fit.runset.stdout_files[i])
+    for attr in (
+        'csv_files',
+        'stdout_files',
+        'config_files',
+        'metric_files',
+    ):
+        files = getattr(bern_fit, attr)
+        if files is None:
+            continue
+        for f in files:
+            if os.path.exists(f):
+                os.remove(f)
 
     with pytest.raises(ValueError, match='Cannot access CSV file'):
         bern_fit.save_csvfiles(dir=DATAFILES_PATH)
@@ -1291,20 +1277,16 @@ def test_save_csv() -> None:
 
 
 def test_diagnose_divergences() -> None:
-    exe = os.path.join(DATAFILES_PATH, 'bernoulli' + EXTENSION)
-    sampler_args = SamplerArgs()
-    cmdstan_args = CmdStanArgs(
-        model_name='bernoulli',
-        model_exe=exe,
-        chain_ids=[1],
-        output_dir=DATAFILES_PATH,
-        method_args=sampler_args,
+    csv_file = os.path.join(
+        DATAFILES_PATH, 'diagnose-good', 'corr_gauss_depth8-1.csv'
     )
-    runset = RunSet(args=cmdstan_args, chains=1)
-    runset._csv_files = [
-        os.path.join(DATAFILES_PATH, 'diagnose-good', 'corr_gauss_depth8-1.csv')
-    ]
-    fit = CmdStanMCMC(runset)
+    config_file = os.path.join(
+        DATAFILES_PATH, 'diagnose-good', 'corr_gauss_depth8-1_config.json'
+    )
+    fit = CmdStanMCMC.from_files(
+        csv_files=[csv_file],
+        config_files=[config_file],
+    )
     # TODO - use cmdstan test files instead
     expected = [
         'Checking sampler transitions treedepth.',
@@ -1322,63 +1304,81 @@ def test_diagnose_divergences() -> None:
 
 
 def test_validate_bad_run() -> None:
-    exe = os.path.join(DATAFILES_PATH, 'bernoulli' + EXTENSION)
-    jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
-    sampler_args = SamplerArgs(max_treedepth=11, adapt_delta=0.95)
-
-    # some chains had errors
-    cmdstan_args = CmdStanArgs(
-        model_name='bernoulli',
-        model_exe=exe,
-        chain_ids=[1, 2, 3, 4],
-        seed=12345,
-        data=jdata,
-        output_dir=DATAFILES_PATH,
-        method_args=sampler_args,
-    )
-    runset = RunSet(args=cmdstan_args, chains=4)
-    for i in range(4):
-        runset._set_retcode(i, 0)
-    assert runset._check_retcodes()
-
-    # errors reported
-    runset._stdout_files = [
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-transcript-bern-1.txt'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-transcript-bern-2.txt'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-transcript-bern-3.txt'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-transcript-bern-4.txt'),
-    ]
-    assert 'Exception' in runset.get_err_msgs()
+    def fixtures(prefix: str) -> tuple[list[str], list[str]]:
+        csvs = [
+            os.path.join(DATAFILES_PATH, 'runset-bad', f'{prefix}-bern-{i}.csv')
+            for i in range(1, 5)
+        ]
+        configs = [
+            os.path.join(
+                DATAFILES_PATH, 'runset-bad', f'{prefix}-bern-{i}_config.json'
+            )
+            for i in range(1, 5)
+        ]
+        return csvs, configs
 
     # csv file headers inconsistent
-    runset._csv_files = [
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-hdr-bern-1.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-hdr-bern-2.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-hdr-bern-3.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-hdr-bern-4.csv'),
-    ]
+    csvs, configs = fixtures('bad-hdr')
     with raises_nested(ValueError, 'CmdStan config mismatch'):
-        CmdStanMCMC(runset)
+        CmdStanMCMC.from_files(csv_files=csvs, config_files=configs)
 
     # bad draws
-    runset._csv_files = [
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-draws-bern-1.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-draws-bern-2.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-draws-bern-3.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-draws-bern-4.csv'),
-    ]
+    csvs, configs = fixtures('bad-draws')
     with raises_nested(ValueError, 'draws'):
-        CmdStanMCMC(runset)
+        CmdStanMCMC.from_files(csv_files=csvs, config_files=configs)
 
     # mismatch - column headers, draws
-    runset._csv_files = [
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-cols-bern-1.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-cols-bern-2.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-cols-bern-3.csv'),
-        os.path.join(DATAFILES_PATH, 'runset-bad', 'bad-cols-bern-4.csv'),
-    ]
+    csvs, configs = fixtures('bad-cols')
     with raises_nested(ValueError, 'bad draw, expecting 9 items, found 8'):
-        CmdStanMCMC(runset)
+        CmdStanMCMC.from_files(csv_files=csvs, config_files=configs)
+
+
+def _good_runset_files() -> tuple[list[str], list[str], list[str]]:
+    csvs = [
+        os.path.join(DATAFILES_PATH, 'runset-good', f'bern-{i}.csv')
+        for i in range(1, 5)
+    ]
+    configs = [
+        os.path.join(DATAFILES_PATH, 'runset-good', f'bern-{i}_config.json')
+        for i in range(1, 5)
+    ]
+    metrics = [
+        os.path.join(DATAFILES_PATH, 'runset-good', f'bern-{i}_metric.json')
+        for i in range(1, 5)
+    ]
+    return csvs, configs, metrics
+
+
+def test_metric_info_unavailable_returns_none() -> None:
+    # No metric files (e.g. adaptation disabled, so CmdStan wrote none) means
+    # the metric properties report None rather than raising. Covers both an
+    # explicit absence and metric paths that were listed but never written.
+    csvs, configs, _ = _good_runset_files()
+    absent = [f'/no/such/bern-{i}_metric.json' for i in range(1, 5)]
+    for metric_files in (None, absent):
+        fit = CmdStanMCMC.from_files(
+            csv_files=csvs, config_files=configs, metric_files=metric_files
+        )
+        assert fit.metric_type is None
+        assert fit.step_size is None
+        assert fit.inv_metric is None
+
+
+def test_metric_files_misaligned() -> None:
+    csvs, configs, metrics = _good_runset_files()
+    # too few metric files -> rejected at construction, not silently accepted
+    with pytest.raises(ValueError, match='one metric file per chain'):
+        CmdStanMCMC.from_files(
+            csv_files=csvs, config_files=configs, metric_files=metrics[:3]
+        )
+    # right count but one absent -> partial set rejected on access
+    fit = CmdStanMCMC.from_files(
+        csv_files=csvs,
+        config_files=configs,
+        metric_files=metrics[:3] + ['/no/such/bern-4_metric.json'],
+    )
+    with pytest.raises(ValueError, match='missing for some chains'):
+        _ = fit.metric_type
 
 
 def test_sample_sporadic_exception(caplog: pytest.LogCaptureFixture) -> None:
@@ -1739,36 +1739,24 @@ def test_validate_summary_sig_figs() -> None:
 
 def test_metadata() -> None:
     # construct CmdStanMCMC from logistic model output, config
-    exe = os.path.join(DATAFILES_PATH, 'logistic' + EXTENSION)
-    rdata = os.path.join(DATAFILES_PATH, 'logistic.data.R')
-    sampler_args = SamplerArgs(iter_sampling=100)
-    cmdstan_args = CmdStanArgs(
-        model_name='logistic',
-        model_exe=exe,
-        chain_ids=[1, 2, 3, 4],
-        seed=12345,
-        data=rdata,
-        output_dir=DATAFILES_PATH,
+    csv_files = [
+        os.path.join(DATAFILES_PATH, f'logistic_output_{i}.csv')
+        for i in range(1, 5)
+    ]
+    config_files = [
+        os.path.join(DATAFILES_PATH, f'logistic_output_{i}_config.json')
+        for i in range(1, 5)
+    ]
+    metric_files = [
+        os.path.join(DATAFILES_PATH, f'logistic_output_{i}_metric.json')
+        for i in range(1, 5)
+    ]
+    fit = CmdStanMCMC.from_files(
+        csv_files=csv_files,
+        config_files=config_files,
+        metric_files=metric_files,
         sig_figs=17,
-        method_args=sampler_args,
     )
-    runset = RunSet(args=cmdstan_args, chains=4)
-    runset._csv_files = [
-        os.path.join(DATAFILES_PATH, 'logistic_output_1.csv'),
-        os.path.join(DATAFILES_PATH, 'logistic_output_2.csv'),
-        os.path.join(DATAFILES_PATH, 'logistic_output_3.csv'),
-        os.path.join(DATAFILES_PATH, 'logistic_output_4.csv'),
-    ]
-    runset._metric_files = [
-        os.path.join(DATAFILES_PATH, 'logistic_output_1_metric.json'),
-        os.path.join(DATAFILES_PATH, 'logistic_output_2_metric.json'),
-        os.path.join(DATAFILES_PATH, 'logistic_output_3_metric.json'),
-        os.path.join(DATAFILES_PATH, 'logistic_output_4_metric.json'),
-    ]
-    retcodes = runset._retcodes
-    for i in range(len(retcodes)):
-        runset._set_retcode(i, 0)
-    fit = CmdStanMCMC(runset)
     meta = fit.metadata
     assert meta.cmdstan_config['model'] == 'logistic_model'
     col_names = (
@@ -1824,8 +1812,8 @@ def test_save_latent_dynamics() -> None:
         iter_sampling=200,
         save_latent_dynamics=True,
     )
-    for i in range(bern_fit.runset.chains):
-        diagnostics_file = bern_fit.runset.diagnostic_files[i]
+    for i in range(bern_fit.chains):
+        diagnostics_file = bern_fit.diagnostic_files[i]  # type: ignore
         assert os.path.exists(diagnostics_file)
 
 
@@ -1844,8 +1832,8 @@ def test_save_profile() -> None:
         iter_sampling=200,
         save_profile=True,
     )
-    assert len(profile_fit.runset.profile_files) == 2
-    for profile_file in profile_fit.runset.profile_files:
+    assert len(profile_fit.profile_files) == 2  # type: ignore
+    for profile_file in profile_fit.profile_files:  # type: ignore
         assert os.path.exists(profile_file)
 
     profile_fit = profile_model.sample(
@@ -1858,8 +1846,8 @@ def test_save_profile() -> None:
         save_profile=True,
     )
 
-    assert len(profile_fit.runset.profile_files) == 1
-    for profile_file in profile_fit.runset.profile_files:
+    assert len(profile_fit.profile_files) == 1  # type: ignore
+    for profile_file in profile_fit.profile_files:  # type: ignore
         assert os.path.exists(profile_file)
 
 
@@ -2126,7 +2114,7 @@ def test_csv_roundtrip() -> None:
 
     # mostly just asserting that from_csv always succeeds
     # in parsing latest cmdstan headers
-    fit_from_csv = from_csv(fit.runset.csv_files)
+    fit_from_csv = from_csv(fit.csv_files)
     assert isinstance(fit_from_csv, CmdStanMCMC)
     z_from_csv = fit_from_csv.stan_variable(var="z")
     assert z_from_csv.shape == (20, 4, 3)
@@ -2152,7 +2140,7 @@ def test_serialization(stanfile: str = 'bernoulli.stan') -> None:
     )
     # Dump the result (which assembles draws) and delete the source files.
     dumped = pickle.dumps(bern_fit1)
-    shutil.rmtree(bern_fit1.runset._outdir)
+    shutil.rmtree(os.path.dirname(bern_fit1.csv_files[0]))
     # Load the serialized result and compare results.
     bern_fit2: CmdStanMCMC = pickle.loads(dumped)
     variables1 = bern_fit1.stan_variables()
@@ -2239,7 +2227,7 @@ def test_config_output() -> None:
         iter_warmup=100,
         iter_sampling=200,
     )
-    assert all(os.path.exists(cf) for cf in fit.runset.config_files)
+    assert all(os.path.exists(cf) for cf in fit.config_files)  # type: ignore
 
     # Config file naming differs when only a single chain is output
     fit_one_chain = model.sample(
@@ -2249,4 +2237,6 @@ def test_config_output() -> None:
         iter_warmup=100,
         iter_sampling=200,
     )
-    assert all(os.path.exists(cf) for cf in fit_one_chain.runset.config_files)
+    assert all(
+        os.path.exists(cf) for cf in fit_one_chain.config_files  # type: ignore
+    )
