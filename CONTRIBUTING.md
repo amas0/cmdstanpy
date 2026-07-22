@@ -8,6 +8,7 @@ We welcome contributions to the project and we could really use your help to:
 
 * Increase test coverage
 
+All contributions must follow the [Stan AI Contribution Policy](https://github.com/stan-dev/stan/wiki/AI-Contribution-Policy).
 
 ### Developers
 
