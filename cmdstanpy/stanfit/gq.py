@@ -541,16 +541,16 @@ class CmdStanGQ(Generic[PrevFit]):
 
         self._assemble_generated_quantities()
 
-        num_draws = self.previous_fit.num_draws_sampling
-        sample_config = self.previous_fit.metadata.cmdstan_config
+        prev = self.previous_fit
+        num_draws = prev.num_draws_sampling
         attrs: MutableMapping[Hashable, Any] = {
-            "stan_version": f"{sample_config['stan_version_major']}."
-            f"{sample_config['stan_version_minor']}."
-            f"{sample_config['stan_version_patch']}",
-            "model": sample_config["model"],
+            "stan_version": f"{prev.config.stan_major_version}."
+            f"{prev.config.stan_minor_version}."
+            f"{prev.config.stan_patch_version}",
+            "model": prev.model_name,
             "num_draws_sampling": num_draws,
         }
-        if inc_warmup and sample_config['save_warmup']:
+        if inc_warmup and prev._save_warmup:
             num_draws += self.previous_fit.num_draws_warmup
             attrs["num_draws_warmup"] = self.previous_fit.num_draws_warmup
 

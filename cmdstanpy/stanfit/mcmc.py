@@ -27,7 +27,6 @@ from cmdstanpy import _TMPDIR
 from cmdstanpy.utils import (
     EXTENSION,
     build_xarray_data,
-    check_sampler_csv,
     cmdstan_path,
     create_named_text_file,
     do_command,
@@ -85,9 +84,6 @@ class CmdStanMCMC:
     )
     _max_treedepths: np.ndarray = field(
         default_factory=lambda: np.array(()), init=False
-    )
-    _chain_time: list[dict[str, float]] = field(
-        default_factory=list, init=False
     )
 
     def __post_init__(self) -> None:
@@ -367,14 +363,6 @@ class CmdStanMCMC:
         """
         return self._max_treedepths if not self._is_fixed_param else None
 
-    @property
-    def time(self) -> list[dict[str, float]]:
-        """
-        List of per-chain time info scraped from CSV file.
-        Each chain has dict with keys "warmup", "sampling", "total".
-        """
-        return self._chain_time
-
     def draws(
         self, *, inc_warmup: bool = False, concat_chains: bool = False
     ) -> np.ndarray:
@@ -461,23 +449,48 @@ class CmdStanMCMC:
     def _validate_csv_files(self) -> None:
         """
         Checks that the draws in the Stan CSV output files are consistent
-        with the run configuration.  Tabulates per-chain timings, plus
+        with the run configuration, and tabulates per-chain counts of
         sampling iters which are divergent or at max treedepth.
 
         Raises exception when inconsistencies detected.
         """
+        expected_sampling = math.ceil(self._iter_sampling / self._thin)
+        expected_warmup = (
+            math.ceil(self._iter_warmup / self._thin)
+            if self._save_warmup
+            else 0
+        )
+        max_depth = self.config.method_config.max_depth
         for i in range(self.chains):
-            d = check_sampler_csv(
-                path=self.csv_files[i],
-                iter_sampling=self._iter_sampling,
-                iter_warmup=self._iter_warmup,
-                save_warmup=self._save_warmup,
-                thin=self._thin,
+            path = self.csv_files[i]
+            _, header, draws = stancsv.parse_comments_header_and_draws(path)
+            if header is None:
+                raise ValueError(f'No header found in Stan CSV file {path}')
+            stancsv.raise_on_inconsistent_draws_shape(header, draws)
+
+            num_warmup, num_sampling = stancsv.count_warmup_and_sampling_draws(
+                path
             )
-            self._chain_time.append(d['time'])
+            if num_sampling != expected_sampling:
+                raise ValueError(
+                    f'Bad Stan CSV file {path}, expected {expected_sampling} '
+                    f'draws, found {num_sampling}'
+                )
+            if self._save_warmup and num_warmup != expected_warmup:
+                raise ValueError(
+                    f'Bad Stan CSV file {path}, expected {expected_warmup} '
+                    f'warmup draws, found {num_warmup}'
+                )
             if not self._is_fixed_param:
-                self._divergences[i] = d['ct_divergences']
-                self._max_treedepths[i] = d['ct_max_treedepth']
+                # HMC runs always record max_depth; only fixed_param omits it
+                assert max_depth is not None
+                treedepths, divergences = (
+                    stancsv.extract_max_treedepth_and_divergence_counts(
+                        header, draws, max_depth, num_warmup
+                    )
+                )
+                self._max_treedepths[i] = treedepths
+                self._divergences[i] = divergences
 
     def _ensure_metric_parsed(self) -> bool:
         """Parse the metric info if available, returning whether it is.
@@ -831,11 +844,11 @@ class CmdStanMCMC:
         self._assemble_draws()
 
         num_draws = self.num_draws_sampling
-        meta = self.metadata.cmdstan_config
         attrs: MutableMapping[Hashable, Any] = {
-            "stan_version": f"{meta['stan_version_major']}."
-            f"{meta['stan_version_minor']}.{meta['stan_version_patch']}",
-            "model": meta["model"],
+            "stan_version": f"{self.config.stan_major_version}."
+            f"{self.config.stan_minor_version}."
+            f"{self.config.stan_patch_version}",
+            "model": self.model_name,
             "num_draws_sampling": num_draws,
         }
         if inc_warmup and self._save_warmup:

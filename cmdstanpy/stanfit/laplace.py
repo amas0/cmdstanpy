@@ -263,11 +263,11 @@ class CmdStanLaplace:
 
         self._assemble_draws()
 
-        meta = self.metadata.cmdstan_config
         attrs: MutableMapping[Hashable, Any] = {
-            "stan_version": f"{meta['stan_version_major']}."
-            f"{meta['stan_version_minor']}.{meta['stan_version_patch']}",
-            "model": meta["model"],
+            "stan_version": f"{self.config.stan_major_version}."
+            f"{self.config.stan_minor_version}."
+            f"{self.config.stan_patch_version}",
+            "model": self.model_name,
         }
 
         data: MutableMapping[Hashable, Any] = {}

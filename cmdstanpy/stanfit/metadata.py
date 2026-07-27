@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import copy
 import json
 import math
 import os
@@ -23,19 +22,15 @@ from cmdstanpy.utils import stancsv
 
 class InferenceMetadata:
     """
-    CmdStan configuration and contents of output file parsed out of
-    the Stan CSV file header comments and column headers.
-    Assumes valid CSV files.
+    Names and structure of the output variables of a CmdStan run, parsed
+    from the Stan CSV file's column header. Assumes valid CSV files.
     """
 
-    def __init__(
-        self, config: dict[str, str | int | float | tuple[str, ...]]
-    ) -> None:
-        """Initialize object from CSV headers"""
-        self._cmdstan_config = config
+    def __init__(self, header: str) -> None:
+        """Initialize object from a Stan CSV header line."""
+        self._column_names = stancsv.parse_header(header)
 
-        vars = stanio.parse_header(config['raw_header'])  # type: ignore
-
+        vars = stanio.parse_header(header)
         self._method_vars = {
             k: v for (k, v) in vars.items() if k.endswith('__')
         }
@@ -48,35 +43,21 @@ class InferenceMetadata:
         cls, stan_csv: str | os.PathLike | Iterator[bytes]
     ) -> InferenceMetadata:
         try:
-            comments, header, _ = stancsv.parse_comments_header_and_draws(
-                stan_csv
-            )
-            return cls(stancsv.construct_config_header_dict(comments, header))
+            _, header, _ = stancsv.parse_comments_header_and_draws(stan_csv)
+            if header is None:
+                raise ValueError("No header line found")
+            return cls(header)
         except Exception as exc:
             raise ValueError(
                 f"An error occurred when parsing Stan csv {stan_csv}"
             ) from exc
 
     def __repr__(self) -> str:
-        return 'Metadata:\n{}\n'.format(self._cmdstan_config)
-
-    def __getitem__(self, key: str) -> str | int | float | tuple[str, ...]:
-        return self._cmdstan_config[key]
-
-    @property
-    def cmdstan_config(self) -> dict[str, Any]:
-        """
-        Returns a dictionary containing a set of name, value pairs
-        parsed out of the Stan CSV file header.  These include the
-        command configuration and the CSV file header row information.
-        Uses deepcopy for immutability.
-        """
-        return copy.deepcopy(self._cmdstan_config)
+        return 'Metadata:\n column_names={}\n'.format(self._column_names)
 
     @property
     def column_names(self) -> tuple[str, ...]:
-        col_names = self['column_names']
-        return col_names  # type: ignore
+        return self._column_names
 
     @property
     def method_vars(self) -> dict[str, stanio.Variable]:

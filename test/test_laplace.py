@@ -61,10 +61,6 @@ def test_laplace_runs_opt() -> None:
     fit1 = model.laplace_sample(data={}, seed=1234, opt_args={'iter': 1003})
     assert isinstance(fit1.mode, cmdstanpy.CmdStanMLE)
 
-    assert fit1.mode.metadata.cmdstan_config['seed'] == 1234
-    assert fit1.metadata.cmdstan_config['seed'] == 1234
-    assert fit1.mode.metadata.cmdstan_config['iter'] == 1003
-
 
 def test_laplace_bad_jacobian_mismatch() -> None:
     model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')

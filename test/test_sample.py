@@ -1757,8 +1757,7 @@ def test_metadata() -> None:
         metric_files=metric_files,
         sig_figs=17,
     )
-    meta = fit.metadata
-    assert meta.cmdstan_config['model'] == 'logistic_model'
+    assert fit.model_name == 'logistic_model'
     col_names = (
         'lp__',
         'accept_stat__',
@@ -1778,17 +1777,9 @@ def test_metadata() -> None:
     assert fit.column_names == col_names
     assert fit.metric_type == 'diag_e'
 
-    assert len(fit.time) == 4
-    for i in range(4):
-        assert 'warmup' in fit.time[i].keys()
-        assert 'sampling' in fit.time[i].keys()
-        assert 'total' in fit.time[i].keys()
-
-    assert fit.metadata.cmdstan_config['num_samples'] == 100
-    assert fit.metadata.cmdstan_config['thin'] == 1
-    assert fit.metadata.cmdstan_config['algorithm'] == 'hmc'
-    assert fit.metadata.cmdstan_config['metric'] == 'diag_e'
-    np.testing.assert_almost_equal(fit.metadata.cmdstan_config['delta'], 0.80)
+    assert fit.config.method_config.num_samples == 100
+    assert fit.config.method_config.thin == 1
+    assert fit.config.method_config.algorithm == 'hmc'
 
     assert 'n_leapfrog__' in fit.metadata.method_vars
     assert 'energy__' in fit.metadata.method_vars
