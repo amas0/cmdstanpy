@@ -3,12 +3,12 @@
 import glob
 import os
 
-from cmdstanpy.utils import get_logger, stancsv
+from cmdstanpy.utils import get_logger
 
 from .gq import CmdStanGQ, PrevFit
 from .laplace import CmdStanLaplace
 from .mcmc import CmdStanMCMC
-from .metadata import InferenceMetadata
+from .metadata import InferenceMetadata, parse_config
 from .mle import CmdStanMLE
 from .pathfinder import CmdStanPathfinder
 from .runset import RunSet
@@ -99,22 +99,27 @@ def from_csv(  # pylint: disable=too-many-return-statements
                 'Bad CSV file path spec, includes non-csv file: {}'.format(file)
             )
 
-    try:
-        comments, *_ = stancsv.parse_comments_header_and_draws(csvfiles[0])
-        config_dict = stancsv.parse_config(comments)
-    except (IOError, OSError, PermissionError) as e:
-        raise ValueError('Cannot read CSV file: {}'.format(csvfiles[0])) from e
-    if 'model' not in config_dict or 'method' not in config_dict:
-        raise ValueError("File {} is not a Stan CSV file.".format(csvfiles[0]))
-    if method is not None and method != config_dict['method']:
+    config_file0 = os.path.splitext(csvfiles[0])[0] + '_config.json'
+    if not os.path.exists(config_file0):
         raise ValueError(
-            'Expecting Stan CSV output files from method {}, '
-            ' found outputs from method {}'.format(
-                method, config_dict['method']
-            )
+            f'Config file not found at expected path: {config_file0}. '
+            'Reconstructing a fit from output files requires the config JSON '
+            'written by CmdStan 2.36 or later.'
         )
     try:
-        if config_dict['method'] == 'sample':
+        with open(config_file0) as f:
+            method_name = parse_config(f.read()).method_config.method
+    except (IOError, OSError, PermissionError) as e:
+        raise ValueError(
+            'Cannot read config file: {}'.format(config_file0)
+        ) from e
+    if method is not None and method != method_name:
+        raise ValueError(
+            'Expecting Stan CSV output files from method {}, '
+            ' found outputs from method {}'.format(method, method_name)
+        )
+    try:
+        if method_name == 'sample':
             config_files: list[str] = []
             metric_files: list[str] = []
             for cf in csvfiles:
@@ -136,7 +141,7 @@ def from_csv(  # pylint: disable=too-many-return-statements
             )
             fit.draws()
             return fit
-        elif config_dict['method'] == 'optimize':
+        elif method_name == 'optimize':
             if len(csvfiles) != 1:
                 raise ValueError(
                     'Expecting a single optimize Stan CSV file, '
@@ -144,46 +149,10 @@ def from_csv(  # pylint: disable=too-many-return-statements
                 )
             csv_file = csvfiles[0]
             config_file = os.path.splitext(csv_file)[0] + '_config.json'
-            if os.path.exists(config_file):
-                return CmdStanMLE.from_files(
-                    csv_file=csv_file, config_file=config_file
-                )
-            # Legacy path: no config file, build config from CSV metadata
-            if 'algorithm' not in config_dict:
-                raise ValueError(
-                    "Cannot find optimization algorithm in file {}.".format(
-                        csv_file
-                    )
-                )
-            from .metadata import OptimizeConfig, StanConfig
-
-            opt_config = OptimizeConfig(
-                algorithm=config_dict['algorithm'],  # type: ignore
-                save_iterations=config_dict.get('save_iterations', 0) == 1,
-                jacobian=config_dict.get('jacobian', 0) == 1,
+            return CmdStanMLE.from_files(
+                csv_file=csv_file, config_file=config_file
             )
-            stan_config = StanConfig[OptimizeConfig].model_validate(
-                {
-                    'model_name': config_dict['model'],
-                    'stan_major_version': str(
-                        config_dict.get('stan_version_major', '')
-                    ),
-                    'stan_minor_version': str(
-                        config_dict.get('stan_version_minor', '')
-                    ),
-                    'stan_patch_version': str(
-                        config_dict.get('stan_version_patch', '')
-                    ),
-                    'method_config': opt_config.model_dump(),
-                }
-            )
-            return CmdStanMLE(
-                metadata=InferenceMetadata.from_csv(csv_file),
-                model_name=stan_config.model_name,
-                csv_file=csv_file,
-                config=stan_config,
-            )
-        elif config_dict['method'] == 'variational':
+        elif method_name == 'variational':
             if len(csvfiles) != 1:
                 raise ValueError(
                     'Expecting a single variational Stan CSV file, '
@@ -199,7 +168,7 @@ def from_csv(  # pylint: disable=too-many-return-statements
             return CmdStanVB.from_files(
                 csv_file=csv_file, config_file=config_file
             )
-        elif config_dict['method'] == 'laplace':
+        elif method_name == 'laplace':
             if len(csvfiles) != 1:
                 raise ValueError(
                     'Expecting a single Laplace Stan CSV file, '
@@ -215,7 +184,7 @@ def from_csv(  # pylint: disable=too-many-return-statements
             return CmdStanLaplace.from_files(
                 csv_file=csv_file, config_file=config_file
             )
-        elif config_dict['method'] == 'pathfinder':
+        elif method_name == 'pathfinder':
             if len(csvfiles) != 1:
                 raise ValueError(
                     'Expecting a single Pathfinder Stan CSV file, '
@@ -234,7 +203,7 @@ def from_csv(  # pylint: disable=too-many-return-statements
         else:
             get_logger().warning(
                 'Unable to process CSV output files from method %s.',
-                (config_dict['method']),
+                (method_name),
             )
             return None
     except (IOError, OSError, PermissionError) as e:

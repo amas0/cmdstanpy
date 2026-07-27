@@ -914,9 +914,7 @@ def test_pd_xr_agreement() -> None:
     )
 
 
-def test_instantiate_from_csvfiles_fail(
-    caplog: pytest.LogCaptureFixture,
-) -> None:
+def test_instantiate_from_csvfiles_fail() -> None:
     with pytest.raises(ValueError, match=r'Must specify path'):
         from_csv(None)
 
@@ -950,19 +948,6 @@ def test_instantiate_from_csvfiles_fail(
     csvfiles_path = os.path.join(DATAFILES_PATH, 'no-such-directory')
     with pytest.raises(ValueError, match=r'Invalid path specification'):
         from_csv(path=csvfiles_path)
-
-    wrong_method_path = os.path.join(DATAFILES_PATH, 'from_csv')
-    with caplog.at_level(logging.INFO):
-        logging.getLogger()
-        from_csv(path=wrong_method_path)
-    check_present(
-        caplog,
-        (
-            'cmdstanpy',
-            'INFO',
-            'Unable to process CSV output files from method diagnose.',
-        ),
-    )
 
     no_csvfiles_path = os.path.join(DATAFILES_PATH, 'test-fail-empty-directory')
     if os.path.exists(no_csvfiles_path):
