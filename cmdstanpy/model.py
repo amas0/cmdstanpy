@@ -1145,7 +1145,13 @@ class CmdStanModel:
                         ' above output is unclear!'
                     )
                 raise RuntimeError(msg)
-            quantities = CmdStanGQ(runset=runset, previous_fit=fit_object)
+            quantities = CmdStanGQ.from_files(
+                csv_files=runset.csv_files,
+                config_files=runset.config_files,
+                previous_fit=fit_object,
+                stdout_files=runset.stdout_files,
+                chain_ids=runset.chain_ids,
+            )
         return quantities
 
     def variational(

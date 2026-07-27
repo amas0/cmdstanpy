@@ -14,7 +14,6 @@ import pandas as pd
 import pytest
 
 import cmdstanpy.stanfit
-from cmdstanpy.cmdstan_args import Method
 from cmdstanpy.model import CmdStanModel
 from cmdstanpy.stanfit import CmdStanGQ
 from cmdstanpy.stanfit.mcmc import CmdStanMCMC
@@ -37,14 +36,12 @@ def test_from_csv_files(caplog: pytest.LogCaptureFixture) -> None:
 
     bern_gqs = model.generate_quantities(data=jdata, previous_fit=csv_files)
 
-    assert bern_gqs.runset._args.method == Method.GENERATE_QUANTITIES
     assert 'CmdStanGQ: model=bernoulli_ppc' in repr(bern_gqs)
     assert 'method=generate_quantities' in repr(bern_gqs)
 
-    assert bern_gqs.runset.chains == 4
-    for i in range(bern_gqs.runset.chains):
-        assert bern_gqs.runset._retcode(i) == 0
-        csv_file = bern_gqs.runset.csv_files[i]
+    assert bern_gqs.chains == 4
+    for i in range(bern_gqs.chains):
+        csv_file = bern_gqs.csv_files[i]
         assert os.path.exists(csv_file)
 
     column_names = [
@@ -171,13 +168,11 @@ def test_from_previous_fit() -> None:
 
     bern_gqs = model.generate_quantities(data=jdata, previous_fit=bern_fit)
 
-    assert bern_gqs.runset._args.method == Method.GENERATE_QUANTITIES
     assert 'CmdStanGQ: model=bernoulli_ppc' in repr(bern_gqs)
     assert 'method=generate_quantities' in repr(bern_gqs)
-    assert bern_gqs.runset.chains == 4
-    for i in range(bern_gqs.runset.chains):
-        assert bern_gqs.runset._retcode(i) == 0
-        csv_file = bern_gqs.runset.csv_files[i]
+    assert bern_gqs.chains == 4
+    for i in range(bern_gqs.chains):
+        csv_file = bern_gqs.csv_files[i]
         assert os.path.exists(csv_file)
 
 
@@ -532,7 +527,7 @@ def test_serialization() -> None:
     fit1 = model.generate_quantities(data=jdata, previous_fit=fit_sampling)
 
     dumped = pickle.dumps(fit1)
-    shutil.rmtree(fit1.runset._outdir)
+    shutil.rmtree(os.path.dirname(fit1.csv_files[0]))
     fit2: CmdStanGQ[CmdStanMCMC] = pickle.loads(dumped)
     variables1 = fit1.stan_variables()
     variables2 = fit2.stan_variables()
@@ -555,13 +550,10 @@ def test_from_optimization() -> None:
 
     bern_gqs = model.generate_quantities(data=jdata, previous_fit=bern_fit)
 
-    assert bern_gqs.runset._args.method == Method.GENERATE_QUANTITIES
-
     assert 'CmdStanGQ: model=bernoulli_ppc' in repr(bern_gqs)
     assert 'method=generate_quantities' in repr(bern_gqs)
-    assert bern_gqs.runset.chains == 1
-    assert bern_gqs.runset._retcode(0) == 0
-    csv_file = bern_gqs.runset.csv_files[0]
+    assert bern_gqs.chains == 1
+    csv_file = bern_gqs.csv_files[0]
     assert os.path.exists(csv_file)
 
     assert bern_gqs.draws().shape == (1, 1, 10)
@@ -699,12 +691,10 @@ def test_from_vb() -> None:
 
     bern_gqs = model.generate_quantities(data=jdata, previous_fit=bern_fit)
 
-    assert bern_gqs.runset._args.method == Method.GENERATE_QUANTITIES
     assert 'CmdStanGQ: model=bernoulli_ppc' in repr(bern_gqs)
     assert 'method=generate_quantities' in repr(bern_gqs)
-    assert bern_gqs.runset.chains == 1
-    assert bern_gqs.runset._retcode(0) == 0
-    csv_file = bern_gqs.runset.csv_files[0]
+    assert bern_gqs.chains == 1
+    csv_file = bern_gqs.csv_files[0]
     assert os.path.exists(csv_file)
 
     assert bern_gqs.draws().shape == (1000, 1, 10)
@@ -788,12 +778,10 @@ def test_from_pathfinder() -> None:
 
     bern_gqs = model.generate_quantities(data=jdata, previous_fit=bern_fit)
 
-    assert bern_gqs.runset._args.method == Method.GENERATE_QUANTITIES
     assert 'CmdStanGQ: model=bernoulli_ppc' in repr(bern_gqs)
     assert 'method=generate_quantities' in repr(bern_gqs)
-    assert bern_gqs.runset.chains == 1
-    assert bern_gqs.runset._retcode(0) == 0
-    csv_file = bern_gqs.runset.csv_files[0]
+    assert bern_gqs.chains == 1
+    csv_file = bern_gqs.csv_files[0]
     assert os.path.exists(csv_file)
 
     assert bern_gqs.draws().shape == (1000, 1, 10)
@@ -824,12 +812,10 @@ def test_from_laplace() -> None:
 
     bern_gqs = model.generate_quantities(data=jdata, previous_fit=bern_fit)
 
-    assert bern_gqs.runset._args.method == Method.GENERATE_QUANTITIES
     assert 'CmdStanGQ: model=bernoulli_ppc' in repr(bern_gqs)
     assert 'method=generate_quantities' in repr(bern_gqs)
-    assert bern_gqs.runset.chains == 1
-    assert bern_gqs.runset._retcode(0) == 0
-    csv_file = bern_gqs.runset.csv_files[0]
+    assert bern_gqs.chains == 1
+    csv_file = bern_gqs.csv_files[0]
     assert os.path.exists(csv_file)
 
     assert bern_gqs.draws().shape == (1000, 1, 10)

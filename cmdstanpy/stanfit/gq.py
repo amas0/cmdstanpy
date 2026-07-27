@@ -5,8 +5,12 @@ generate quantities (GQ) method
 
 from __future__ import annotations
 
+import os
+import shutil
 from collections import Counter
-from collections.abc import Hashable
+from collections.abc import Hashable, Sequence
+from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Any, Generic, MutableMapping, NoReturn, TypeVar, overload
 
 import numpy as np
@@ -20,7 +24,6 @@ except ImportError:
     XARRAY_INSTALLED = False
 
 
-from cmdstanpy.cmdstan_args import Method
 from cmdstanpy.utils import (
     build_xarray_data,
     flatten_chains,
@@ -30,10 +33,14 @@ from cmdstanpy.utils import (
 
 from .laplace import CmdStanLaplace
 from .mcmc import CmdStanMCMC
-from .metadata import InferenceMetadata
+from .metadata import (
+    GeneratedQuantitiesConfig,
+    InferenceMetadata,
+    StanConfig,
+    parse_config,
+)
 from .mle import CmdStanMLE
 from .pathfinder import CmdStanPathfinder
-from .runset import RunSet
 from .vb import CmdStanVB
 
 PrevFit = TypeVar(
@@ -46,42 +53,92 @@ PrevFit = TypeVar(
 )
 
 
+@dataclass
 class CmdStanGQ(Generic[PrevFit]):
     """
     Container for outputs from CmdStan generate_quantities run.
     Created by :meth:`CmdStanModel.generate_quantities`.
     """
 
-    def __init__(
-        self,
-        runset: RunSet,
+    metadata: InferenceMetadata
+    model_name: str
+    csv_files: list[str]
+    config: StanConfig[GeneratedQuantitiesConfig]
+    chain_ids: list[int]
+    previous_fit: PrevFit
+    config_files: list[str] | None = None
+    stdout_files: list[str] | None = None
+
+    _draws: np.ndarray = field(default_factory=lambda: np.array(()), init=False)
+
+    def __post_init__(self) -> None:
+        self._validate_configs()
+
+    @classmethod
+    def from_files(
+        cls,
+        csv_files: Sequence[str | os.PathLike],
+        config_files: Sequence[str | os.PathLike] | str | os.PathLike,
         previous_fit: PrevFit,
-    ) -> None:
-        """Initialize object."""
-        if not runset.method == Method.GENERATE_QUANTITIES:
-            raise ValueError(
-                'Wrong runset method, expecting generate_quantities runset, '
-                'found method {}'.format(runset.method)
-            )
-        self.runset = runset
+        stdout_files: Sequence[str | os.PathLike] | None = None,
+        chain_ids: Sequence[int] | None = None,
+    ) -> CmdStanGQ[PrevFit]:
+        """Build a CmdStanGQ from output files.
 
-        self.previous_fit: PrevFit = previous_fit
+        ``config_files`` may be a single path (when CmdStan ran multiple chains
+        in one process) or a per-chain list.
+        """
+        csv_files_list = [os.fspath(f) for f in csv_files]
+        chains = len(csv_files_list)
+        if chains == 0:
+            raise ValueError('At least one CSV file is required.')
 
-        self._draws: np.ndarray = np.array(())
-        self._metadata = self._validate_csv_files()
+        if isinstance(config_files, (str, os.PathLike)):
+            config_files_list = [os.fspath(config_files)]
+        else:
+            config_files_list = [os.fspath(f) for f in config_files]
+        if not config_files_list:
+            raise ValueError('At least one config file is required.')
+
+        with open(config_files_list[0]) as f:
+            stan_config = parse_config(f.read(), GeneratedQuantitiesConfig)
+
+        stdout_files_list = (
+            [os.fspath(f) for f in stdout_files]
+            if stdout_files is not None
+            else None
+        )
+
+        if chain_ids is None:
+            chain_ids_list = list(range(1, chains + 1))
+        else:
+            chain_ids_list = list(chain_ids)
+            if len(chain_ids_list) != chains:
+                raise ValueError(
+                    f'Got {chains} csv files but {len(chain_ids_list)} '
+                    'chain ids'
+                )
+
+        return cls(
+            metadata=InferenceMetadata.from_csv(csv_files_list[0]),
+            model_name=stan_config.model_name,
+            csv_files=csv_files_list,
+            config=stan_config,
+            chain_ids=chain_ids_list,
+            previous_fit=previous_fit,
+            config_files=config_files_list,
+            stdout_files=stdout_files_list,
+        )
 
     def __repr__(self) -> str:
-        repr = 'CmdStanGQ: model={} chains={}{}'.format(
-            self.runset.model,
-            self.chains,
-            self.runset._args.method_args.compose(0, cmd=[]),
-        )
-        repr = '{}\n csv_files:\n\t{}\n output_files:\n\t{}'.format(
-            repr,
-            '\n\t'.join(self.runset.csv_files),
-            '\n\t'.join(self.runset.stdout_files),
-        )
-        return repr
+        lines = [
+            f'CmdStanGQ: model={self.model_name} chains={self.chains}'
+            f' method={self.config.method_config.method}',
+            ' csv_files:\n\t' + '\n\t'.join(self.csv_files),
+        ]
+        if self.stdout_files is not None:
+            lines.append(' output_files:\n\t' + '\n\t'.join(self.stdout_files))
+        return '\n'.join(lines)
 
     def __getattr__(self, attr: str) -> np.ndarray:
         """Synonymous with ``fit.stan_variable(attr)"""
@@ -99,66 +156,70 @@ class CmdStanGQ(Generic[PrevFit]):
         # for details. We call _assemble_generated_quantities to ensure
         # the data are loaded prior to serialization.
         self._assemble_generated_quantities()
-        return self.__dict__
+        state = self.__dict__.copy()
+        # StanConfig[GeneratedQuantitiesConfig] is a generic alias with no
+        # module-level name, so serialize it as a plain dict for pickle.
+        state['config'] = self.config.model_dump()
+        return state
 
-    def _validate_csv_files(self) -> InferenceMetadata:
+    def __setstate__(self, state: dict) -> None:
+        config_dict = state.pop('config')
+        self.__dict__.update(state)
+        self.config = StanConfig[GeneratedQuantitiesConfig].model_validate(
+            config_dict
+        )
+
+    def _validate_configs(self) -> None:
         """
-        Checks that Stan CSV output files for all chains are consistent
-        and returns InferenceMetadata object containing config and column names.
+        Checks that the CmdStan config JSONs for all chains agree on the
+        settings that affect how the draws are laid out, plus the model name
+        and Stan version.
+
+        When CmdStan ran all chains in a single process there is only one
+        config file, so there is nothing to cross-check.
 
         Raises exception if inconsistencies are detected.
         """
-        excluded_fields = {
-            'id',
-            'fitted_params',
-            'diagnostic_file',
-            'metric_file',
-            'profile_file',
-            'init',
-            'seed',
-            'start_datetime',
-        }
-        meta0 = InferenceMetadata.from_csv(self.runset.csv_files[0])
-        for i in range(1, self.chains):
-            meta = InferenceMetadata.from_csv(self.runset.csv_files[i])
-            for key in set(meta._cmdstan_config.keys()) - excluded_fields:
-                if meta0[key] != meta[key]:
+        if self.config_files is None or len(self.config_files) < 2:
+            return
+
+        def _comparable(
+            config: StanConfig[GeneratedQuantitiesConfig],
+        ) -> dict[str, Any]:
+            extra = config.model_extra or {}
+            return {
+                'model': config.model_name,
+                'stan_version_major': config.stan_major_version,
+                'stan_version_minor': config.stan_minor_version,
+                'stan_version_patch': config.stan_patch_version,
+                'stanc_version': extra.get('stanc_version'),
+            }
+
+        expected = _comparable(self.config)
+        for config_file in self.config_files[1:]:
+            with open(config_file) as f:
+                other = _comparable(
+                    parse_config(f.read(), GeneratedQuantitiesConfig)
+                )
+            for key, want in expected.items():
+                if other[key] != want:
                     raise ValueError(
-                        'CmdStan config mismatch in Stan CSV file {}: '
-                        'arg {} is {}, expected {}'.format(
-                            self.runset.csv_files[i],
-                            key,
-                            meta0[key],
-                            meta[key],
-                        )
+                        'CmdStan config mismatch in config file '
+                        f'{config_file}: arg {key} is {other[key]}, '
+                        f'expected {want}'
                     )
-        return meta0
 
     @property
     def chains(self) -> int:
         """Number of chains."""
-        return self.runset.chains
-
-    @property
-    def chain_ids(self) -> list[int]:
-        """Chain ids."""
-        return self.runset.chain_ids
+        return len(self.csv_files)
 
     @property
     def column_names(self) -> tuple[str, ...]:
         """
         Names of generated quantities of interest.
         """
-        return self._metadata.column_names
-
-    @property
-    def metadata(self) -> InferenceMetadata:
-        """
-        Returns object which contains CmdStan configuration as well as
-        information about the names and structure of the inference method
-        and model output variables.
-        """
-        return self._metadata
+        return self.metadata.column_names
 
     def draws(
         self,
@@ -321,8 +382,8 @@ class CmdStanGQ(Generic[PrevFit]):
         mcmc_vars: list[str] = []
         if vars is not None:
             for var in vars_list:
-                if var in self._metadata.stan_vars:
-                    info = self._metadata.stan_vars[var]
+                if var in self.metadata.stan_vars:
+                    info = self.metadata.stan_vars[var]
                     gq_cols.extend(
                         self.column_names[info.start_idx : info.end_idx]
                     )
@@ -461,7 +522,7 @@ class CmdStanGQ(Generic[PrevFit]):
             else:
                 vars_list = vars
             for var in vars_list:
-                if var not in self._metadata.stan_vars:
+                if var not in self.metadata.stan_vars:
                     if inc_sample and (
                         var in self.previous_fit.metadata.stan_vars
                     ):
@@ -470,7 +531,7 @@ class CmdStanGQ(Generic[PrevFit]):
                     else:
                         raise ValueError('Unknown variable: {}'.format(var))
         else:
-            vars_list = list(self._metadata.stan_vars.keys())
+            vars_list = list(self.metadata.stan_vars.keys())
             if inc_sample:
                 for var in self.previous_fit.metadata.stan_vars.keys():
                     if var not in vars_list and var not in mcmc_vars_list:
@@ -502,7 +563,7 @@ class CmdStanGQ(Generic[PrevFit]):
         for var in vars_list:
             build_xarray_data(
                 data,
-                self._metadata.stan_vars[var],
+                self.metadata.stan_vars[var],
                 self.draws(inc_warmup=inc_warmup),
             )
         if inc_sample:
@@ -562,7 +623,7 @@ class CmdStanGQ(Generic[PrevFit]):
         CmdStanLaplace.stan_variable
         """
         model_var_names = self.previous_fit.metadata.stan_vars.keys()
-        gq_var_names = self._metadata.stan_vars.keys()
+        gq_var_names = self.metadata.stan_vars.keys()
         if not (var in model_var_names or var in gq_var_names):
             raise ValueError(
                 f'Unknown variable name: {var}\n'
@@ -580,7 +641,7 @@ class CmdStanGQ(Generic[PrevFit]):
             or kwargs.get('inc_iterations', False)
         )
         draws = flatten_chains(self._draws[draw1:])
-        out: np.ndarray = self._metadata.stan_vars[var].extract_reshape(draws)
+        out: np.ndarray = self.metadata.stan_vars[var].extract_reshape(draws)
         return out
 
     def stan_variables(self, **kwargs: bool) -> dict[str, np.ndarray]:
@@ -603,7 +664,7 @@ class CmdStanGQ(Generic[PrevFit]):
         """
         result = {}
         sample_var_names = self.previous_fit.metadata.stan_vars.keys()
-        gq_var_names = self._metadata.stan_vars.keys()
+        gq_var_names = self.metadata.stan_vars.keys()
         for name in gq_var_names:
             result[name] = self.stan_variable(name, **kwargs)
         for name in sample_var_names:
@@ -623,10 +684,10 @@ class CmdStanGQ(Generic[PrevFit]):
             order='F',
         )
         for chain in range(self.chains):
-            csv_file = self.runset.csv_files[chain]
+            csv_file = self.csv_files[chain]
             try:
                 *_, draws = stancsv.parse_comments_header_and_draws(
-                    self.runset.csv_files[chain]
+                    self.csv_files[chain]
                 )
                 gq_sample[:, chain, :] = stancsv.csv_bytes_list_to_numpy(draws)
             except Exception as exc:
@@ -716,13 +777,39 @@ class CmdStanGQ(Generic[PrevFit]):
 
     def save_csvfiles(self, dir: str | None = None) -> None:
         """
-        Move output CSV files to specified directory.
+        Move output CSV files, and any associated config and stdout files,
+        to the specified directory. Updates the corresponding attributes on
+        this object to point at the new locations.
 
         :param dir: directory path
 
         See Also
         --------
-        stanfit.RunSet.save_csvfiles
         cmdstanpy.from_csv
         """
-        self.runset.save_csvfiles(dir)
+        dest = Path(dir) if dir is not None else Path.cwd()
+        try:
+            dest.mkdir(parents=True, exist_ok=True)
+            test_path = dest / f'.cmdstanpy-write-test-{os.getpid()}'
+            test_path.touch()
+            test_path.unlink()
+        except (IOError, OSError, PermissionError) as exc:
+            raise RuntimeError(f'Cannot save to path: {dest}') from exc
+
+        for attr in ('csv_files', 'config_files', 'stdout_files'):
+            srcs = getattr(self, attr)
+            if srcs is None:
+                continue
+            new = []
+            for src in srcs:
+                if not os.path.exists(src):
+                    if attr == 'csv_files':
+                        raise ValueError(f'Cannot access CSV file {src}')
+                    new.append(src)
+                    continue
+                dst = dest / Path(src).name
+                if dst.exists():
+                    raise ValueError(f'File exists, not overwriting: {dst}')
+                shutil.move(src, dst)
+                new.append(os.fspath(dst))
+            setattr(self, attr, new)
