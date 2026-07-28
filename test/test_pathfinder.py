@@ -10,7 +10,7 @@ import numpy as np
 import pytest
 
 import cmdstanpy
-from cmdstanpy.stanfit import from_csv
+from cmdstanpy.stanfit import from_output_files
 
 HERE = Path(__file__).parent
 DATAFILES_PATH = HERE / 'data'
@@ -39,9 +39,9 @@ def test_pathfinder_outputs() -> None:
     assert pathfinder.draws().shape == (draws, 4)
 
 
-def test_pathfinder_from_csv() -> None:
+def test_pathfinder_from_output_files() -> None:
     pathfinder_outputs = DATAFILES_PATH / 'pathfinder'
-    pathfinder = from_csv(pathfinder_outputs)
+    pathfinder = from_output_files(pathfinder_outputs)
     assert isinstance(pathfinder, cmdstanpy.CmdStanPathfinder)
     assert 'lp__' in pathfinder.column_names
     assert 'lp_approx__' in pathfinder.column_names

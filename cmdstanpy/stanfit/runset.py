@@ -5,14 +5,11 @@ such as file locations
 
 import os
 import re
-import shutil
 import tempfile
 from datetime import datetime
-from time import time
 
 from cmdstanpy import _TMPDIR
 from cmdstanpy.cmdstan_args import CmdStanArgs, Method
-from cmdstanpy.utils import get_logger
 
 
 class RunSet:
@@ -291,49 +288,6 @@ class RunSet:
                         if len(errors) > 0:
                             msgs.append('\n\t'.join(errors))
         return '\n'.join(msgs)
-
-    def save_csvfiles(self, dir: str | None = None) -> None:
-        """
-        Moves CSV files to specified directory.
-
-        :param dir: directory path
-
-        See Also
-        --------
-        cmdstanpy.from_csv
-        """
-        if dir is None:
-            dir = os.path.realpath('.')
-        test_path = os.path.join(dir, str(time()))
-        try:
-            os.makedirs(dir, exist_ok=True)
-            with open(test_path, 'w'):
-                pass
-            os.remove(test_path)  # cleanup
-        except (IOError, OSError, PermissionError) as exc:
-            raise RuntimeError('Cannot save to path: {}'.format(dir)) from exc
-
-        for i in range(self.chains):
-            if not os.path.exists(self._csv_files[i]):
-                raise ValueError(
-                    'Cannot access CSV file {}'.format(self._csv_files[i])
-                )
-
-            to_path = os.path.join(dir, os.path.basename(self._csv_files[i]))
-            if os.path.exists(to_path):
-                raise ValueError(
-                    'File exists, not overwriting: {}'.format(to_path)
-                )
-            try:
-                get_logger().debug(
-                    'saving tmpfile: "%s" as: "%s"', self._csv_files[i], to_path
-                )
-                shutil.move(self._csv_files[i], to_path)
-                self._csv_files[i] = to_path
-            except (IOError, OSError, PermissionError) as e:
-                raise ValueError(
-                    'Cannot save to file: {}'.format(to_path)
-                ) from e
 
     def raise_for_timeouts(self) -> None:
         if any(self._timeout_flags):

@@ -7,7 +7,7 @@ import numpy as np
 import pytest
 
 import cmdstanpy
-from cmdstanpy.stanfit import from_csv
+from cmdstanpy.stanfit import from_output_files
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
@@ -26,14 +26,14 @@ def test_laplace_from_opt_csv() -> None:
     assert isinstance(fit.mode, cmdstanpy.CmdStanMLE)
 
 
-def test_laplace_from_csv() -> None:
+def test_laplace_from_output_files() -> None:
     model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
     model = cmdstanpy.CmdStanModel(stan_file=model_file)
     fit = model.laplace_sample(
         data={},
         seed=1234,
     )
-    fit2 = from_csv([fit.csv_file])
+    fit2 = from_output_files([fit.csv_file])
     assert isinstance(fit2, cmdstanpy.CmdStanLaplace)
     assert 'x' in fit2.stan_variables()
     assert 'y' in fit2.stan_variables()
@@ -42,7 +42,7 @@ def test_laplace_from_csv() -> None:
     with TemporaryDirectory() as dir:
         model.laplace_sample(data={}, seed=1234, output_dir=dir)
 
-        fit3 = from_csv(
+        fit3 = from_output_files(
             [
                 os.path.join(dir, f)
                 for f in os.listdir(dir)

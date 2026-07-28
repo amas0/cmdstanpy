@@ -22,7 +22,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
 
 
-def test_from_csv_files(caplog: pytest.LogCaptureFixture) -> None:
+def test_from_output_files_files(caplog: pytest.LogCaptureFixture) -> None:
     # fitted_params sample - list of filenames
     goodfiles_path = os.path.join(DATAFILES_PATH, 'runset-good', 'bern')
     csv_files = []
@@ -128,7 +128,7 @@ def test_pd_xr_agreement() -> None:
     )
 
 
-def test_from_csv_files_bad() -> None:
+def test_from_output_files_files_bad() -> None:
     # gq model
     stan = os.path.join(DATAFILES_PATH, 'bernoulli_ppc.stan')
     model = CmdStanModel(stan_file=stan)

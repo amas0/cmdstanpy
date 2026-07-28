@@ -36,7 +36,7 @@ from cmdstanpy.stanfit import (
     CmdStanVB,
     PrevFit,
     RunSet,
-    from_csv,
+    from_output_files,
 )
 from cmdstanpy.utils import do_command, get_logger
 from cmdstanpy.utils.cmdstan import cmdstan_version_before, windows_tbb_path
@@ -1067,7 +1067,9 @@ class CmdStanModel:
                 )
             try:
                 fit_csv_files = previous_fit
-                fit_object: PrevFit = from_csv(fit_csv_files)  # type: ignore
+                fit_object: PrevFit = from_output_files(  # type: ignore
+                    fit_csv_files
+                )
             except ValueError as e:
                 raise ValueError(
                     'Invalid sample from Stan CSV files, error:\n\t{}\n\t'
@@ -1766,7 +1768,8 @@ class CmdStanModel:
                     "Consider supplying a mode or additional optimizer args"
                 ) from e
         elif not isinstance(mode, CmdStanMLE):
-            cmdstan_mode = from_csv(mode)  # type: ignore  # we check below
+            # we check the type below
+            cmdstan_mode = from_output_files(mode)  # type: ignore
         else:
             cmdstan_mode = mode
 

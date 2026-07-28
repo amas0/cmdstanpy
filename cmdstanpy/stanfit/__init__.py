@@ -27,7 +27,7 @@ __all__ = [
 ]
 
 
-def from_csv(  # pylint: disable=too-many-return-statements
+def from_output_files(  # pylint: disable=too-many-return-statements
     path: str | list[str] | os.PathLike | None = None,
     method: str | None = None,
 ) -> (

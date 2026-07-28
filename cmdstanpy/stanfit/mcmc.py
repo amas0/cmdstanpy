@@ -128,8 +128,8 @@ class CmdStanMCMC:
 
         if sig_figs is None:
             # Recover the output precision from the config so fits rebuilt
-            # from files (e.g. via from_csv) report it. A value of -1 is
-            # CmdStan's default and leaves sig_figs unset (i.e. 6 digits).
+            # from files (e.g. via from_output_files) report it. A value of
+            # -1 is CmdStan's default and leaves sig_figs unset (6 digits).
             output = (stan_config.model_extra or {}).get('output', {})
             cfg_sig_figs = (
                 output.get('sig_figs') if isinstance(output, dict) else None
@@ -966,7 +966,7 @@ class CmdStanMCMC:
             for name, var in self.metadata.method_vars.items()
         }
 
-    def save_csvfiles(self, dir: str | None = None) -> None:
+    def save_output_files(self, dir: str | None = None) -> None:
         """
         Move output CSV files, and any associated config, metric, and stdout
         files, to the specified directory. Updates the corresponding
@@ -976,7 +976,7 @@ class CmdStanMCMC:
 
         See Also
         --------
-        cmdstanpy.from_csv
+        cmdstanpy.from_output_files
         """
         dest = Path(dir) if dir is not None else Path.cwd()
         try:

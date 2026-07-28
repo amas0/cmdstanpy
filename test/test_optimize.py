@@ -14,7 +14,7 @@ import numpy as np
 import pytest
 
 from cmdstanpy.model import CmdStanModel
-from cmdstanpy.stanfit import CmdStanMLE, from_csv
+from cmdstanpy.stanfit import CmdStanMLE, from_output_files
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
@@ -24,7 +24,7 @@ def test_instantiate() -> None:
     csvfiles_path = os.path.join(
         DATAFILES_PATH, 'optimize', 'rosenbrock_mle.csv'
     )
-    mle = from_csv(path=csvfiles_path)
+    mle = from_output_files(path=csvfiles_path)
     assert isinstance(mle, CmdStanMLE)
     assert 'CmdStanMLE: model=rosenbrock' in repr(mle)
     assert 'method=optimize' in repr(mle)
@@ -33,11 +33,11 @@ def test_instantiate() -> None:
     np.testing.assert_almost_equal(mle.optimized_params_dict['y'], 1, decimal=3)
 
 
-def test_instantiate_from_csvfiles() -> None:
+def test_instantiate_from_output_filesfiles() -> None:
     csvfiles_path = os.path.join(
         DATAFILES_PATH, 'optimize', 'rosenbrock_mle.csv'
     )
-    mle = from_csv(path=csvfiles_path)
+    mle = from_output_files(path=csvfiles_path)
     assert isinstance(mle, CmdStanMLE)
     assert 'CmdStanMLE: model=rosenbrock' in repr(mle)
     assert 'method=optimize' in repr(mle)
@@ -46,11 +46,11 @@ def test_instantiate_from_csvfiles() -> None:
     np.testing.assert_almost_equal(mle.optimized_params_dict['y'], 1, decimal=3)
 
 
-def test_instantiate_from_csvfiles_save_iterations() -> None:
+def test_instantiate_from_output_filesfiles_save_iterations() -> None:
     csvfiles_path = os.path.join(
         DATAFILES_PATH, 'optimize', 'eight_schools_mle_iters.csv'
     )
-    mle = from_csv(path=csvfiles_path)
+    mle = from_output_files(path=csvfiles_path)
     assert isinstance(mle, CmdStanMLE)
     assert 'CmdStanMLE: model=eight_schools' in repr(mle)
     assert 'method=optimize' in repr(mle)

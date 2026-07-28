@@ -335,7 +335,7 @@ class CmdStanMLE:
             )
         return result
 
-    def save_csvfiles(self, dir: str | None = None) -> None:
+    def save_output_files(self, dir: str | None = None) -> None:
         """
         Move output CSV file, and any associated config and stdout files,
         to the specified directory. Updates the corresponding attributes on
@@ -345,7 +345,7 @@ class CmdStanMLE:
 
         See Also
         --------
-        cmdstanpy.from_csv
+        cmdstanpy.from_output_files
         """
         dest = Path(dir) if dir is not None else Path.cwd()
         dest.mkdir(parents=True, exist_ok=True)

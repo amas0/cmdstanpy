@@ -130,10 +130,10 @@ set_make_env
 
 .. autofunction:: cmdstanpy.set_make_env
 
-from_csv
+from_output_files
 ========
 
-.. autofunction:: cmdstanpy.from_csv
+.. autofunction:: cmdstanpy.from_output_files
 
 write_stan_json
 ===============

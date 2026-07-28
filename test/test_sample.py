@@ -21,7 +21,7 @@ import pytest
 import cmdstanpy.stanfit
 from cmdstanpy import _TMPDIR
 from cmdstanpy.model import CmdStanModel
-from cmdstanpy.stanfit import CmdStanMCMC, from_csv
+from cmdstanpy.stanfit import CmdStanMCMC, from_output_files
 from cmdstanpy.utils import cmdstan_version_before
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -846,9 +846,9 @@ def test_validate_big_run() -> None:
         fit.draws_pd(vars=['gamma'])
 
 
-def test_instantiate_from_csvfiles() -> None:
+def test_instantiate_from_output_filesfiles() -> None:
     csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-good')
-    bern_fit = from_csv(path=csvfiles_path)
+    bern_fit = from_output_files(path=csvfiles_path)
     assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
     assert draws_pd.shape == (
@@ -856,7 +856,7 @@ def test_instantiate_from_csvfiles() -> None:
         len(bern_fit.column_names) + 3,
     )
     csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-big')
-    big_fit = from_csv(path=csvfiles_path)
+    big_fit = from_output_files(path=csvfiles_path)
     assert isinstance(big_fit, CmdStanMCMC)
     draws_pd = big_fit.draws_pd()
     assert draws_pd.shape == (
@@ -869,7 +869,7 @@ def test_instantiate_from_csvfiles() -> None:
     for file in os.listdir(csvfiles_path):
         if file.endswith(".csv"):
             csvfiles.append(os.path.join(csvfiles_path, file))
-    bern_fit = from_csv(path=csvfiles)
+    bern_fit = from_output_files(path=csvfiles)
     assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
     assert draws_pd.shape == (
@@ -877,7 +877,7 @@ def test_instantiate_from_csvfiles() -> None:
         len(bern_fit.column_names) + 3,
     )
     # single csvfile
-    bern_fit = from_csv(path=csvfiles[0])
+    bern_fit = from_output_files(path=csvfiles[0])
     assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
     assert draws_pd.shape == (
@@ -886,7 +886,7 @@ def test_instantiate_from_csvfiles() -> None:
     )
     # glob
     csvfiles_path = os.path.join(csvfiles_path, '*.csv')
-    big_fit = from_csv(path=csvfiles_path)
+    big_fit = from_output_files(path=csvfiles_path)
     assert isinstance(big_fit, CmdStanMCMC)
     draws_pd = big_fit.draws_pd()
     assert draws_pd.shape == (
@@ -897,7 +897,7 @@ def test_instantiate_from_csvfiles() -> None:
 
 def test_pd_xr_agreement() -> None:
     csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-good', '*.csv')
-    bern_fit = from_csv(path=csvfiles_path)
+    bern_fit = from_output_files(path=csvfiles_path)
     assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
     draws_xr = bern_fit.draws_xr()
@@ -914,61 +914,61 @@ def test_pd_xr_agreement() -> None:
     )
 
 
-def test_instantiate_from_csvfiles_fail() -> None:
+def test_instantiate_from_output_filesfiles_fail() -> None:
     with pytest.raises(ValueError, match=r'Must specify path'):
-        from_csv(None)
+        from_output_files(None)
 
     csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-good')
     with pytest.raises(ValueError, match=r'Bad method argument'):
-        from_csv(csvfiles_path, 'not-a-method')
+        from_output_files(csvfiles_path, 'not-a-method')
 
     with pytest.raises(
         ValueError,
         match='Expecting Stan CSV output files from method ' 'optimize',
     ):
-        from_csv(csvfiles_path, 'optimize')
+        from_output_files(csvfiles_path, 'optimize')
 
     csvfiles: list[str] = []
     with pytest.raises(ValueError, match=r'No CSV files found'):
-        from_csv(csvfiles, 'sample')
+        from_output_files(csvfiles, 'sample')
 
     for file in os.listdir(csvfiles_path):
         csvfiles.append(os.path.join(csvfiles_path, file))
     with pytest.raises(ValueError, match=r'Bad CSV file path spec'):
-        from_csv(csvfiles, 'sample')
+        from_output_files(csvfiles, 'sample')
 
     csvfiles_path = os.path.join(csvfiles_path, '*')
     with pytest.raises(ValueError, match=r'Bad CSV file path spec'):
-        from_csv(csvfiles_path, 'sample')
+        from_output_files(csvfiles_path, 'sample')
 
     csvfiles_path = os.path.join(csvfiles_path, '*')
     with pytest.raises(ValueError, match=r'Invalid path specification'):
-        from_csv(csvfiles_path, 'sample')
+        from_output_files(csvfiles_path, 'sample')
 
     csvfiles_path = os.path.join(DATAFILES_PATH, 'no-such-directory')
     with pytest.raises(ValueError, match=r'Invalid path specification'):
-        from_csv(path=csvfiles_path)
+        from_output_files(path=csvfiles_path)
 
     no_csvfiles_path = os.path.join(DATAFILES_PATH, 'test-fail-empty-directory')
     if os.path.exists(no_csvfiles_path):
         shutil.rmtree(no_csvfiles_path, ignore_errors=True)
     os.mkdir(no_csvfiles_path)
     with pytest.raises(ValueError, match=r'No CSV files found'):
-        from_csv(path=no_csvfiles_path)
+        from_output_files(path=no_csvfiles_path)
     if os.path.exists(no_csvfiles_path):
         shutil.rmtree(no_csvfiles_path, ignore_errors=True)
 
 
-def test_from_csv_fixed_param() -> None:
+def test_from_output_files_fixed_param() -> None:
     csv_path = os.path.join(DATAFILES_PATH, 'fixed_param_sample.csv')
-    fixed_param_sample = from_csv(path=csv_path)
+    fixed_param_sample = from_output_files(path=csv_path)
     assert isinstance(fixed_param_sample, CmdStanMCMC)
     assert fixed_param_sample.draws_pd().shape == (100, 88)
 
 
-def test_from_csv_no_param_hmc() -> None:
+def test_from_output_files_no_param_hmc() -> None:
     csv_path = os.path.join(DATAFILES_PATH, 'no_param_hmc_sample.csv')
-    no_parameters_sample = from_csv(path=csv_path)
+    no_parameters_sample = from_output_files(path=csv_path)
     assert isinstance(no_parameters_sample, CmdStanMCMC)
     assert no_parameters_sample.draws_pd().shape == (100, 93)
 
@@ -1199,16 +1199,16 @@ def test_save_csv() -> None:
         assert os.path.exists(stdout_file)
 
     # save files to good dir
-    bern_fit.save_csvfiles(dir=DATAFILES_PATH)
+    bern_fit.save_output_files(dir=DATAFILES_PATH)
     for i in range(bern_fit.chains):
         csv_file = bern_fit.csv_files[i]
         assert os.path.exists(csv_file)
     with pytest.raises(ValueError, match='File exists, not overwriting: '):
-        bern_fit.save_csvfiles(dir=DATAFILES_PATH)
+        bern_fit.save_output_files(dir=DATAFILES_PATH)
 
     tmp2_dir = os.path.join(HERE, 'tmp2')
     os.mkdir(tmp2_dir)
-    bern_fit.save_csvfiles(dir=tmp2_dir)
+    bern_fit.save_output_files(dir=tmp2_dir)
     for i in range(bern_fit.chains):
         csv_file = bern_fit.csv_files[i]
         assert os.path.exists(csv_file)
@@ -1234,7 +1234,7 @@ def test_save_csv() -> None:
         seed=12345,
         iter_sampling=200,
     )
-    bern_fit.save_csvfiles()  # default dir
+    bern_fit.save_output_files()  # default dir
     for i in range(bern_fit.chains):
         csv_file = bern_fit.csv_files[i]
         assert os.path.exists(csv_file)
@@ -1252,13 +1252,13 @@ def test_save_csv() -> None:
                 os.remove(f)
 
     with pytest.raises(ValueError, match='Cannot access CSV file'):
-        bern_fit.save_csvfiles(dir=DATAFILES_PATH)
+        bern_fit.save_output_files(dir=DATAFILES_PATH)
 
     if platform.system() != 'Windows':
         with pytest.raises(RuntimeError, match='Cannot save to path: '):
             dir = tempfile.mkdtemp(dir=_TMPDIR)
             os.chmod(dir, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-            bern_fit.save_csvfiles(dir=dir)
+            bern_fit.save_output_files(dir=dir)
 
 
 def test_diagnose_divergences() -> None:
@@ -1565,7 +1565,7 @@ def test_variable_bern() -> None:
 
 def test_variables_2d() -> None:
     csvfiles_path = os.path.join(DATAFILES_PATH, 'lotka-volterra.csv')
-    fit = from_csv(path=csvfiles_path)
+    fit = from_output_files(path=csvfiles_path)
     assert isinstance(fit, CmdStanMCMC)
     assert 20 == fit.num_draws_sampling
     assert 8 == len(fit.metadata.stan_vars)
@@ -1582,7 +1582,7 @@ def test_variables_2d() -> None:
 def test_variables_3d() -> None:
     # construct fit using existing sampler output
     csvfiles_path = os.path.join(DATAFILES_PATH, 'multidim_vars.csv')
-    fit = from_csv(path=csvfiles_path)
+    fit = from_output_files(path=csvfiles_path)
     assert isinstance(fit, CmdStanMCMC)
     assert 20 == fit.num_draws_sampling
     assert 3 == len(fit.metadata.stan_vars)
@@ -1693,7 +1693,7 @@ def test_validate_sample_sig_figs(stanfile: str = 'bernoulli.stan') -> None:
 
 def test_validate_summary_sig_figs() -> None:
     # construct CmdStanMCMC from logistic model output
-    fit = from_csv(
+    fit = from_output_files(
         [
             os.path.join(DATAFILES_PATH, 'logistic_output_1.csv'),
             os.path.join(DATAFILES_PATH, 'logistic_output_2.csv'),
@@ -2088,14 +2088,16 @@ def test_csv_roundtrip() -> None:
     z_with_warmup = fit.stan_variable(var="z", inc_warmup=True)
     assert z_with_warmup.shape == (38, 4, 3)
 
-    # mostly just asserting that from_csv always succeeds
+    # mostly just asserting that from_output_files always succeeds
     # in parsing latest cmdstan headers
-    fit_from_csv = from_csv(fit.csv_files)
-    assert isinstance(fit_from_csv, CmdStanMCMC)
-    z_from_csv = fit_from_csv.stan_variable(var="z")
-    assert z_from_csv.shape == (20, 4, 3)
-    z_with_warmup_from_csv = fit.stan_variable(var="z", inc_warmup=True)
-    assert z_with_warmup_from_csv.shape == (38, 4, 3)
+    fit_from_output_files = from_output_files(fit.csv_files)
+    assert isinstance(fit_from_output_files, CmdStanMCMC)
+    z_from_output_files = fit_from_output_files.stan_variable(var="z")
+    assert z_from_output_files.shape == (20, 4, 3)
+    z_with_warmup_from_output_files = fit.stan_variable(
+        var="z", inc_warmup=True
+    )
+    assert z_with_warmup_from_output_files.shape == (38, 4, 3)
 
 
 @pytest.mark.order(before="test_no_xarray")

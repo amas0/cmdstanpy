@@ -13,18 +13,18 @@ import numpy as np
 import pytest
 
 from cmdstanpy.model import CmdStanModel
-from cmdstanpy.stanfit import CmdStanVB, from_csv
+from cmdstanpy.stanfit import CmdStanVB, from_output_files
 from cmdstanpy.utils.cmdstan import cmdstan_version_before
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
 
 
-def test_instantiate_from_csv() -> None:
+def test_instantiate_from_output_files() -> None:
     csv_path = os.path.join(
         DATAFILES_PATH, 'variational', 'eta_should_be_big_vb.csv'
     )
-    variational = from_csv(csv_path)
+    variational = from_output_files(csv_path)
     assert isinstance(variational, CmdStanVB)
     assert 'CmdStanVB: model=eta_should_be_big' in repr(variational)
     assert 'method=variational' in repr(variational)

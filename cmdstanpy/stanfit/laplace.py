@@ -56,14 +56,16 @@ class CmdStanLaplace:
         mode: CmdStanMLE | None = None,
     ) -> CmdStanLaplace:
         # Local import to avoid circular dependency with stanfit.__init__
-        from cmdstanpy.stanfit import from_csv
+        from cmdstanpy.stanfit import from_output_files
 
         with open(config_file) as f:
             stan_config = parse_config(f.read(), LaplaceConfig)
 
         metadata = InferenceMetadata.from_csv(csv_file)
         if mode is None:
-            mle = from_csv(stan_config.method_config.mode, method='optimize')
+            mle = from_output_files(
+                stan_config.method_config.mode, method='optimize'
+            )
             if not isinstance(mle, CmdStanMLE):
                 raise TypeError(
                     f'Expected CmdStanMLE from mode file '
@@ -330,7 +332,7 @@ class CmdStanLaplace:
         """
         return self.metadata.column_names
 
-    def save_csvfiles(self, dir: str | None = None) -> None:
+    def save_output_files(self, dir: str | None = None) -> None:
         """
         Move output CSV file, and any associated config and stdout files,
         to the specified directory. Updates the corresponding attributes on
@@ -340,7 +342,7 @@ class CmdStanLaplace:
 
         See Also
         --------
-        cmdstanpy.from_csv
+        cmdstanpy.from_output_files
         """
         dest = Path(dir) if dir is not None else Path.cwd()
         dest.mkdir(parents=True, exist_ok=True)
