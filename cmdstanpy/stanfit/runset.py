@@ -62,13 +62,6 @@ class RunSet:
                 self.gen_file_name(".txt", extra="stdout", id=id)
                 for id in self._chain_ids
             ]
-            self._config_files = [
-                os.path.join(
-                    self._outdir, f"{self._base_outfile}_{id}_config.json"
-                )
-                for id in self._chain_ids
-            ]
-
             if args.save_profile:
                 self._profile_files = [
                     self.gen_file_name(".csv", extra="profile", id=id)
@@ -76,7 +69,6 @@ class RunSet:
                 ]
         else:
             self._stdout_files = [self.gen_file_name(".txt", extra="stdout")]
-            self._config_files = [self.gen_file_name(".json", extra="config")]
             if args.save_profile:
                 self._profile_files = [
                     self.gen_file_name(".csv", extra="profile")
@@ -85,10 +77,6 @@ class RunSet:
         # per-chain output files
         if chains == 1:
             self._csv_files = [self.gen_file_name(".csv")]
-            if args.method == Method.SAMPLE:
-                self._metric_files = [
-                    self.gen_file_name(".json", extra="metric")
-                ]
             if args.save_latent_dynamics:
                 self._diagnostic_files = [
                     self.gen_file_name(".csv", extra="diagnostic")
@@ -97,25 +85,32 @@ class RunSet:
             self._csv_files = [
                 self.gen_file_name(".csv", id=id) for id in self._chain_ids
             ]
-            if args.method == Method.SAMPLE:
-                if one_process_per_chain:
-                    self._metric_files = [
-                        os.path.join(
-                            self._outdir,
-                            f"{self._base_outfile}_{id}_metric.json",
-                        )
-                        for id in self._chain_ids
-                    ]
-                else:
-                    self._metric_files = [
-                        self.gen_file_name(".json", extra="metric", id=id)
-                        for id in self._chain_ids
-                    ]
             if args.save_latent_dynamics:
                 self._diagnostic_files = [
                     self.gen_file_name(".csv", extra="diagnostic", id=id)
                     for id in self._chain_ids
                 ]
+
+        # CmdStan names these itself, deriving them from the output file names
+        # it is given: one metric per chain, named for that chain's output
+        # file, and one config per process, named for the first output file
+        # that process was given. Because every output file name is passed
+        # explicitly (CmdStan 2.37 accepts a comma-separated list), both
+        # follow the same pattern regardless of how chains map to processes.
+        if args.method == Method.SAMPLE:
+            self._metric_files = [
+                self._json_sidecar(csv_file, "metric")
+                for csv_file in self._csv_files
+            ]
+        if one_process_per_chain:
+            self._config_files = [
+                self._json_sidecar(csv_file, "config")
+                for csv_file in self._csv_files
+            ]
+        else:
+            self._config_files = [
+                self._json_sidecar(self._csv_files[0], "config")
+            ]
 
     def __repr__(self) -> str:
         lines = [
@@ -153,9 +148,9 @@ class RunSet:
     def one_process_per_chain(self) -> bool:
         """
         When True, for each chain, call CmdStan in its own subprocess.
-        When False, use CmdStan's `num_chains` arg to run parallel chains.
-        Always True if CmdStan < 2.28.
-        For CmdStan 2.28 and up, `sample` method determines value.
+        When False, use CmdStan's `num_chains` arg to run parallel chains,
+        which requires a model compiled with STAN_THREADS.
+        Determined by the `sample` method.
         """
         return self._one_process_per_chain
 
@@ -189,11 +184,14 @@ class RunSet:
                 ),
             )
         else:
+            # CmdStan 2.37 and up accept a comma-separated file name per
+            # chain, so name every output file rather than letting CmdStan
+            # append '_<id>' to a single base name.
             return self._args.compose_command(
                 idx,
-                csv_file=self.gen_file_name('.csv'),
+                csv_file=','.join(self.csv_files),
                 diagnostic_file=(
-                    self.gen_file_name(".csv", extra="diagnostic")
+                    ','.join(self.diagnostic_files)
                     if self._args.save_latent_dynamics
                     else None
                 ),
@@ -242,6 +240,11 @@ class RunSet:
     def metric_files(self) -> list[str]:
         """List of paths to CmdStan NUTS-HMC sampler metric files."""
         return self._metric_files
+
+    @staticmethod
+    def _json_sidecar(csv_file: str, kind: str) -> str:
+        """Name CmdStan gives a JSON written alongside ``csv_file``."""
+        return f"{os.path.splitext(csv_file)[0]}_{kind}.json"
 
     def gen_file_name(
         self, suffix: str, *, extra: str = "", id: int | None = None
