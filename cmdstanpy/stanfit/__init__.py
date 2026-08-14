@@ -2,6 +2,8 @@
 
 import glob
 import os
+from collections.abc import Callable
+from pathlib import Path
 
 from cmdstanpy.utils import get_logger
 
@@ -27,7 +29,57 @@ __all__ = [
 ]
 
 
-def from_output_files(  # pylint: disable=too-many-return-statements
+def _sidecar(csv_file: Path, kind: str) -> Path:
+    """Path to the JSON of the given kind CmdStan writes for ``csv_file``."""
+    return csv_file.with_name(f'{csv_file.stem}_{kind}.json')
+
+
+def _resolve_csv_files(path: str | list[str] | os.PathLike) -> list[Path]:
+    """Expand a path spec (list, glob, directory, or file) into CSV paths."""
+    if isinstance(path, list):
+        csvfiles = [Path(file) for file in path]
+    elif isinstance(path, str) and '*' in path:
+        parent = Path(path).parent
+        if parent.name and not parent.is_dir():
+            raise ValueError(
+                'Invalid path specification, {}  unknown '
+                'directory: {}'.format(path, parent)
+            )
+        csvfiles = [Path(file) for file in glob.glob(path)]
+    elif isinstance(path, (str, os.PathLike)):
+        spec = Path(path)
+        if spec.is_dir():
+            csvfiles = list(spec.glob('*.csv'))
+        elif spec.exists():
+            csvfiles = [spec]
+        else:
+            raise ValueError('Invalid path specification: {}'.format(path))
+    else:
+        raise ValueError('Invalid path specification: {}'.format(path))
+
+    if len(csvfiles) == 0:
+        raise ValueError('No CSV files found in directory {}'.format(path))
+    for file in csvfiles:
+        if not (file.exists() and file.suffix == '.csv'):
+            raise ValueError(
+                'Bad CSV file path spec, includes non-csv file: {}'.format(file)
+            )
+    return csvfiles
+
+
+# Methods whose output is a single Stan CSV file, and the builder for each.
+_SINGLE_FILE_METHODS: dict[
+    str,
+    Callable[..., CmdStanMLE | CmdStanVB | CmdStanLaplace | CmdStanPathfinder],
+] = {
+    'optimize': CmdStanMLE.from_files,
+    'variational': CmdStanVB.from_files,
+    'laplace': CmdStanLaplace.from_files,
+    'pathfinder': CmdStanPathfinder.from_files,
+}
+
+
+def from_output_files(
     path: str | list[str] | os.PathLike | None = None,
     method: str | None = None,
 ) -> (
@@ -39,19 +91,18 @@ def from_output_files(  # pylint: disable=too-many-return-statements
     | None
 ):
     """
-    Instantiate a CmdStan object from a the Stan CSV files from a CmdStan run.
-    CSV files are specified from either a list of Stan CSV files or a single
+    Instantiate a CmdStan object from the output files of a CmdStan run.
+    Output files are specified as either a list of Stan CSV files or a single
     filepath which can be either a directory name, a Stan CSV filename, or
     a pathname pattern (i.e., a Python glob).  The optional argument 'method'
-    checks that the CSV files were produced by that method.
-    Stan CSV files from CmdStan methods 'sample', 'optimize', and 'variational'
-    result in objects of class CmdStanMCMC, CmdStanMLE, and CmdStanVB,
-    respectively.
+    checks that the files were produced by that method.  Each Stan CSV file
+    must be accompanied by the config JSON CmdStan writes next to it.
 
     :param path: directory path
     :param method: method name (optional)
 
-    :return: either a CmdStanMCMC, CmdStanMLE, or CmdStanVB object
+    :return: a CmdStanMCMC, CmdStanMLE, CmdStanVB, CmdStanLaplace, or
+        CmdStanPathfinder object, according to the method that was run
     """
     if path is None:
         raise ValueError('Must specify path to Stan CSV files.')
@@ -63,48 +114,18 @@ def from_output_files(  # pylint: disable=too-many-return-statements
         'pathfinder',
     ]:
         raise ValueError(
-            'Bad method argument {}, must be one of: '
-            '"sample", "optimize", "variational"'.format(method)
+            'Bad method argument {}, must be one of: "sample", "optimize", '
+            '"variational", "laplace", "pathfinder"'.format(method)
         )
 
-    csvfiles = []
-    if isinstance(path, list):
-        csvfiles = path
-    elif isinstance(path, str) and '*' in path:
-        splits = os.path.split(path)
-        if splits[0] is not None:
-            if not (os.path.exists(splits[0]) and os.path.isdir(splits[0])):
-                raise ValueError(
-                    'Invalid path specification, {}  unknown '
-                    'directory: {}'.format(path, splits[0])
-                )
-        csvfiles = glob.glob(path)
-    elif isinstance(path, (str, os.PathLike)):
-        if os.path.exists(path) and os.path.isdir(path):
-            for file in os.listdir(path):
-                if os.path.splitext(file)[1] == ".csv":
-                    csvfiles.append(os.path.join(path, file))
-        elif os.path.exists(path):
-            csvfiles.append(os.fspath(path))
-        else:
-            raise ValueError('Invalid path specification: {}'.format(path))
-    else:
-        raise ValueError('Invalid path specification: {}'.format(path))
+    csvfiles = _resolve_csv_files(path)
 
-    if len(csvfiles) == 0:
-        raise ValueError('No CSV files found in directory {}'.format(path))
-    for file in csvfiles:
-        if not (os.path.exists(file) and os.path.splitext(file)[1] == ".csv"):
-            raise ValueError(
-                'Bad CSV file path spec, includes non-csv file: {}'.format(file)
-            )
-
-    config_file0 = os.path.splitext(csvfiles[0])[0] + '_config.json'
-    if not os.path.exists(config_file0):
+    config_file0 = _sidecar(csvfiles[0], 'config')
+    if not config_file0.exists():
         raise ValueError(
-            f'Config file not found at expected path: {config_file0}. '
+            f'Config file not found alongside {csvfiles[0]}. '
             'Reconstructing a fit from output files requires the config JSON '
-            'written by CmdStan 2.36 or later.'
+            'written by CmdStan 2.34 or later.'
         )
     try:
         with open(config_file0) as f:
@@ -120,20 +141,18 @@ def from_output_files(  # pylint: disable=too-many-return-statements
         )
     try:
         if method_name == 'sample':
-            config_files: list[str] = []
-            metric_files: list[str] = []
-            for cf in csvfiles:
-                stem = os.path.splitext(cf)[0]
-                cfg = stem + '_config.json'
-                if not os.path.exists(cfg):
+            config_files: list[Path] = []
+            metric_files: list[Path] = []
+            for csv_file in csvfiles:
+                config_file = _sidecar(csv_file, 'config')
+                if not config_file.exists():
                     raise ValueError(
-                        'Sample config file not found at expected path: '
-                        f'{cfg}'
+                        f'Sample config file not found alongside {csv_file}'
                     )
-                config_files.append(cfg)
-                metric = stem + '_metric.json'
-                if os.path.exists(metric):
-                    metric_files.append(metric)
+                config_files.append(config_file)
+                metric_file = _sidecar(csv_file, 'metric')
+                if metric_file.exists():
+                    metric_files.append(metric_file)
             fit = CmdStanMCMC.from_files(
                 csv_files=csvfiles,
                 config_files=config_files,
@@ -141,71 +160,21 @@ def from_output_files(  # pylint: disable=too-many-return-statements
             )
             fit.draws()
             return fit
-        elif method_name == 'optimize':
+
+        builder = _SINGLE_FILE_METHODS.get(method_name)
+        if builder is not None:
             if len(csvfiles) != 1:
                 raise ValueError(
-                    'Expecting a single optimize Stan CSV file, '
+                    f'Expecting a single {method_name} Stan CSV file, '
                     f'found {len(csvfiles)}'
                 )
-            csv_file = csvfiles[0]
-            config_file = os.path.splitext(csv_file)[0] + '_config.json'
-            return CmdStanMLE.from_files(
-                csv_file=csv_file, config_file=config_file
-            )
-        elif method_name == 'variational':
-            if len(csvfiles) != 1:
-                raise ValueError(
-                    'Expecting a single variational Stan CSV file, '
-                    f'found {len(csvfiles)}'
-                )
-            csv_file = csvfiles[0]
-            config_file = os.path.splitext(csv_file)[0] + '_config.json'
-            if not os.path.exists(config_file):
-                raise ValueError(
-                    'Variational config file not found at expected path: '
-                    f'{config_file}'
-                )
-            return CmdStanVB.from_files(
-                csv_file=csv_file, config_file=config_file
-            )
-        elif method_name == 'laplace':
-            if len(csvfiles) != 1:
-                raise ValueError(
-                    'Expecting a single Laplace Stan CSV file, '
-                    f'found {len(csvfiles)}'
-                )
-            csv_file = csvfiles[0]
-            config_file = os.path.splitext(csv_file)[0] + '_config.json'
-            if not os.path.exists(config_file):
-                raise ValueError(
-                    'Laplace config file not found at expected path: '
-                    f'{config_file}'
-                )
-            return CmdStanLaplace.from_files(
-                csv_file=csv_file, config_file=config_file
-            )
-        elif method_name == 'pathfinder':
-            if len(csvfiles) != 1:
-                raise ValueError(
-                    'Expecting a single Pathfinder Stan CSV file, '
-                    f'found {len(csvfiles)}'
-                )
-            csv_file = csvfiles[0]
-            config_file = os.path.splitext(csv_file)[0] + '_config.json'
-            if not os.path.exists(config_file):
-                raise ValueError(
-                    'Pathfinder config file not found at expected path: '
-                    f'{config_file}'
-                )
-            return CmdStanPathfinder.from_files(
-                csv_file=csv_file, config_file=config_file
-            )
-        else:
-            get_logger().warning(
-                'Unable to process CSV output files from method %s.',
-                (method_name),
-            )
-            return None
+            return builder(csv_file=csvfiles[0], config_file=config_file0)
+
+        get_logger().warning(
+            'Unable to process CSV output files from method %s.',
+            (method_name),
+        )
+        return None
     except (IOError, OSError, PermissionError) as e:
         raise ValueError(
             'An error occurred processing the CSV files:\n\t{}'.format(str(e))
