@@ -2,6 +2,7 @@
 
 import glob
 import os
+import re
 from collections.abc import Callable
 from pathlib import Path
 
@@ -27,6 +28,15 @@ __all__ = [
     "CmdStanPathfinder",
     "PrevFit",
 ]
+
+
+_CHAIN_ID_RE = re.compile(r'_(\d+)$')
+
+
+def _chain_sort_key(csv_file: Path) -> tuple[int, str]:
+    """Sort key ordering Stan CSV files by their trailing chain id."""
+    match = _CHAIN_ID_RE.search(csv_file.stem)
+    return (int(match.group(1)) if match else 0, csv_file.name)
 
 
 def _sidecar(csv_file: Path, kind: str) -> Path:
@@ -64,7 +74,10 @@ def _resolve_csv_files(path: str | list[str] | os.PathLike) -> list[Path]:
             raise ValueError(
                 'Bad CSV file path spec, includes non-csv file: {}'.format(file)
             )
-    return csvfiles
+    # Sort by trailing chain id so that chains are ordered 1..N regardless of
+    # the order the filesystem reported them in; ``glob`` and ``iterdir`` are
+    # both unordered, and callers rely on index i being chain i.
+    return sorted(csvfiles, key=_chain_sort_key)
 
 
 # Methods whose output is a single Stan CSV file, and the builder for each.

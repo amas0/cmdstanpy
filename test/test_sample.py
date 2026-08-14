@@ -12,6 +12,7 @@ import shutil
 import stat
 import tempfile
 from multiprocessing import cpu_count
+from pathlib import Path
 from test import check_present, raises_nested, without_import
 from time import time
 
@@ -903,6 +904,21 @@ def test_pd_xr_agreement() -> None:
         draws_pd[draws_pd['iter__'] == 100]['theta'],
         draws_xr.theta.sel(draw=99).values,
     )
+
+
+def test_from_output_files_orders_chains_by_id(tmp_path: Path) -> None:
+    # chain 10 sorts before chain 2 lexically; ids must be compared numerically
+    for chain_id in (1, 2, 10):
+        shutil.copy(
+            os.path.join(GOODFILES_PATH, 'bern-1.csv'),
+            os.path.join(tmp_path, f'bern_{chain_id}.csv'),
+        )
+    resolved = cmdstanpy.stanfit._resolve_csv_files(os.fspath(tmp_path))
+    assert [p.name for p in resolved] == [
+        'bern_1.csv',
+        'bern_2.csv',
+        'bern_10.csv',
+    ]
 
 
 def test_instantiate_from_output_filesfiles_fail() -> None:
