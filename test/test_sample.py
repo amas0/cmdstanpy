@@ -941,6 +941,32 @@ def test_from_output_files_single_process_layout(tmp_path: Path) -> None:
     )
 
 
+def test_from_output_files_ignores_non_draw_csvs(tmp_path: Path) -> None:
+    # latent dynamics and profile CSVs sit alongside the draws in an output
+    # directory and must not be picked up as extra chains
+    for chain_id in range(1, 5):
+        for name in (
+            f'bern_{chain_id}.csv',
+            f'bern_diagnostic_{chain_id}.csv',
+        ):
+            shutil.copy(
+                os.path.join(GOODFILES_PATH, f'bern-{chain_id}.csv'),
+                os.path.join(tmp_path, name),
+            )
+        shutil.copy(
+            os.path.join(GOODFILES_PATH, f'bern-{chain_id}_config.json'),
+            os.path.join(tmp_path, f'bern_{chain_id}_config.json'),
+        )
+    shutil.copy(
+        os.path.join(GOODFILES_PATH, 'bern-1.csv'),
+        os.path.join(tmp_path, 'bern_profile.csv'),
+    )
+
+    fit = from_output_files(path=os.fspath(tmp_path))
+    assert isinstance(fit, CmdStanMCMC)
+    assert fit.chains == 4
+
+
 def test_from_output_files_orders_chains_by_id(tmp_path: Path) -> None:
     # chain 10 sorts before chain 2 lexically; ids must be compared numerically
     for chain_id in (1, 2, 10):

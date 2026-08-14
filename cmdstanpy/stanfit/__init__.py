@@ -39,6 +39,18 @@ def _chain_sort_key(csv_file: Path) -> tuple[int, str]:
     return (int(match.group(1)) if match else 0, csv_file.name)
 
 
+def _holds_draws(csv_file: Path) -> bool:
+    """
+    Whether a CSV found in an output directory holds draws, as opposed to
+    latent dynamics or profiling data. Those are written as
+    ``<base>_diagnostic[_<id>].csv`` and ``<base>_profile[_<id>].csv``,
+    so they would otherwise be mistaken for additional chains.
+    """
+    return not _CHAIN_ID_RE.sub('', csv_file.stem).endswith(
+        ('_diagnostic', '_profile')
+    )
+
+
 def _sidecar(csv_file: Path, kind: str) -> Path:
     """Path to the JSON of the given kind CmdStan writes for ``csv_file``."""
     return csv_file.with_name(f'{csv_file.stem}_{kind}.json')
@@ -59,7 +71,7 @@ def _resolve_csv_files(path: str | list[str] | os.PathLike) -> list[Path]:
     elif isinstance(path, (str, os.PathLike)):
         spec = Path(path)
         if spec.is_dir():
-            csvfiles = list(spec.glob('*.csv'))
+            csvfiles = [f for f in spec.glob('*.csv') if _holds_draws(f)]
         elif spec.exists():
             csvfiles = [spec]
         else:
