@@ -11,7 +11,7 @@ from cmdstanpy.utils import get_logger
 from .gq import CmdStanGQ, PrevFit
 from .laplace import CmdStanLaplace
 from .mcmc import CmdStanMCMC
-from .metadata import InferenceMetadata, parse_config
+from .metadata import InferenceMetadata, StanConfig, parse_config
 from .mle import CmdStanMLE
 from .pathfinder import CmdStanPathfinder
 from .runset import RunSet
@@ -54,6 +54,18 @@ def _holds_draws(csv_file: Path) -> bool:
 def _sidecar(csv_file: Path, kind: str) -> Path:
     """Path to the JSON of the given kind CmdStan writes for ``csv_file``."""
     return csv_file.with_name(f'{csv_file.stem}_{kind}.json')
+
+
+def _chain_id(config: StanConfig, default: int) -> int:
+    """Chain id recorded in a config, which CmdStan reports as 'id'."""
+    recorded = (config.model_extra or {}).get('id')
+    return int(recorded) if isinstance(recorded, int) else default
+
+
+def _config_chain_id(config_file: Path, default: int) -> int:
+    """Chain id recorded in the config JSON at ``config_file``."""
+    with open(config_file) as f:
+        return _chain_id(parse_config(f.read()), default)
 
 
 def _resolve_csv_files(path: str | list[str] | os.PathLike) -> list[Path]:
@@ -154,7 +166,8 @@ def from_output_files(
         )
     try:
         with open(config_file0) as f:
-            method_name = parse_config(f.read()).method_config.method
+            stan_config0 = parse_config(f.read())
+        method_name = stan_config0.method_config.method
     except (IOError, OSError, PermissionError) as e:
         raise ValueError(
             'Cannot read config file: {}'.format(config_file0)
@@ -168,12 +181,17 @@ def from_output_files(
         if method_name == 'sample':
             config_files: list[Path] = []
             metric_files: list[Path] = []
-            for csv_file in csvfiles:
+            chain_ids: list[int] = []
+            for index, csv_file in enumerate(csvfiles):
                 # A single-process run writes one config for the whole run,
-                # named for the first chain's output file.
+                # named for the first chain's output file. Its 'id' is the
+                # first chain's, the rest following on from it.
                 config_file = _sidecar(csv_file, 'config')
-                if not config_file.exists():
+                if config_file.exists():
+                    chain_ids.append(_config_chain_id(config_file, index + 1))
+                else:
                     config_file = config_file0
+                    chain_ids.append(_chain_id(stan_config0, 1) + index)
                 if config_file not in config_files:
                     config_files.append(config_file)
                 metric_file = _sidecar(csv_file, 'metric')
@@ -183,6 +201,7 @@ def from_output_files(
                 csv_files=csvfiles,
                 config_files=config_files,
                 metric_files=metric_files or None,
+                chain_ids=chain_ids,
             )
             fit.draws()
             return fit
