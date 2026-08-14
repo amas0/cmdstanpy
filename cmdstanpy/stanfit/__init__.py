@@ -157,12 +157,13 @@ def from_output_files(
             config_files: list[Path] = []
             metric_files: list[Path] = []
             for csv_file in csvfiles:
+                # A single-process run writes one config for the whole run,
+                # named for the first chain's output file.
                 config_file = _sidecar(csv_file, 'config')
                 if not config_file.exists():
-                    raise ValueError(
-                        f'Sample config file not found alongside {csv_file}'
-                    )
-                config_files.append(config_file)
+                    config_file = config_file0
+                if config_file not in config_files:
+                    config_files.append(config_file)
                 metric_file = _sidecar(csv_file, 'metric')
                 if metric_file.exists():
                     metric_files.append(metric_file)

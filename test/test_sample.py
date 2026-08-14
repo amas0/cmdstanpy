@@ -906,6 +906,41 @@ def test_pd_xr_agreement() -> None:
     )
 
 
+def test_from_output_files_single_process_layout(tmp_path: Path) -> None:
+    # when all chains run in one process CmdStan writes a single config for
+    # the run, named for the first chain's output file
+    outdir = os.path.join(tmp_path, 'threaded')
+    os.makedirs(outdir)
+    for chain_id in range(1, 5):
+        shutil.copy(
+            os.path.join(GOODFILES_PATH, f'bern-{chain_id}.csv'),
+            os.path.join(outdir, f'bern_{chain_id}.csv'),
+        )
+        shutil.copy(
+            os.path.join(GOODFILES_PATH, f'bern-{chain_id}_metric.json'),
+            os.path.join(outdir, f'bern_{chain_id}_metric.json'),
+        )
+    shutil.copy(
+        os.path.join(GOODFILES_PATH, 'bern-1_config.json'),
+        os.path.join(outdir, 'bern_1_config.json'),
+    )
+
+    fit = from_output_files(path=outdir)
+    assert isinstance(fit, CmdStanMCMC)
+    assert fit.chains == 4
+    assert fit.config_files == [os.path.join(outdir, 'bern_1_config.json')]
+    assert fit.metric_files == [
+        os.path.join(outdir, f'bern_{i}_metric.json') for i in range(1, 5)
+    ]
+    assert fit.metric_type == 'diag_e'
+    assert fit.step_size is not None and fit.step_size.shape == (4,)
+    draws_pd = fit.draws_pd()
+    assert draws_pd.shape == (
+        fit.chains * fit.num_draws_sampling,
+        len(fit.column_names) + 3,
+    )
+
+
 def test_from_output_files_orders_chains_by_id(tmp_path: Path) -> None:
     # chain 10 sorts before chain 2 lexically; ids must be compared numerically
     for chain_id in (1, 2, 10):
