@@ -174,12 +174,6 @@ class CmdStanModel:
                 user_header=user_header,
             )
 
-            # try to detect models w/out parameters, needed for sampler
-            if cmdstan_version_before(2, 36):
-                model_info = self.src_info()
-                if 'parameters' in model_info:
-                    self._fixed_param |= len(model_info['parameters']) == 0
-
         # check CmdStan version compatibility
         exe_info = None
         try:
@@ -191,9 +185,9 @@ class CmdStanModel:
                 self._name,
                 str(e),
             )
-        if cmdstan_version_before(2, 35, exe_info):
+        if cmdstan_version_before(2, 37, exe_info):
             raise RuntimeError(
-                "This version of CmdStanPy requires CmdStan 2.35 or higher."
+                "This version of CmdStanPy requires CmdStan 2.37 or higher."
             )
 
     def __repr__(self) -> str:
@@ -534,16 +528,16 @@ class CmdStanModel:
         :param parallel_chains: Number of processes to run in parallel. Must be
             a positive integer.  Defaults to :func:`multiprocessing.cpu_count`,
             i.e., it will only run as many chains in parallel as there are
-            cores on the machine.   Note that CmdStan 2.28 and higher can run
-            all chains in parallel providing that the model was compiled with
-            threading support.
+            cores on the machine.   Note that CmdStan can run all chains in
+            parallel providing that the model was compiled with threading
+            support.
 
         :param threads_per_chain: The number of threads to use in parallelized
             sections within an MCMC chain (e.g., when using the Stan functions
             ``reduce_sum()``  or ``map_rect()``).  This will only have an effect
             if the model was compiled with threading support.  For such models,
-            CmdStan version 2.28 and higher will run all chains in parallel
-            from within a single process.  The total number of threads used
+            CmdStan will run all chains in parallel from within a single
+            process.  The total number of threads used
             will be ``parallel_chains * threads_per_chain``, where the default
             value for parallel_chains is the number of cpus, not chains.
 
@@ -687,12 +681,12 @@ class CmdStanModel:
 
         :param force_one_process_per_chain: If ``True``, run multiple chains in
             distinct processes regardless of model ability to run parallel
-            chains (CmdStan 2.28+ feature). If ``False``, always run multiple
-            chains in one process (does not check that this is valid).
+            chains. If ``False``, always run multiple chains in one process
+            (does not check that this is valid).
 
-            If None (Default): Check that CmdStan version is >=2.28, and that
-            model was compiled with STAN_THREADS=True, and utilize the
-            parallel chain functionality if those conditions are met.
+            If None (Default): Check that the model was compiled with
+            STAN_THREADS=True, and utilize the parallel chain functionality
+            if so.
 
         :param timeout: Duration at which sampling times out in seconds.
 

@@ -14,7 +14,6 @@ import pytest
 
 from cmdstanpy.model import CmdStanModel
 from cmdstanpy.stanfit import CmdStanVB, from_output_files
-from cmdstanpy.utils.cmdstan import cmdstan_version_before
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
@@ -135,11 +134,7 @@ def test_variational_eta_small() -> None:
         DATAFILES_PATH, 'variational', 'eta_should_be_small.stan'
     )
     model = CmdStanModel(stan_file=stan)
-    if cmdstan_version_before(2, 35):
-        seed = 12345
-    else:
-        seed = 1234
-    variational = model.variational(algorithm='meanfield', seed=seed)
+    variational = model.variational(algorithm='meanfield', seed=1234)
     assert variational.column_names == (
         'lp__',
         'log_p__',
