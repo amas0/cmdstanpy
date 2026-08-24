@@ -15,7 +15,7 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from typing_extensions import TypeVar
+from typing_extensions import Self, TypeVar
 
 from cmdstanpy.utils import stancsv
 
@@ -205,6 +205,47 @@ class StanConfig(BaseModel, Generic[MethodT]):
 
     method_config: MethodT
 
+    @classmethod
+    def from_json(cls, json_data: str | bytes) -> Self:
+        """Parse a CmdStan config JSON string into this config class."""
+        raw = json.loads(json_data)
+        config: Self = cls.model_validate(flatten_config(raw))
+        return config
+
+
+# Named classes for each method - these can be pickled unlike the generic
+# StanConfig[MethodConfig]
+
+
+# pylint: disable-next=too-few-public-methods
+class SampleRunConfig(StanConfig[SampleConfig]):
+    """Run configuration of the sample method."""
+
+
+# pylint: disable-next=too-few-public-methods
+class OptimizeRunConfig(StanConfig[OptimizeConfig]):
+    """Run configuration of the optimize method."""
+
+
+# pylint: disable-next=too-few-public-methods
+class VariationalRunConfig(StanConfig[VariationalConfig]):
+    """Run configuration of the variational method."""
+
+
+# pylint: disable-next=too-few-public-methods
+class LaplaceRunConfig(StanConfig[LaplaceConfig]):
+    """Run configuration of the laplace method."""
+
+
+# pylint: disable-next=too-few-public-methods
+class PathfinderRunConfig(StanConfig[PathfinderConfig]):
+    """Run configuration of the pathfinder method."""
+
+
+# pylint: disable-next=too-few-public-methods
+class GeneratedQuantitiesRunConfig(StanConfig[GeneratedQuantitiesConfig]):
+    """Run configuration of the generate_quantities method."""
+
 
 def flatten_value_dict(data: dict[str, Any]) -> dict[str, Any]:
     """Recursively flatten CmdStan's nested value/subdict structure.
@@ -267,17 +308,17 @@ def flatten_config(data: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-def parse_config(
-    json_data: str | bytes, method_type: type[MethodT] | None = None
-) -> StanConfig[MethodT]:
-    """Parse a CmdStan config JSON string into a StanConfig.
+def parse_config(json_data: str | bytes) -> StanConfig[AnyMethodConfig]:
+    """Parse a CmdStan config JSON string into a StanConfig, auto-detecting
+    the method from the JSON content via the discriminated union
+    ``AnyMethodConfig``.
 
-    When ``method_type`` is omitted the method is auto-detected from the
-    JSON content using the discriminated union ``AnyMethodConfig``.
+    When the method is known in advance, use the ``from_json`` constructor
+    of the corresponding named config class (e.g. ``SampleRunConfig``)
+    instead; unlike the parametrized generic returned here, instances of
+    the named classes support pickling.
     """
 
     raw = json.loads(json_data)
     flat = flatten_config(raw)
-    if method_type is None:
-        return StanConfig[AnyMethodConfig].model_validate(flat)  # type: ignore
-    return StanConfig[method_type].model_validate(flat)  # type: ignore
+    return StanConfig[AnyMethodConfig].model_validate(flat)  # type: ignore

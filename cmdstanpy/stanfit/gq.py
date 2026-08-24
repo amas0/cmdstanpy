@@ -33,12 +33,7 @@ from cmdstanpy.utils import (
 
 from .laplace import CmdStanLaplace
 from .mcmc import CmdStanMCMC
-from .metadata import (
-    GeneratedQuantitiesConfig,
-    InferenceMetadata,
-    StanConfig,
-    parse_config,
-)
+from .metadata import GeneratedQuantitiesRunConfig, InferenceMetadata
 from .mle import CmdStanMLE
 from .pathfinder import CmdStanPathfinder
 from .vb import CmdStanVB
@@ -63,7 +58,7 @@ class CmdStanGQ(Generic[PrevFit]):
     metadata: InferenceMetadata
     model_name: str
     csv_files: list[str]
-    config: StanConfig[GeneratedQuantitiesConfig]
+    config: GeneratedQuantitiesRunConfig
     chain_ids: list[int]
     previous_fit: PrevFit
     config_files: list[str] | None = None
@@ -101,7 +96,7 @@ class CmdStanGQ(Generic[PrevFit]):
             raise ValueError('At least one config file is required.')
 
         with open(config_files_list[0]) as f:
-            stan_config = parse_config(f.read(), GeneratedQuantitiesConfig)
+            stan_config = GeneratedQuantitiesRunConfig.from_json(f.read())
 
         stdout_files_list = (
             [os.fspath(f) for f in stdout_files]
@@ -156,18 +151,7 @@ class CmdStanGQ(Generic[PrevFit]):
         # for details. We call _assemble_generated_quantities to ensure
         # the data are loaded prior to serialization.
         self._assemble_generated_quantities()
-        state = self.__dict__.copy()
-        # StanConfig[GeneratedQuantitiesConfig] is a generic alias with no
-        # module-level name, so serialize it as a plain dict for pickle.
-        state['config'] = self.config.model_dump()
-        return state
-
-    def __setstate__(self, state: dict) -> None:
-        config_dict = state.pop('config')
-        self.__dict__.update(state)
-        self.config = StanConfig[GeneratedQuantitiesConfig].model_validate(
-            config_dict
-        )
+        return self.__dict__
 
     def _validate_configs(self) -> None:
         """
@@ -184,7 +168,7 @@ class CmdStanGQ(Generic[PrevFit]):
             return
 
         def _comparable(
-            config: StanConfig[GeneratedQuantitiesConfig],
+            config: GeneratedQuantitiesRunConfig,
         ) -> dict[str, Any]:
             extra = config.model_extra or {}
             return {
@@ -199,7 +183,7 @@ class CmdStanGQ(Generic[PrevFit]):
         for config_file in self.config_files[1:]:
             with open(config_file) as f:
                 other = _comparable(
-                    parse_config(f.read(), GeneratedQuantitiesConfig)
+                    GeneratedQuantitiesRunConfig.from_json(f.read())
                 )
             for key, want in expected.items():
                 if other[key] != want:

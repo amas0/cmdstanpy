@@ -24,7 +24,7 @@ except ImportError:
 from cmdstanpy.utils import stancsv
 from cmdstanpy.utils.data_munging import build_xarray_data
 
-from .metadata import InferenceMetadata, LaplaceConfig, StanConfig, parse_config
+from .metadata import InferenceMetadata, LaplaceRunConfig
 from .mle import CmdStanMLE
 
 # TODO list:
@@ -41,7 +41,7 @@ class CmdStanLaplace:
     metadata: InferenceMetadata
     model_name: str
     csv_file: str
-    config: StanConfig[LaplaceConfig]
+    config: LaplaceRunConfig
     mode: CmdStanMLE
     config_file: str | None = None  # None if config object passed directly
     stdout_file: str | None = None
@@ -59,7 +59,7 @@ class CmdStanLaplace:
         from cmdstanpy.stanfit import from_output_files
 
         with open(config_file) as f:
-            stan_config = parse_config(f.read(), LaplaceConfig)
+            stan_config = LaplaceRunConfig.from_json(f.read())
 
         metadata = InferenceMetadata.from_csv(csv_file)
         if mode is None:

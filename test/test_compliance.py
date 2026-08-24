@@ -64,3 +64,22 @@ def test_variational_copy_ability() -> None:
     assert fit is not None
     fit2 = copy.deepcopy(fit)
     assert fit.stan_variables().keys() == fit2.stan_variables().keys()
+
+
+def test_pathfinder_pickle_ability() -> None:
+    csv_path = DATAFILES_PATH / 'pathfinder' / 'bernoulli-pathfinder.csv'
+    fit = cmdstanpy.from_output_files(path=csv_path)
+    assert fit is not None
+    keys = fit.stan_variables().keys()
+    pickled = pickle.dumps(fit)
+    del fit
+    unpickled = pickle.loads(pickled)
+    assert keys == unpickled.stan_variables().keys()
+
+
+def test_pathfinder_copy_ability() -> None:
+    csv_path = DATAFILES_PATH / 'pathfinder' / 'bernoulli-pathfinder.csv'
+    fit = cmdstanpy.from_output_files(path=csv_path)
+    assert fit is not None
+    fit2 = copy.deepcopy(fit)
+    assert fit.stan_variables().keys() == fit2.stan_variables().keys()

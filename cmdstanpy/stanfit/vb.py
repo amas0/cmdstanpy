@@ -13,12 +13,7 @@ import pandas as pd
 
 from cmdstanpy.utils import stancsv
 
-from .metadata import (
-    InferenceMetadata,
-    StanConfig,
-    VariationalConfig,
-    parse_config,
-)
+from .metadata import InferenceMetadata, VariationalRunConfig
 
 
 @dataclass
@@ -31,7 +26,7 @@ class CmdStanVB:
     metadata: InferenceMetadata
     model_name: str
     csv_file: str
-    config: StanConfig[VariationalConfig]
+    config: VariationalRunConfig
     config_file: str | None = None  # None if config object passed directly
     stdout_file: str | None = None
     _variational_mean: np.ndarray = field(
@@ -50,7 +45,7 @@ class CmdStanVB:
         stdout_file: str | os.PathLike | None = None,
     ) -> CmdStanVB:
         with open(config_file) as f:
-            stan_config = parse_config(f.read(), VariationalConfig)
+            stan_config = VariationalRunConfig.from_json(f.read())
 
         metadata = InferenceMetadata.from_csv(csv_file)
         return cls(
@@ -149,16 +144,7 @@ class CmdStanVB:
         # for details. We call _assemble_draws to ensure draws have been
         # loaded prior to serialization.
         self._assemble_draws()
-        state = self.__dict__.copy()
-        # StanConfig[VariationalConfig] is a generic alias with no module-level
-        # name, so we serialize it as a plain dict for pickle compatibility.
-        state['config'] = self.config.model_dump()
-        return state
-
-    def __setstate__(self, state: dict) -> None:
-        config_dict = state.pop('config')
-        self.__dict__.update(state)
-        self.config = StanConfig[VariationalConfig].model_validate(config_dict)
+        return self.__dict__
 
     @property
     def columns(self) -> int:

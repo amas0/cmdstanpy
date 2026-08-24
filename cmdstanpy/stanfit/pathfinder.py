@@ -11,12 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-from cmdstanpy.stanfit.metadata import (
-    InferenceMetadata,
-    PathfinderConfig,
-    StanConfig,
-    parse_config,
-)
+from cmdstanpy.stanfit.metadata import InferenceMetadata, PathfinderRunConfig
 from cmdstanpy.utils import stancsv
 
 
@@ -30,7 +25,7 @@ class CmdStanPathfinder:
     metadata: InferenceMetadata
     model_name: str
     csv_file: str
-    config: StanConfig[PathfinderConfig]
+    config: PathfinderRunConfig
     config_file: str | None = None  # None if config object passed directly
     stdout_file: str | None = None
     _draws: np.ndarray = field(default_factory=lambda: np.array(()), init=False)
@@ -43,7 +38,7 @@ class CmdStanPathfinder:
         stdout_file: str | os.PathLike | None = None,
     ) -> CmdStanPathfinder:
         with open(config_file) as f:
-            stan_config = parse_config(f.read(), PathfinderConfig)
+            stan_config = PathfinderRunConfig.from_json(f.read())
 
         metadata = InferenceMetadata.from_csv(csv_file)
         return cls(

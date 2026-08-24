@@ -35,13 +35,7 @@ from cmdstanpy.utils import (
     stancsv,
 )
 
-from .metadata import (
-    InferenceMetadata,
-    MetricInfo,
-    SampleConfig,
-    StanConfig,
-    parse_config,
-)
+from .metadata import InferenceMetadata, MetricInfo, SampleRunConfig
 
 
 @dataclass
@@ -62,7 +56,7 @@ class CmdStanMCMC:
     metadata: InferenceMetadata
     model_name: str
     csv_files: list[str]
-    config: StanConfig[SampleConfig]
+    config: SampleRunConfig
     chain_ids: list[int]
     config_files: list[str] | None = None
     metric_files: list[str] | None = None
@@ -124,7 +118,7 @@ class CmdStanMCMC:
             raise ValueError('At least one config file is required.')
 
         with open(config_files_list[0]) as f:
-            stan_config = parse_config(f.read(), SampleConfig)
+            stan_config = SampleRunConfig.from_json(f.read())
 
         if sig_figs is None:
             # Recover the output precision from the config so fits rebuilt
@@ -272,16 +266,7 @@ class CmdStanMCMC:
         # for details. We call _assemble_draws to ensure posterior samples have
         # been loaded prior to serialization.
         self._assemble_draws()
-        state = self.__dict__.copy()
-        # StanConfig[SampleConfig] is a generic alias with no module-level
-        # name, so we serialize it as a plain dict for pickle compatibility.
-        state['config'] = self.config.model_dump()
-        return state
-
-    def __setstate__(self, state: dict) -> None:
-        config_dict = state.pop('config')
-        self.__dict__.update(state)
-        self.config = StanConfig[SampleConfig].model_validate(config_dict)
+        return self.__dict__
 
     @property
     def num_draws_warmup(self) -> int:
@@ -419,7 +404,7 @@ class CmdStanMCMC:
         if self.config_files is None or len(self.config_files) < 2:
             return
 
-        def _comparable(config: StanConfig[SampleConfig]) -> dict[str, Any]:
+        def _comparable(config: SampleRunConfig) -> dict[str, Any]:
             method_config = config.method_config
             extra = config.model_extra or {}
             return {
@@ -437,7 +422,7 @@ class CmdStanMCMC:
         expected = _comparable(self.config)
         for config_file in self.config_files[1:]:
             with open(config_file) as f:
-                other = _comparable(parse_config(f.read(), SampleConfig))
+                other = _comparable(SampleRunConfig.from_json(f.read()))
             for key, want in expected.items():
                 if other[key] != want:
                     raise ValueError(

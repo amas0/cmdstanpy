@@ -55,6 +55,24 @@ def test_laplace_from_output_files() -> None:
         assert isinstance(fit3.mode, cmdstanpy.CmdStanMLE)
 
 
+def test_laplace_pickle_ability() -> None:
+    import pickle
+
+    model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
+    model = cmdstanpy.CmdStanModel(stan_file=model_file)
+    fit = model.laplace_sample(
+        data={},
+        mode=os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock_mle.csv'),
+        jacobian=False,
+    )
+    keys = fit.stan_variables().keys()
+    pickled = pickle.dumps(fit)
+    del fit
+    unpickled = pickle.loads(pickled)
+    assert keys == unpickled.stan_variables().keys()
+    assert isinstance(unpickled.mode, cmdstanpy.CmdStanMLE)
+
+
 def test_laplace_runs_opt() -> None:
     model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
     model = cmdstanpy.CmdStanModel(stan_file=model_file)

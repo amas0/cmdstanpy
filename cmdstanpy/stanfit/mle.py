@@ -13,12 +13,7 @@ import pandas as pd
 
 from cmdstanpy.utils import get_logger, stancsv
 
-from .metadata import (
-    InferenceMetadata,
-    OptimizeConfig,
-    StanConfig,
-    parse_config,
-)
+from .metadata import InferenceMetadata, OptimizeRunConfig
 
 
 @dataclass
@@ -31,7 +26,7 @@ class CmdStanMLE:
     metadata: InferenceMetadata
     model_name: str
     csv_file: str
-    config: StanConfig[OptimizeConfig]
+    config: OptimizeRunConfig
     converged: bool = True
     config_file: str | None = None  # None if config object passed directly
     stdout_file: str | None = None
@@ -49,7 +44,7 @@ class CmdStanMLE:
         converged: bool = True,
     ) -> CmdStanMLE:
         with open(config_file) as f:
-            stan_config = parse_config(f.read(), OptimizeConfig)
+            stan_config = OptimizeRunConfig.from_json(f.read())
 
         metadata = InferenceMetadata.from_csv(csv_file)
         return cls(
@@ -137,16 +132,7 @@ class CmdStanMLE:
         # for details. We call _assemble_draws to ensure estimates have been
         # loaded prior to serialization.
         self._assemble_draws()
-        state = self.__dict__.copy()
-        # StanConfig[OptimizeConfig] is a generic alias with no module-level
-        # name, so we serialize it as a plain dict for pickle compatibility.
-        state['config'] = self.config.model_dump()
-        return state
-
-    def __setstate__(self, state: dict) -> None:
-        config_dict = state.pop('config')
-        self.__dict__.update(state)
-        self.config = StanConfig[OptimizeConfig].model_validate(config_dict)
+        return self.__dict__
 
     @property
     def column_names(self) -> tuple[str, ...]:
