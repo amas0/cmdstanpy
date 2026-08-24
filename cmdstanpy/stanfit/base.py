@@ -198,14 +198,6 @@ class SingleFileFit(StanFit[MethodT]):
                 f"An error occurred when parsing Stan csv {self.csv_file}"
             ) from exc
 
-    def draws(self) -> np.ndarray:
-        """
-        Return a numpy.ndarray containing the draws. This is a 2-D array
-        of shape (draws, parameters).
-        """
-        self._assemble()
-        return self._draws
-
     def stan_variable(self, var: str) -> np.ndarray:
         """
         Return a numpy.ndarray which contains the values for the

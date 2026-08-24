@@ -7,6 +7,8 @@ from __future__ import annotations
 import os
 from dataclasses import dataclass
 
+import numpy as np
+
 from cmdstanpy.stanfit.base import SingleFileFit
 from cmdstanpy.stanfit.metadata import PathfinderConfig, PathfinderRunConfig
 
@@ -41,6 +43,15 @@ class CmdStanPathfinder(SingleFileFit[PathfinderConfig]):
         if self.stdout_file is not None:
             lines.append(f' output_file:\n\t{self.stdout_file}')
         return '\n'.join(lines)
+
+    def draws(self) -> np.ndarray:
+        """
+        Return a numpy.ndarray containing the draws from the
+        approximate posterior distribution. This is a 2-D array
+        of shape (draws, parameters).
+        """
+        self._assemble()
+        return self._draws
 
     @property
     def is_resampled(self) -> bool:

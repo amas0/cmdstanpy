@@ -63,6 +63,15 @@ class CmdStanLaplace(SingleFileFit[LaplaceConfig]):
             mode = mle
         return cls(mode=mode, **kwargs)
 
+    def draws(self) -> np.ndarray:
+        """
+        Return a numpy.ndarray containing the draws from the
+        approximate posterior distribution. This is a 2-D array
+        of shape (draws, parameters).
+        """
+        self._assemble()
+        return self._draws
+
     def draws_pd(
         self,
         vars: list[str] | str | None = None,
