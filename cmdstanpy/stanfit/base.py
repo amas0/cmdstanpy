@@ -146,7 +146,8 @@ class StanFit(Generic[MethodT]):
 
 
 # _assemble and stan_variable remain abstract here; the concrete
-# per-method subclasses implement them.
+# per-method subclasses implement them. This requires the below
+# pylint disable. Perhaps replace with a proper ABC in the future?
 @dataclass(kw_only=True)
 # pylint: disable-next=abstract-method
 class MultiChainFit(StanFit[MethodT]):
