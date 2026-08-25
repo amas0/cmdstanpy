@@ -105,6 +105,17 @@ def test_parse_comments_header_and_draws() -> None:
     assert draws_lines == [b"3\n"]
 
 
+def test_scan_header() -> None:
+    lines: list[bytes] = [b"# 1\n", b"a,b\n", b"3,4\n", b"# 4\n"]
+    assert stancsv.scan_header(iter(lines)) == "a,b"
+    assert stancsv.scan_header(iter([b"# 1\n", b"# 2\n"])) is None
+
+    csv_path = os.path.join(DATAFILES_PATH, "logistic_output_1.csv")
+    header = stancsv.scan_header(csv_path)
+    assert header is not None
+    assert header.startswith("lp__")
+
+
 def test_csv_polars_and_numpy_equiv() -> None:
     lines = [
         b"-6.76206,1,0.787025,1,1,0,6.81411,0.229458\n",

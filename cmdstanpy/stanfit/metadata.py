@@ -43,7 +43,7 @@ class InferenceMetadata:
         cls, stan_csv: str | os.PathLike | Iterator[bytes]
     ) -> InferenceMetadata:
         try:
-            _, header, _ = stancsv.parse_comments_header_and_draws(stan_csv)
+            header = stancsv.scan_header(stan_csv)
             if header is None:
                 raise ValueError("No header line found")
             return cls(header)

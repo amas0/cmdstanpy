@@ -6,8 +6,6 @@ import re
 from collections.abc import Callable
 from pathlib import Path
 
-from cmdstanpy.utils import get_logger
-
 from .gq import CmdStanGQ, PrevFit
 from .laplace import CmdStanLaplace
 from .mcmc import CmdStanMCMC
@@ -119,14 +117,7 @@ _SINGLE_FILE_METHODS: dict[
 def from_output_files(
     path: str | list[str] | os.PathLike | None = None,
     method: str | None = None,
-) -> (
-    CmdStanMCMC
-    | CmdStanMLE
-    | CmdStanVB
-    | CmdStanPathfinder
-    | CmdStanLaplace
-    | None
-):
+) -> CmdStanMCMC | CmdStanMLE | CmdStanVB | CmdStanPathfinder | CmdStanLaplace:
     """
     Instantiate a CmdStan object from the output files of a CmdStan run.
     Output files are specified as either a list of Stan CSV files or a single
@@ -169,13 +160,13 @@ def from_output_files(
         raise ValueError(
             f'Config file not found alongside {csvfiles[0]}. '
             'Reconstructing a fit from output files requires the config JSON '
-            'written by CmdStan 2.34 or later.'
+            'written by CmdStan 2.37 or later.'
         )
     try:
         with open(config_file0) as f:
             stan_config0 = parse_config(f.read())
         method_name = stan_config0.method_config.method
-    except (IOError, OSError, PermissionError) as e:
+    except OSError as e:
         raise ValueError(
             'Cannot read config file: {}'.format(config_file0)
         ) from e
@@ -213,20 +204,18 @@ def from_output_files(
             return fit
 
         builder = _SINGLE_FILE_METHODS.get(method_name)
-        if builder is not None:
-            if len(csvfiles) != 1:
-                raise ValueError(
-                    f'Expecting a single {method_name} Stan CSV file, '
-                    f'found {len(csvfiles)}'
-                )
-            return builder(csv_file=csvfiles[0], config_file=config_file0)
-
-        get_logger().warning(
-            'Unable to process CSV output files from method %s.',
-            (method_name),
-        )
-        return None
-    except (IOError, OSError, PermissionError) as e:
+        if builder is None:
+            raise ValueError(
+                f'Unable to process CSV output files from method '
+                f'{method_name}.'
+            )
+        if len(csvfiles) != 1:
+            raise ValueError(
+                f'Expecting a single {method_name} Stan CSV file, '
+                f'found {len(csvfiles)}'
+            )
+        return builder(csv_file=csvfiles[0], config_file=config_file0)
+    except OSError as e:
         raise ValueError(
             'An error occurred processing the CSV files:\n\t{}'.format(str(e))
         ) from e

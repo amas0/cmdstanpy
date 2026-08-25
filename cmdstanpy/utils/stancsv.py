@@ -13,6 +13,24 @@ import numpy as np
 import numpy.typing as npt
 
 
+def scan_header(
+    stan_csv: str | os.PathLike | Iterator[bytes],
+) -> str | None:
+    """Return a Stan CSV file's header line (its first non-comment line),
+    without reading the draws."""
+
+    def scan(lines: Iterator[bytes]) -> str | None:
+        for line in lines:
+            if not line.startswith(b"#"):
+                return line.strip().decode()
+        return None
+
+    if isinstance(stan_csv, (str, os.PathLike)):
+        with open(stan_csv, "rb") as f:
+            return scan(f)
+    return scan(stan_csv)
+
+
 def parse_comments_header_and_draws(
     stan_csv: str | os.PathLike | Iterator[bytes],
 ) -> tuple[list[bytes], str | None, list[bytes]]:

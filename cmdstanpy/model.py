@@ -38,6 +38,7 @@ from cmdstanpy.stanfit import (
     RunSet,
     from_output_files,
 )
+from cmdstanpy.stanfit.base import SingleFileFit
 from cmdstanpy.utils import do_command, get_logger
 from cmdstanpy.utils.cmdstan import cmdstan_version_before, windows_tbb_path
 from cmdstanpy.utils.filesystem import (
@@ -1047,10 +1048,7 @@ class CmdStanModel:
             ),
         ):
             fit_object = previous_fit
-            if isinstance(
-                previous_fit,
-                (CmdStanPathfinder, CmdStanLaplace, CmdStanMLE, CmdStanVB),
-            ):
+            if isinstance(previous_fit, SingleFileFit):
                 fit_csv_files = [previous_fit.csv_file]
             else:
                 fit_csv_files = previous_fit.csv_files
