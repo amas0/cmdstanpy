@@ -180,7 +180,6 @@ The CmdStanMCMC object also provides access to metadata about the model and the 
 .. ipython:: python
 
     print(fit.model_name)
-    print(fit.config.method_config.num_samples)
 
 
 CmdStan utilities:  ``stansummary``, ``diagnose``
