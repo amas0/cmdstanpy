@@ -968,22 +968,18 @@ def test_from_output_files_ignores_non_draw_csvs(tmp_path: Path) -> None:
 
 
 def test_from_output_files_recovers_chain_ids(tmp_path: Path) -> None:
-    # chain ids need not start at 1; they are recorded in each config
+    # chain ids need not start at 1; they are taken from the trailing
+    # number in each CSV file's name
     chain_ids = [7, 8]
     for index, chain_id in enumerate(chain_ids, start=1):
         shutil.copy(
             os.path.join(GOODFILES_PATH, f'bern-{index}.csv'),
             os.path.join(tmp_path, f'bern_{chain_id}.csv'),
         )
-        with open(
-            os.path.join(GOODFILES_PATH, f'bern-{index}_config.json')
-        ) as f:
-            config = json.load(f)
-        config['id'] = chain_id
-        with open(
-            os.path.join(tmp_path, f'bern_{chain_id}_config.json'), 'w'
-        ) as f:
-            json.dump(config, f)
+        shutil.copy(
+            os.path.join(GOODFILES_PATH, f'bern-{index}_config.json'),
+            os.path.join(tmp_path, f'bern_{chain_id}_config.json'),
+        )
 
     fit = from_output_files(path=os.fspath(tmp_path))
     assert isinstance(fit, CmdStanMCMC)

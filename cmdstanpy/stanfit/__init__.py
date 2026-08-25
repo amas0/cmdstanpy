@@ -11,7 +11,7 @@ from cmdstanpy.utils import get_logger
 from .gq import CmdStanGQ, PrevFit
 from .laplace import CmdStanLaplace
 from .mcmc import CmdStanMCMC
-from .metadata import InferenceMetadata, StanConfig, parse_config
+from .metadata import InferenceMetadata, parse_config
 from .mle import CmdStanMLE
 from .pathfinder import CmdStanPathfinder
 from .runset import RunSet
@@ -30,6 +30,8 @@ __all__ = [
 ]
 
 
+# CmdStanPy names each chain's files `<name>_<chain_id>.<ext>`; the
+# trailing number both orders the chains and gives their ids.
 _CHAIN_ID_RE = re.compile(r'_(\d+)$')
 
 
@@ -37,6 +39,16 @@ def _chain_sort_key(csv_file: Path) -> tuple[int, str]:
     """Sort key ordering Stan CSV files by their trailing chain id."""
     match = _CHAIN_ID_RE.search(csv_file.stem)
     return (int(match.group(1)) if match else 0, csv_file.name)
+
+
+def _chain_ids(csvfiles: list[Path]) -> list[int]:
+    """Chain ids from the files' trailing numbers, falling back to 1..N
+    when the files are not named that way."""
+    matches = [_CHAIN_ID_RE.search(f.stem) for f in csvfiles]
+    ids = [int(m.group(1)) for m in matches if m]
+    if len(ids) == len(csvfiles) and len(set(ids)) == len(ids):
+        return ids
+    return list(range(1, len(csvfiles) + 1))
 
 
 def _holds_draws(csv_file: Path) -> bool:
@@ -54,18 +66,6 @@ def _holds_draws(csv_file: Path) -> bool:
 def _sidecar(csv_file: Path, kind: str) -> Path:
     """Path to the JSON of the given kind CmdStan writes for ``csv_file``."""
     return csv_file.with_name(f'{csv_file.stem}_{kind}.json')
-
-
-def _chain_id(config: StanConfig, default: int) -> int:
-    """Chain id recorded in a config, which CmdStan reports as 'id'."""
-    recorded = (config.model_extra or {}).get('id')
-    return int(recorded) if isinstance(recorded, int) else default
-
-
-def _config_chain_id(config_file: Path, default: int) -> int:
-    """Chain id recorded in the config JSON at ``config_file``."""
-    with open(config_file) as f:
-        return _chain_id(parse_config(f.read()), default)
 
 
 def _resolve_csv_files(path: str | list[str] | os.PathLike) -> list[Path]:
@@ -132,8 +132,15 @@ def from_output_files(
     Output files are specified as either a list of Stan CSV files or a single
     filepath which can be either a directory name, a Stan CSV filename, or
     a pathname pattern (i.e., a Python glob).  The optional argument 'method'
-    checks that the files were produced by that method.  Each Stan CSV file
-    must be accompanied by the config JSON CmdStan writes next to it.
+    checks that the files were produced by that method.
+
+    The files are assumed to follow CmdStanPy's own output naming: each
+    chain's CSV ends in ``_<chain_id>``, and the config (and, for sample,
+    metric) JSONs CmdStan writes sit next to the CSVs they belong to, with
+    a run that shared one process across chains having a single config
+    named for its first chain. Outputs written by running CmdStan directly
+    with a single output name and ``num_chains`` follow a different naming
+    scheme and are not currently supported.
 
     :param path: directory path
     :param method: method name (optional)
@@ -179,29 +186,28 @@ def from_output_files(
         )
     try:
         if method_name == 'sample':
-            config_files: list[Path] = []
-            metric_files: list[Path] = []
-            chain_ids: list[int] = []
-            for index, csv_file in enumerate(csvfiles):
-                # A single-process run writes one config for the whole run,
-                # named for the first chain's output file. Its 'id' is the
-                # first chain's, the rest following on from it.
-                config_file = _sidecar(csv_file, 'config')
-                if config_file.exists():
-                    chain_ids.append(_config_chain_id(config_file, index + 1))
-                else:
-                    config_file = config_file0
-                    chain_ids.append(_chain_id(stan_config0, 1) + index)
-                if config_file not in config_files:
-                    config_files.append(config_file)
-                metric_file = _sidecar(csv_file, 'metric')
-                if metric_file.exists():
-                    metric_files.append(metric_file)
+            # Collect the sidecar JSONs that exist next to each CSV. A
+            # single-process run has just one config, named for the first
+            # chain's output file; a per-process run has one per chain.
+            config_files = [
+                cf
+                for cf in dict.fromkeys(
+                    _sidecar(csv_file, 'config') for csv_file in csvfiles
+                )
+                if cf.exists()
+            ]
+            metric_files = [
+                mf
+                for mf in (
+                    _sidecar(csv_file, 'metric') for csv_file in csvfiles
+                )
+                if mf.exists()
+            ]
             fit = CmdStanMCMC.from_files(
                 csv_files=csvfiles,
                 config_files=config_files,
                 metric_files=metric_files or None,
-                chain_ids=chain_ids,
+                chain_ids=_chain_ids(csvfiles),
             )
             fit.draws()
             return fit
