@@ -6,12 +6,10 @@ from __future__ import annotations
 
 import math
 import os
-import shutil
 from collections.abc import Hashable, MutableMapping, Sequence
 from dataclasses import dataclass, field
 from io import StringIO
-from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 import numpy as np
 import pandas as pd
@@ -35,11 +33,12 @@ from cmdstanpy.utils import (
     stancsv,
 )
 
-from .metadata import InferenceMetadata, MetricInfo, SampleRunConfig
+from .base import MultiChainFit
+from .metadata import MetricInfo, SampleConfig, SampleRunConfig, StanConfig
 
 
-@dataclass
-class CmdStanMCMC:
+@dataclass(kw_only=True)
+class CmdStanMCMC(MultiChainFit[SampleConfig]):
     """
     Container for outputs from CmdStan sampler run.
     Provides methods to summarize and diagnose the model fit
@@ -53,17 +52,19 @@ class CmdStanMCMC:
 
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
 
-    metadata: InferenceMetadata
-    model_name: str
-    csv_files: list[str]
-    config: SampleRunConfig
-    chain_ids: list[int]
-    config_files: list[str] | None = None
     metric_files: list[str] | None = None
-    stdout_files: list[str] | None = None
     diagnostic_files: list[str] | None = None
     profile_files: list[str] | None = None
     sig_figs: int | None = None
+
+    _FILE_ATTRS: ClassVar[tuple[str, ...]] = (
+        'csv_files',
+        'config_files',
+        'metric_files',
+        'stdout_files',
+        'diagnostic_files',
+        'profile_files',
+    )
 
     _draws: np.ndarray = field(default_factory=lambda: np.array(()), init=False)
     _metric_type: str | None = field(default=None, init=False)
@@ -83,7 +84,7 @@ class CmdStanMCMC:
     def __post_init__(self) -> None:
         self._divergences = np.zeros(self.chains, dtype=int)
         self._max_treedepths = np.zeros(self.chains, dtype=int)
-        self._validate_configs()
+        super().__post_init__()
         self._validate_csv_files()
         if not self._is_fixed_param:
             self._check_sampler_diagnostics()
@@ -105,20 +106,11 @@ class CmdStanMCMC:
         ``config_files`` may be a single path (when CmdStan ran multiple chains
         in one process) or a per-chain list.
         """
-        csv_files_list = [os.fspath(f) for f in csv_files]
-        chains = len(csv_files_list)
-        if chains == 0:
-            raise ValueError('At least one CSV file is required.')
-
-        if isinstance(config_files, (str, os.PathLike)):
-            config_files_list = [os.fspath(config_files)]
-        else:
-            config_files_list = [os.fspath(f) for f in config_files]
-        if not config_files_list:
-            raise ValueError('At least one config file is required.')
-
-        with open(config_files_list[0]) as f:
-            stan_config = SampleRunConfig.from_json(f.read())
+        kwargs = cls._from_files_kwargs(
+            csv_files, config_files, stdout_files, chain_ids, SampleRunConfig
+        )
+        stan_config = kwargs['config']
+        chains = len(kwargs['csv_files'])
 
         if sig_figs is None:
             # Recover the output precision from the config so fits rebuilt
@@ -142,40 +134,14 @@ class CmdStanMCMC:
                 f'Expected one metric file per chain ({chains}), '
                 f'got {len(metric_files_list)}.'
             )
-        stdout_files_list = _maybe_list(stdout_files)
-        diagnostic_files_list = _maybe_list(diagnostic_files)
-        profile_files_list = _maybe_list(profile_files)
-
-        if chain_ids is None:
-            chain_ids_list = list(range(1, chains + 1))
-        else:
-            chain_ids_list = list(chain_ids)
-            if len(chain_ids_list) != chains:
-                raise ValueError(
-                    f'Got {chains} csv files but {len(chain_ids_list)} '
-                    'chain ids'
-                )
-
-        metadata = InferenceMetadata.from_csv(csv_files_list[0])
 
         return cls(
-            metadata=metadata,
-            model_name=stan_config.model_name,
-            csv_files=csv_files_list,
-            config=stan_config,
-            chain_ids=chain_ids_list,
-            config_files=config_files_list,
             metric_files=metric_files_list,
-            stdout_files=stdout_files_list,
-            diagnostic_files=diagnostic_files_list,
-            profile_files=profile_files_list,
+            diagnostic_files=_maybe_list(diagnostic_files),
+            profile_files=_maybe_list(profile_files),
             sig_figs=sig_figs,
+            **kwargs,
         )
-
-    @property
-    def chains(self) -> int:
-        """Number of chains."""
-        return len(self.csv_files)
 
     @property
     def _iter_sampling(self) -> int:
@@ -215,7 +181,7 @@ class CmdStanMCMC:
         of dictionaries is returned, in the format expected for the
         ``inits`` argument of :meth:`CmdStanModel.sample`.
         """
-        self._assemble_draws()
+        self._assemble()
         rng = np.random.default_rng(seed)
         n_draws, n_chains = self._draws.shape[:2]
         draw_idxs = rng.choice(n_draws, size=chains, replace=False)
@@ -250,24 +216,6 @@ class CmdStanMCMC:
             lines.append(' output_files:\n\t' + '\n\t'.join(self.stdout_files))
         return '\n'.join(lines)
 
-    def __getattr__(self, attr: str) -> np.ndarray:
-        """Synonymous with ``fit.stan_variable(attr)"""
-        if attr.startswith("_"):
-            raise AttributeError(f"Unknown variable name {attr}")
-        try:
-            return self.stan_variable(attr)
-        except ValueError as e:
-            # pylint: disable=raise-missing-from
-            raise AttributeError(*e.args)
-
-    def __getstate__(self) -> dict:
-        # This function returns the mapping of objects to serialize with pickle.
-        # See https://docs.python.org/3/library/pickle.html#object.__getstate__
-        # for details. We call _assemble_draws to ensure posterior samples have
-        # been loaded prior to serialization.
-        self._assemble_draws()
-        return self.__dict__
-
     @property
     def num_draws_warmup(self) -> int:
         """Number of warmup draws per chain, i.e., thinned warmup iterations."""
@@ -280,16 +228,6 @@ class CmdStanMCMC:
         thinned sampling iterations.
         """
         return int(math.ceil((self._iter_sampling) / self._thin))
-
-    @property
-    def column_names(self) -> tuple[str, ...]:
-        """
-        Names of all outputs from the sampler, comprising sampler parameters
-        and all components of all model parameters, transformed parameters,
-        and quantities of interest. Corresponds to Stan CSV file header row,
-        with names munged to array notation, e.g. `beta[1]` not `beta.1`.
-        """
-        return self.metadata.column_names
 
     @property
     def metric_type(self) -> str | None:
@@ -374,7 +312,7 @@ class CmdStanMCMC:
         CmdStanMCMC.draws_xr
         CmdStanGQ.draws
         """
-        self._assemble_draws()
+        self._assemble()
 
         if inc_warmup and not self._save_warmup:
             get_logger().warning(
@@ -390,46 +328,19 @@ class CmdStanMCMC:
             return flatten_chains(self._draws[start_idx:, :, :])
         return self._draws[start_idx:, :, :]
 
-    def _validate_configs(self) -> None:
-        """
-        Checks that the CmdStan config JSONs for all chains agree on the
-        settings which affect how the draws are laid out, plus the model
-        name and Stan version.
-
-        When CmdStan ran all chains in a single process there is only one
-        config file, so there is nothing to cross-check.
-
-        Raises exception when inconsistencies detected.
-        """
-        if self.config_files is None or len(self.config_files) < 2:
-            return
-
-        def _comparable(config: SampleRunConfig) -> dict[str, Any]:
-            method_config = config.method_config
-            extra = config.model_extra or {}
-            return {
-                'model': config.model_name,
-                'stan_version_major': config.stan_major_version,
-                'stan_version_minor': config.stan_minor_version,
-                'stan_version_patch': config.stan_patch_version,
-                'stanc_version': extra.get('stanc_version'),
-                'num_samples': method_config.num_samples,
-                'num_warmup': method_config.num_warmup,
-                'save_warmup': method_config.save_warmup,
-                'thin': method_config.thin,
-            }
-
-        expected = _comparable(self.config)
-        for config_file in self.config_files[1:]:
-            with open(config_file) as f:
-                other = _comparable(SampleRunConfig.from_json(f.read()))
-            for key, want in expected.items():
-                if other[key] != want:
-                    raise ValueError(
-                        'CmdStan config mismatch in config file '
-                        f'{config_file}: arg {key} is {other[key]}, '
-                        f'expected {want}'
-                    )
+    def _comparable_config(
+        self, config: StanConfig[SampleConfig]
+    ) -> dict[str, Any]:
+        """Extends the base cross-chain checks with the sampler settings
+        which affect how the draws are laid out."""
+        method_config = config.method_config
+        return {
+            **super()._comparable_config(config),
+            'num_samples': method_config.num_samples,
+            'num_warmup': method_config.num_warmup,
+            'save_warmup': method_config.save_warmup,
+            'thin': method_config.thin,
+        }
 
     def _validate_csv_files(self) -> None:
         """
@@ -563,7 +474,7 @@ class CmdStanMCMC:
             )
             get_logger().warning('\n\t'.join(diagnostics))
 
-    def _assemble_draws(self) -> None:
+    def _assemble(self) -> None:
         """
         Allocates and populates the sample array by parsing the validated
         stan_csv files.
@@ -749,7 +660,7 @@ class CmdStanMCMC:
                 ' must run sampler with "save_warmup=True".'
             )
 
-        self._assemble_draws()
+        self._assemble()
         cols = []
         if vars is not None:
             for var in dict.fromkeys(vars_list):
@@ -826,7 +737,7 @@ class CmdStanMCMC:
         else:
             vars_list = vars
 
-        self._assemble_draws()
+        self._assemble()
 
         num_draws = self.num_draws_sampling
         attrs: MutableMapping[Hashable, Any] = {
@@ -904,38 +815,8 @@ class CmdStanMCMC:
         CmdStanGQ.stan_variable
         CmdStanLaplace.stan_variable
         """
-        try:
-            draws = self.draws(inc_warmup=inc_warmup, concat_chains=True)
-            out: np.ndarray = self.metadata.stan_vars[var].extract_reshape(
-                draws
-            )
-            return out
-        except KeyError:
-            # pylint: disable=raise-missing-from
-            raise ValueError(
-                f'Unknown variable name: {var}\n'
-                'Available variables are '
-                + ", ".join(self.metadata.stan_vars.keys())
-            )
-
-    def stan_variables(self) -> dict[str, np.ndarray]:
-        """
-        Return a dictionary mapping Stan program variables names
-        to the corresponding numpy.ndarray containing the inferred values.
-
-        See Also
-        --------
-        CmdStanMCMC.stan_variable
-        CmdStanMLE.stan_variables
-        CmdStanPathfinder.stan_variables
-        CmdStanVB.stan_variables
-        CmdStanGQ.stan_variables
-        CmdStanLaplace.stan_variables
-        """
-        result = {}
-        for name in self.metadata.stan_vars:
-            result[name] = self.stan_variable(name)
-        return result
+        draws = self.draws(inc_warmup=inc_warmup, concat_chains=True)
+        return self._extract_stan_var(var, draws)
 
     def method_variables(self) -> dict[str, np.ndarray]:
         """
@@ -945,55 +826,8 @@ class CmdStanMCMC:
         Maps each column name to a numpy.ndarray (draws x chains x 1)
         containing per-draw diagnostic values.
         """
-        self._assemble_draws()
+        self._assemble()
         return {
             name: var.extract_reshape(self._draws)
             for name, var in self.metadata.method_vars.items()
         }
-
-    def save_output_files(self, dir: str | None = None) -> None:
-        """
-        Move output CSV files, and any associated config, metric, and stdout
-        files, to the specified directory. Updates the corresponding
-        attributes on this object to point at the new locations.
-
-        :param dir: directory path
-
-        See Also
-        --------
-        cmdstanpy.from_output_files
-        """
-        dest = Path(dir) if dir is not None else Path.cwd()
-        try:
-            dest.mkdir(parents=True, exist_ok=True)
-            test_path = dest / f'.cmdstanpy-write-test-{os.getpid()}'
-            test_path.touch()
-            test_path.unlink()
-        except (IOError, OSError, PermissionError) as exc:
-            raise RuntimeError(f'Cannot save to path: {dest}') from exc
-
-        list_attrs = (
-            'csv_files',
-            'config_files',
-            'metric_files',
-            'stdout_files',
-            'diagnostic_files',
-            'profile_files',
-        )
-        for attr in list_attrs:
-            srcs = getattr(self, attr)
-            if srcs is None:
-                continue
-            new = []
-            for src in srcs:
-                if not os.path.exists(src):
-                    if attr == 'csv_files':
-                        raise ValueError(f'Cannot access CSV file {src}')
-                    new.append(src)
-                    continue
-                dst = dest / Path(src).name
-                if dst.exists():
-                    raise ValueError(f'File exists, not overwriting: {dst}')
-                shutil.move(src, dst)
-                new.append(os.fspath(dst))
-            setattr(self, attr, new)
