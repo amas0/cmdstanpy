@@ -257,6 +257,9 @@ class MultiChainFit(StanFit[MethodT]):
 
         expected = self._comparable_config(self.config)
         for config_file in self.config_files[1:]:
+            # Parse sibling configs with the same class as self.config so
+            # the comparison sees identically-typed method configs, however
+            # this object was constructed.
             with open(config_file) as f:
                 other = self._comparable_config(
                     type(self.config).from_json(f.read())

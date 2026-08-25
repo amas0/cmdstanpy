@@ -49,36 +49,42 @@ CmdStanMCMC
 
 .. autoclass:: cmdstanpy.CmdStanMCMC
    :members:
+   :inherited-members:
 
 CmdStanMLE
 ==========
 
 .. autoclass:: cmdstanpy.CmdStanMLE
    :members:
+   :inherited-members:
 
 CmdStanLaplace
 ==============
 
 .. autoclass:: cmdstanpy.CmdStanLaplace
    :members:
+   :inherited-members:
 
 CmdStanPathfinder
 =================
 
 .. autoclass:: cmdstanpy.CmdStanPathfinder
    :members:
+   :inherited-members:
 
 CmdStanVB
 =========
 
 .. autoclass:: cmdstanpy.CmdStanVB
    :members:
+   :inherited-members:
 
 CmdStanGQ
 =========
 
 .. autoclass:: cmdstanpy.CmdStanGQ
    :members:
+   :inherited-members:
 
 *********
 Functions
