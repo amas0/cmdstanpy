@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import shutil
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, ClassVar, Generic
@@ -142,6 +143,131 @@ class StanFit(Generic[MethodT]):
                 setattr(self, attr, [_move(f, is_csv) for f in val])
             else:
                 setattr(self, attr, _move(val, is_csv))
+
+
+# _assemble and stan_variable remain abstract here; the concrete
+# per-method subclasses implement them.
+@dataclass(kw_only=True)
+# pylint: disable-next=abstract-method
+class MultiChainFit(StanFit[MethodT]):
+    """
+    Base container for the outputs of a CmdStan run whose draws are held
+    in one Stan CSV file per chain.
+    """
+
+    csv_files: list[str]
+    chain_ids: list[int]
+    config_files: list[str] | None = None
+    stdout_files: list[str] | None = None
+
+    _FILE_ATTRS: ClassVar[tuple[str, ...]] = (
+        'csv_files',
+        'config_files',
+        'stdout_files',
+    )
+
+    def __post_init__(self) -> None:
+        self._validate_configs()
+
+    @property
+    def chains(self) -> int:
+        """Number of chains."""
+        return len(self.csv_files)
+
+    @classmethod
+    def _from_files_kwargs(
+        cls,
+        csv_files: Sequence[str | os.PathLike],
+        config_files: Sequence[str | os.PathLike] | str | os.PathLike,
+        stdout_files: Sequence[str | os.PathLike] | None,
+        chain_ids: Sequence[int] | None,
+        config_cls: type[StanConfig[MethodT]],
+    ) -> dict[str, Any]:
+        """Common constructor arguments parsed from the output files.
+
+        ``config_files`` may be a single path (when CmdStan ran multiple
+        chains in one process) or a per-chain list.
+        """
+        csv_files_list = [os.fspath(f) for f in csv_files]
+        chains = len(csv_files_list)
+        if chains == 0:
+            raise ValueError('At least one CSV file is required.')
+
+        if isinstance(config_files, (str, os.PathLike)):
+            config_files_list = [os.fspath(config_files)]
+        else:
+            config_files_list = [os.fspath(f) for f in config_files]
+        if not config_files_list:
+            raise ValueError('At least one config file is required.')
+
+        with open(config_files_list[0]) as f:
+            stan_config = config_cls.from_json(f.read())
+
+        stdout_files_list = (
+            [os.fspath(f) for f in stdout_files]
+            if stdout_files is not None
+            else None
+        )
+
+        if chain_ids is None:
+            chain_ids_list = list(range(1, chains + 1))
+        else:
+            chain_ids_list = list(chain_ids)
+            if len(chain_ids_list) != chains:
+                raise ValueError(
+                    f'Got {chains} csv files but {len(chain_ids_list)} '
+                    'chain ids'
+                )
+
+        return {
+            'metadata': InferenceMetadata.from_csv(csv_files_list[0]),
+            'model_name': stan_config.model_name,
+            'csv_files': csv_files_list,
+            'config': stan_config,
+            'chain_ids': chain_ids_list,
+            'config_files': config_files_list,
+            'stdout_files': stdout_files_list,
+        }
+
+    def _comparable_config(self, config: StanConfig[MethodT]) -> dict[str, Any]:
+        """The config settings which must agree across chains: the model
+        name and Stan version. Subclasses extend this with the settings
+        that affect how their draws are laid out."""
+        extra = config.model_extra or {}
+        return {
+            'model': config.model_name,
+            'stan_version_major': config.stan_major_version,
+            'stan_version_minor': config.stan_minor_version,
+            'stan_version_patch': config.stan_patch_version,
+            'stanc_version': extra.get('stanc_version'),
+        }
+
+    def _validate_configs(self) -> None:
+        """
+        Checks that the CmdStan config JSONs for all chains agree on the
+        settings named by ``_comparable_config``.
+
+        When CmdStan ran all chains in a single process there is only one
+        config file, so there is nothing to cross-check.
+
+        Raises exception if inconsistencies are detected.
+        """
+        if self.config_files is None or len(self.config_files) < 2:
+            return
+
+        expected = self._comparable_config(self.config)
+        for config_file in self.config_files[1:]:
+            with open(config_file) as f:
+                other = self._comparable_config(
+                    type(self.config).from_json(f.read())
+                )
+            for key, want in expected.items():
+                if other[key] != want:
+                    raise ValueError(
+                        'CmdStan config mismatch in config file '
+                        f'{config_file}: arg {key} is {other[key]}, '
+                        f'expected {want}'
+                    )
 
 
 @dataclass(kw_only=True)
