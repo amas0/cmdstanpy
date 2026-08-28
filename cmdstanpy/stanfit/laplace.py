@@ -7,6 +7,7 @@ from __future__ import annotations
 import os
 from collections.abc import Hashable
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any, MutableMapping
 
 import numpy as np
@@ -24,9 +25,34 @@ from cmdstanpy.utils.data_munging import build_xarray_data
 from .base import SingleFileFit
 from .metadata import LaplaceConfig, LaplaceRunConfig
 from .mle import CmdStanMLE
+from .naming import accompanying_json
 
 # TODO list:
 # - docs and example notebook
+
+
+def _mode_from_files(
+    mode_file: str, laplace_csv_file: str | os.PathLike
+) -> CmdStanMLE:
+    """Build a CmdStanMLE for the mode. If the provided mode output file isn't
+    found, falls back to looking for a sibling file with the same name."""
+    mode_csv = Path(mode_file)
+    if not mode_csv.exists():
+        sibling = Path(laplace_csv_file).parent / mode_csv.name
+        if sibling.exists():
+            mode_csv = sibling
+        else:
+            raise ValueError(
+                f'Mode file {mode_file} recorded in the laplace config not '
+                f'found.'
+            )
+    mode_config = accompanying_json(mode_csv, 'config')
+    if not mode_config.exists():
+        raise ValueError(
+            f'No config file {mode_config.name} found alongside mode file '
+            f'{mode_csv}.'
+        )
+    return CmdStanMLE.from_files(csv_file=mode_csv, config_file=mode_config)
 
 
 @dataclass(kw_only=True)
@@ -46,21 +72,13 @@ class CmdStanLaplace(SingleFileFit[LaplaceConfig]):
         stdout_file: str | os.PathLike | None = None,
         mode: CmdStanMLE | None = None,
     ) -> CmdStanLaplace:
-        # Local import to avoid circular dependency with stanfit.__init__
-        from cmdstanpy.stanfit import from_output_files
-
         kwargs = cls._from_files_kwargs(
             csv_file, config_file, stdout_file, LaplaceRunConfig
         )
         if mode is None:
-            mode_file = kwargs['config'].method_config.mode
-            mle = from_output_files(mode_file, method='optimize')
-            if not isinstance(mle, CmdStanMLE):
-                raise TypeError(
-                    f'Expected CmdStanMLE from mode file '
-                    f'{mode_file!r}, got {type(mle).__name__}'
-                )
-            mode = mle
+            mode = _mode_from_files(
+                kwargs['config'].method_config.mode, Path(csv_file).parent
+            )
         return cls(mode=mode, **kwargs)
 
     def draws(self) -> np.ndarray:

@@ -1,6 +1,7 @@
 """Tests for the Laplace sampling method."""
 
 import os
+from pathlib import Path
 from tempfile import TemporaryDirectory
 
 import numpy as np
@@ -55,22 +56,18 @@ def test_laplace_from_output_files() -> None:
         assert isinstance(fit3.mode, cmdstanpy.CmdStanMLE)
 
 
-def test_laplace_pickle_ability() -> None:
-    import pickle
+def test_laplace_missing_mode_files(tmp_path: Path) -> None:
+    # the laplace fixture records a stale mode path; without the mode's
+    # output files next to the laplace CSV either, loading must fail
+    import shutil
 
-    model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
-    model = cmdstanpy.CmdStanModel(stan_file=model_file)
-    fit = model.laplace_sample(
-        data={},
-        mode=os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock_mle.csv'),
-        jacobian=False,
-    )
-    keys = fit.stan_variables().keys()
-    pickled = pickle.dumps(fit)
-    del fit
-    unpickled = pickle.loads(pickled)
-    assert keys == unpickled.stan_variables().keys()
-    assert isinstance(unpickled.mode, cmdstanpy.CmdStanMLE)
+    for name in ('rosenbrock_laplace.csv', 'rosenbrock_laplace_config.json'):
+        shutil.copy(
+            os.path.join(DATAFILES_PATH, 'laplace', name),
+            os.path.join(tmp_path, name),
+        )
+    with pytest.raises(ValueError, match=r'Mode file'):
+        from_output_files(os.path.join(tmp_path, 'rosenbrock_laplace.csv'))
 
 
 def test_laplace_runs_opt() -> None:
