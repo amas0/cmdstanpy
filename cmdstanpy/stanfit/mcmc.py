@@ -112,16 +112,9 @@ class CmdStanMCMC(MultiChainFit[SampleConfig]):
         stan_config = kwargs['config']
         chains = len(kwargs['csv_files'])
 
-        if sig_figs is None:
-            # Recover the output precision from the config so fits rebuilt
-            # from files (e.g. via from_output_files) report it. A value of
-            # -1 is CmdStan's default and leaves sig_figs unset (6 digits).
-            output = (stan_config.model_extra or {}).get('output', {})
-            cfg_sig_figs = (
-                output.get('sig_figs') if isinstance(output, dict) else None
-            )
-            if isinstance(cfg_sig_figs, int) and cfg_sig_figs > 0:
-                sig_figs = cfg_sig_figs
+        if sig_figs is None and stan_config.output.sig_figs > 0:
+            # A value of -1 is CmdStan's default (six digits).
+            sig_figs = stan_config.output.sig_figs
 
         def _maybe_list(
             files: Sequence[str | os.PathLike] | None,
@@ -328,18 +321,21 @@ class CmdStanMCMC(MultiChainFit[SampleConfig]):
             return flatten_chains(self._draws[start_idx:, :, :])
         return self._draws[start_idx:, :, :]
 
+    @classmethod
     def _comparable_config(
-        self, config: StanConfig[SampleConfig]
+        cls, config: StanConfig[SampleConfig]
     ) -> dict[str, Any]:
         """Extends the base cross-chain checks with the sampler settings
         which affect how the draws are laid out."""
         method_config = config.method_config
         return {
             **super()._comparable_config(config),
+            'algorithm': method_config.algorithm,
             'num_samples': method_config.num_samples,
             'num_warmup': method_config.num_warmup,
             'save_warmup': method_config.save_warmup,
             'thin': method_config.thin,
+            'max_depth': method_config.max_depth,
         }
 
     def _validate_csv_files(self) -> None:

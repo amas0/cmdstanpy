@@ -855,40 +855,39 @@ def test_instantiate_from_output_filesfiles() -> None:
         big_fit.chains * big_fit.num_draws_sampling,
         len(big_fit.column_names) + 3,
     )
-    # list
+    # explicit list naming every file of the fit
     csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-good')
-    csvfiles = []
+    outfiles = []
     for file in os.listdir(csvfiles_path):
-        if file.endswith(".csv"):
-            csvfiles.append(os.path.join(csvfiles_path, file))
-    bern_fit = from_output_files(path=csvfiles)
+        if not file.endswith('.txt'):
+            outfiles.append(os.path.join(csvfiles_path, file))
+    bern_fit = from_output_files(path=outfiles)
     assert isinstance(bern_fit, CmdStanMCMC)
+    assert bern_fit.chains == 4
     draws_pd = bern_fit.draws_pd()
     assert draws_pd.shape == (
         bern_fit.chains * bern_fit.num_draws_sampling,
         len(bern_fit.column_names) + 3,
     )
-    # single csvfile
-    bern_fit = from_output_files(path=csvfiles[0])
+    # a config file identifies the whole fit
+    config_file = os.path.join(csvfiles_path, 'bern-1_config.json')
+    bern_fit = from_output_files(path=config_file)
     assert isinstance(bern_fit, CmdStanMCMC)
+    assert bern_fit.chains == 4
+    # so does a single CSV file, through the config alongside it
+    csv_file = os.path.join(csvfiles_path, 'bern-2.csv')
+    bern_fit = from_output_files(path=csv_file)
+    assert isinstance(bern_fit, CmdStanMCMC)
+    assert bern_fit.chains == 4
     draws_pd = bern_fit.draws_pd()
     assert draws_pd.shape == (
-        bern_fit.num_draws_sampling,
+        bern_fit.chains * bern_fit.num_draws_sampling,
         len(bern_fit.column_names) + 3,
-    )
-    # glob
-    csvfiles_path = os.path.join(csvfiles_path, '*.csv')
-    big_fit = from_output_files(path=csvfiles_path)
-    assert isinstance(big_fit, CmdStanMCMC)
-    draws_pd = big_fit.draws_pd()
-    assert draws_pd.shape == (
-        big_fit.chains * big_fit.num_draws_sampling,
-        len(big_fit.column_names) + 3,
     )
 
 
 def test_pd_xr_agreement() -> None:
-    csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-good', '*.csv')
+    csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-good')
     bern_fit = from_output_files(path=csvfiles_path)
     assert isinstance(bern_fit, CmdStanMCMC)
     draws_pd = bern_fit.draws_pd()
@@ -908,32 +907,47 @@ def test_pd_xr_agreement() -> None:
 
 def test_from_output_files_single_process_layout(tmp_path: Path) -> None:
     # when all chains run in one process CmdStan writes a single config for
-    # the run, named for the first chain's output file
+    # the run, named for the first chain's output file; the config names
+    # every chain's CSV in its ``output file`` argument
     outdir = os.path.join(tmp_path, 'threaded')
     os.makedirs(outdir)
-    for chain_id in range(1, 5):
+    chain_ids = range(7, 11)
+    for source_index, chain_id in enumerate(chain_ids, start=1):
         shutil.copy(
-            os.path.join(GOODFILES_PATH, f'bern-{chain_id}.csv'),
+            os.path.join(GOODFILES_PATH, f'bern-{source_index}.csv'),
             os.path.join(outdir, f'bern_{chain_id}.csv'),
         )
         shutil.copy(
-            os.path.join(GOODFILES_PATH, f'bern-{chain_id}_metric.json'),
+            os.path.join(GOODFILES_PATH, f'bern-{source_index}_metric.json'),
             os.path.join(outdir, f'bern_{chain_id}_metric.json'),
         )
-    shutil.copy(
-        os.path.join(GOODFILES_PATH, 'bern-1_config.json'),
-        os.path.join(outdir, 'bern_1_config.json'),
+    with open(os.path.join(GOODFILES_PATH, 'bern-1_config.json')) as f:
+        config = json.load(f)
+    config['id'] = 7
+    config['method']['sample']['num_chains'] = 4
+    # the recorded paths may be stale (e.g. the fit was moved); only the
+    # file names are used, resolved next to the config file
+    config['output']['file'] = ','.join(
+        f'/some/stale/dir/bern_{i}.csv' for i in chain_ids
     )
+    with open(os.path.join(outdir, 'bern_7_config.json'), 'w') as f:
+        json.dump(config, f)
 
     fit = from_output_files(path=outdir)
     assert isinstance(fit, CmdStanMCMC)
     assert fit.chains == 4
-    assert fit.config_files == [os.path.join(outdir, 'bern_1_config.json')]
+    assert fit.config_files == [os.path.join(outdir, 'bern_7_config.json')]
+    assert fit.chain_ids == list(chain_ids)
     assert fit.metric_files == [
-        os.path.join(outdir, f'bern_{i}_metric.json') for i in range(1, 5)
+        os.path.join(outdir, f'bern_{i}_metric.json') for i in chain_ids
     ]
     assert fit.metric_type == 'diag_e'
     assert fit.step_size is not None and fit.step_size.shape == (4,)
+
+    fit_from_later_chain = from_output_files(os.path.join(outdir, 'bern_8.csv'))
+    assert isinstance(fit_from_later_chain, CmdStanMCMC)
+    assert fit_from_later_chain.chain_ids == list(chain_ids)
+
     draws_pd = fit.draws_pd()
     assert draws_pd.shape == (
         fit.chains * fit.num_draws_sampling,
@@ -945,17 +959,10 @@ def test_from_output_files_ignores_non_draw_csvs(tmp_path: Path) -> None:
     # latent dynamics and profile CSVs sit alongside the draws in an output
     # directory and must not be picked up as extra chains
     for chain_id in range(1, 5):
-        for name in (
-            f'bern_{chain_id}.csv',
-            f'bern_diagnostic_{chain_id}.csv',
-        ):
-            shutil.copy(
-                os.path.join(GOODFILES_PATH, f'bern-{chain_id}.csv'),
-                os.path.join(tmp_path, name),
-            )
+        _copy_bern_chain(chain_id, os.fspath(tmp_path), chain_id)
         shutil.copy(
-            os.path.join(GOODFILES_PATH, f'bern-{chain_id}_config.json'),
-            os.path.join(tmp_path, f'bern_{chain_id}_config.json'),
+            os.path.join(GOODFILES_PATH, f'bern-{chain_id}.csv'),
+            os.path.join(tmp_path, f'bern_diagnostic_{chain_id}.csv'),
         )
     shutil.copy(
         os.path.join(GOODFILES_PATH, 'bern-1.csv'),
@@ -967,19 +974,46 @@ def test_from_output_files_ignores_non_draw_csvs(tmp_path: Path) -> None:
     assert fit.chains == 4
 
 
+def _copy_bern_chain(source_index: int, dest_dir: str, chain_id: int) -> None:
+    """Copy one runset-good chain's CSV and config, renumbered to
+    ``chain_id``, into ``dest_dir``."""
+    shutil.copy(
+        os.path.join(GOODFILES_PATH, f'bern-{source_index}.csv'),
+        os.path.join(dest_dir, f'bern_{chain_id}.csv'),
+    )
+    with open(
+        os.path.join(GOODFILES_PATH, f'bern-{source_index}_config.json')
+    ) as f:
+        config = json.load(f)
+    config['id'] = chain_id
+    config['output']['file'] = f'bern_{chain_id}.csv'
+    with open(os.path.join(dest_dir, f'bern_{chain_id}_config.json'), 'w') as f:
+        json.dump(config, f)
+
+
+def test_from_output_files_single_chain_timestamp_name(tmp_path: Path) -> None:
+    stem = 'bernoulli-20260831225044'
+    csv_file = tmp_path / f'{stem}.csv'
+    config_file = tmp_path / f'{stem}_config.json'
+    shutil.copy(os.path.join(GOODFILES_PATH, 'bern-1.csv'), csv_file)
+    with open(os.path.join(GOODFILES_PATH, 'bern-1_config.json')) as fd:
+        config = json.load(fd)
+    config['id'] = 7
+    config['output']['file'] = os.fspath(csv_file)
+    with open(config_file, 'w') as fd:
+        json.dump(config, fd)
+
+    fit = from_output_files(config_file)
+    assert isinstance(fit, CmdStanMCMC)
+    assert fit.chain_ids == [7]
+    assert fit.csv_files == [os.fspath(csv_file)]
+
+
 def test_from_output_files_recovers_chain_ids(tmp_path: Path) -> None:
-    # chain ids need not start at 1; they are taken from the trailing
-    # number in each CSV file's name
+    # chain ids need not start at 1; they are recorded in each chain's config
     chain_ids = [7, 8]
     for index, chain_id in enumerate(chain_ids, start=1):
-        shutil.copy(
-            os.path.join(GOODFILES_PATH, f'bern-{index}.csv'),
-            os.path.join(tmp_path, f'bern_{chain_id}.csv'),
-        )
-        shutil.copy(
-            os.path.join(GOODFILES_PATH, f'bern-{index}_config.json'),
-            os.path.join(tmp_path, f'bern_{chain_id}_config.json'),
-        )
+        _copy_bern_chain(index, os.fspath(tmp_path), chain_id)
 
     fit = from_output_files(path=os.fspath(tmp_path))
     assert isinstance(fit, CmdStanMCMC)
@@ -989,12 +1023,12 @@ def test_from_output_files_recovers_chain_ids(tmp_path: Path) -> None:
 def test_from_output_files_orders_chains_by_id(tmp_path: Path) -> None:
     # chain 10 sorts before chain 2 lexically; ids must be compared numerically
     for chain_id in (1, 2, 10):
-        shutil.copy(
-            os.path.join(GOODFILES_PATH, 'bern-1.csv'),
-            os.path.join(tmp_path, f'bern_{chain_id}.csv'),
-        )
-    resolved = cmdstanpy.stanfit._resolve_csv_files(os.fspath(tmp_path))
-    assert [p.name for p in resolved] == [
+        _copy_bern_chain(1, os.fspath(tmp_path), chain_id)
+
+    fit = from_output_files(path=os.fspath(tmp_path))
+    assert isinstance(fit, CmdStanMCMC)
+    assert list(fit.chain_ids) == [1, 2, 10]
+    assert [os.path.basename(f) for f in fit.csv_files] == [
         'bern_1.csv',
         'bern_2.csv',
         'bern_10.csv',
@@ -1011,26 +1045,33 @@ def test_instantiate_from_output_filesfiles_fail() -> None:
 
     with pytest.raises(
         ValueError,
-        match='Expecting Stan CSV output files from method ' 'optimize',
+        match='Expecting CmdStan output files from method optimize',
     ):
         from_output_files(csvfiles_path, 'optimize')
 
     csvfiles: list[str] = []
-    with pytest.raises(ValueError, match=r'No CSV files found'):
+    with pytest.raises(ValueError, match=r'No output files provided'):
         from_output_files(csvfiles, 'sample')
 
+    # a list must not contain files that are not part of the fit
     for file in os.listdir(csvfiles_path):
         csvfiles.append(os.path.join(csvfiles_path, file))
-    with pytest.raises(ValueError, match=r'Bad CSV file path spec'):
+    with pytest.raises(ValueError, match=r'Unrecognized output file'):
         from_output_files(csvfiles, 'sample')
 
-    csvfiles_path = os.path.join(csvfiles_path, '*')
-    with pytest.raises(ValueError, match=r'Bad CSV file path spec'):
-        from_output_files(csvfiles_path, 'sample')
+    # a list must name the config JSON(s) of the fit
+    csvfiles = [
+        os.path.join(csvfiles_path, file)
+        for file in os.listdir(csvfiles_path)
+        if file.endswith('.csv')
+    ]
+    with pytest.raises(ValueError, match=r'No CmdStan config JSON'):
+        from_output_files(csvfiles, 'sample')
 
-    csvfiles_path = os.path.join(csvfiles_path, '*')
+    # globs are no longer supported
+    glob_path = os.path.join(csvfiles_path, '*')
     with pytest.raises(ValueError, match=r'Invalid path specification'):
-        from_output_files(csvfiles_path, 'sample')
+        from_output_files(glob_path, 'sample')
 
     csvfiles_path = os.path.join(DATAFILES_PATH, 'no-such-directory')
     with pytest.raises(ValueError, match=r'Invalid path specification'):
@@ -1040,10 +1081,202 @@ def test_instantiate_from_output_filesfiles_fail() -> None:
     if os.path.exists(no_csvfiles_path):
         shutil.rmtree(no_csvfiles_path, ignore_errors=True)
     os.mkdir(no_csvfiles_path)
-    with pytest.raises(ValueError, match=r'No CSV files found'):
+    with pytest.raises(ValueError, match=r'No CmdStan config files found'):
         from_output_files(path=no_csvfiles_path)
     if os.path.exists(no_csvfiles_path):
         shutil.rmtree(no_csvfiles_path, ignore_errors=True)
+
+
+def test_from_output_files_multiple_fits_in_directory(
+    tmp_path: Path,
+) -> None:
+    # a directory holding more than one fit is ambiguous; the config file
+    # of the desired fit must be passed instead
+    for chain_id in (1, 2):
+        _copy_bern_chain(chain_id, os.fspath(tmp_path), chain_id)
+    shutil.copy(
+        os.path.join(GOODFILES_PATH, 'bern-1.csv'),
+        os.path.join(tmp_path, 'other.csv'),
+    )
+    with open(os.path.join(GOODFILES_PATH, 'bern-1_config.json')) as fd:
+        other_config = json.load(fd)
+    other_config['output']['file'] = 'other.csv'
+    with open(os.path.join(tmp_path, 'other_config.json'), 'w') as fd:
+        json.dump(other_config, fd)
+
+    with pytest.raises(ValueError, match=r'more than one fit'):
+        from_output_files(path=os.fspath(tmp_path))
+
+    fit = from_output_files(path=os.path.join(tmp_path, 'other_config.json'))
+    assert isinstance(fit, CmdStanMCMC)
+    assert fit.chains == 1
+
+
+def test_from_output_files_same_base_different_methods(tmp_path: Path) -> None:
+    _copy_bern_chain(1, os.fspath(tmp_path), 1)
+    shutil.copy(
+        os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock_mle.csv'),
+        os.path.join(tmp_path, 'bern_2.csv'),
+    )
+    with open(
+        os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock_mle_config.json')
+    ) as fd:
+        optimize_config = json.load(fd)
+    optimize_config['output']['file'] = 'bern_2.csv'
+    with open(os.path.join(tmp_path, 'bern_2_config.json'), 'w') as fd:
+        json.dump(optimize_config, fd)
+
+    with pytest.raises(ValueError, match=r'more than one fit'):
+        from_output_files(tmp_path)
+
+
+def test_from_output_files_ignores_incomplete_optional_files(
+    tmp_path: Path,
+) -> None:
+    for chain_id in (1, 2):
+        _copy_bern_chain(chain_id, os.fspath(tmp_path), chain_id)
+    shutil.copy(
+        os.path.join(GOODFILES_PATH, 'bern-1_metric.json'),
+        os.path.join(tmp_path, 'bern_1_metric.json'),
+    )
+    shutil.copy(
+        os.path.join(GOODFILES_PATH, 'bern-3.csv'),
+        os.path.join(tmp_path, 'bern_3.csv'),
+    )
+
+    fit = from_output_files(tmp_path)
+    assert isinstance(fit, CmdStanMCMC)
+    assert fit.chains == 2
+    assert fit.metric_files is None
+
+
+def test_from_output_files_explicit_does_not_discover_siblings(
+    tmp_path: Path,
+) -> None:
+    for chain_id in (1, 2):
+        _copy_bern_chain(chain_id, os.fspath(tmp_path), chain_id)
+
+    fit = from_output_files(
+        [tmp_path / 'bern_1.csv', tmp_path / 'bern_1_config.json']
+    )
+    assert isinstance(fit, CmdStanMCMC)
+    assert fit.chains == 1
+
+
+def test_from_output_files_explicit_allows_nonstandard_csv_name(
+    tmp_path: Path,
+) -> None:
+    csv_file = tmp_path / 'model_profile.csv'
+    config_file = tmp_path / 'other_config.json'
+    shutil.copy(os.path.join(GOODFILES_PATH, 'bern-1.csv'), csv_file)
+    with open(os.path.join(GOODFILES_PATH, 'bern-1_config.json')) as fd:
+        config = json.load(fd)
+    config['output']['file'] = csv_file.name
+    config_file.write_text(json.dumps(config))
+
+    with pytest.raises(ValueError, match=r'Cannot discover a fit'):
+        from_output_files(config_file)
+
+    fit = from_output_files([csv_file, config_file])
+    assert isinstance(fit, CmdStanMCMC)
+    assert fit.chains == 1
+
+    config['output']['file'] = 'different.csv'
+    config_file.write_text(json.dumps(config))
+    with pytest.raises(ValueError, match=r'Configured output name'):
+        from_output_files([csv_file, config_file])
+
+
+@pytest.mark.parametrize('num_chains', [0, -1])
+def test_from_output_files_rejects_invalid_num_chains(
+    tmp_path: Path, num_chains: int
+) -> None:
+    csv_file = tmp_path / 'bern.csv'
+    config_file = tmp_path / 'bern_config.json'
+    shutil.copy(os.path.join(GOODFILES_PATH, 'bern-1.csv'), csv_file)
+    with open(os.path.join(GOODFILES_PATH, 'bern-1_config.json')) as fd:
+        config = json.load(fd)
+    config['method']['sample']['num_chains'] = num_chains
+    config['output']['file'] = csv_file.name
+    with open(config_file, 'w') as fd:
+        json.dump(config, fd)
+
+    with pytest.raises(ValueError, match=r'Cannot parse CmdStan config'):
+        from_output_files(config_file)
+
+
+def test_from_output_files_rejects_nonpositive_single_process_id(
+    tmp_path: Path,
+) -> None:
+    for chain_id in (0, 1):
+        shutil.copy(
+            os.path.join(GOODFILES_PATH, f'bern-{chain_id + 1}.csv'),
+            tmp_path / f'bern_{chain_id}.csv',
+        )
+    with open(os.path.join(GOODFILES_PATH, 'bern-1_config.json')) as fd:
+        config = json.load(fd)
+    config['id'] = 0
+    config['method']['sample']['num_chains'] = 2
+    config['output']['file'] = 'bern_0.csv,bern_1.csv'
+    config_file = tmp_path / 'bern_0_config.json'
+    config_file.write_text(json.dumps(config))
+
+    with pytest.raises(ValueError, match=r'non-positive chain ID'):
+        from_output_files(config_file)
+
+
+def test_from_output_files_rejects_multichain_per_chain_configs(
+    tmp_path: Path,
+) -> None:
+    files: list[Path] = []
+    for chain_id in (1, 2):
+        _copy_bern_chain(chain_id, os.fspath(tmp_path), chain_id)
+        config_file = tmp_path / f'bern_{chain_id}_config.json'
+        config = json.loads(config_file.read_text())
+        config['method']['sample']['num_chains'] = 2
+        config_file.write_text(json.dumps(config))
+        files.extend([tmp_path / f'bern_{chain_id}.csv', config_file])
+
+    with pytest.raises(ValueError, match=r'must each record num_chains=1'):
+        from_output_files(files)
+
+
+def test_from_output_files_csv_without_config(tmp_path: Path) -> None:
+    # a bare CSV without the config JSON CmdStan writes alongside it does
+    # not follow CmdStanPy naming and cannot be used for discovery
+    csv_file = os.path.join(tmp_path, 'bern_1.csv')
+    shutil.copy(os.path.join(GOODFILES_PATH, 'bern-1.csv'), csv_file)
+
+    with pytest.raises(ValueError, match=r'Cannot identify one config JSON'):
+        from_output_files(path=csv_file)
+
+
+def test_from_output_files_raw_cmdstan_num_chains(tmp_path: Path) -> None:
+    # running CmdStan directly with ``num_chains`` and a single output name
+    # writes ``output_<id>.csv`` per chain and one ``output_config.json``;
+    # that config is not named for any CSV, so the files cannot be
+    # discovered and must be passed explicitly
+    for chain_id in range(1, 5):
+        shutil.copy(
+            os.path.join(GOODFILES_PATH, f'bern-{chain_id}.csv'),
+            os.path.join(tmp_path, f'output_{chain_id}.csv'),
+        )
+    with open(os.path.join(GOODFILES_PATH, 'bern-1_config.json')) as f:
+        config = json.load(f)
+    config['method']['sample']['num_chains'] = 4
+    config['output']['file'] = 'output.csv'
+    with open(os.path.join(tmp_path, 'output_config.json'), 'w') as f:
+        json.dump(config, f)
+
+    with pytest.raises(ValueError, match=r'No CmdStan config files found'):
+        from_output_files(path=os.fspath(tmp_path))
+
+    fit = from_output_files(
+        path=[os.path.join(tmp_path, f) for f in os.listdir(tmp_path)]
+    )
+    assert isinstance(fit, CmdStanMCMC)
+    assert fit.chains == 4
+    assert list(fit.chain_ids) == [1, 2, 3, 4]
 
 
 def test_from_output_files_fixed_param() -> None:
@@ -1782,10 +2015,9 @@ def test_validate_summary_sig_figs() -> None:
     # construct CmdStanMCMC from logistic model output
     fit = from_output_files(
         [
-            os.path.join(DATAFILES_PATH, 'logistic_output_1.csv'),
-            os.path.join(DATAFILES_PATH, 'logistic_output_2.csv'),
-            os.path.join(DATAFILES_PATH, 'logistic_output_3.csv'),
-            os.path.join(DATAFILES_PATH, 'logistic_output_4.csv'),
+            os.path.join(DATAFILES_PATH, f'logistic_output_{i}{suffix}')
+            for i in range(1, 5)
+            for suffix in ('.csv', '_config.json')
         ]
     )
     assert isinstance(fit, CmdStanMCMC)
@@ -2177,7 +2409,8 @@ def test_csv_roundtrip() -> None:
 
     # mostly just asserting that from_output_files always succeeds
     # in parsing latest cmdstan headers
-    fit_from_output_files = from_output_files(fit.csv_files)
+    assert fit.config_files is not None
+    fit_from_output_files = from_output_files(fit.csv_files + fit.config_files)
     assert isinstance(fit_from_output_files, CmdStanMCMC)
     z_from_output_files = fit_from_output_files.stan_variable(var="z")
     assert z_from_output_files.shape == (20, 4, 3)

@@ -301,7 +301,7 @@ def test_variational_create_inits() -> None:
     bern_model = CmdStanModel(stan_file=stan)
     jdata = os.path.join(DATAFILES_PATH, 'bernoulli.data.json')
 
-    vb = bern_model.variational(data=jdata, seed=11235)
+    vb = bern_model.variational(data=jdata, seed=11235, draws=10)
 
     inits = vb.create_inits()
     assert isinstance(inits, list)
@@ -309,9 +309,13 @@ def test_variational_create_inits() -> None:
     assert isinstance(inits[0], dict)
     assert 'theta' in inits[0]
 
-    inits_10 = vb.create_inits(chains=10)
+    inits_10 = vb.create_inits(seed=0, chains=10)
     assert isinstance(inits_10, list)
     assert len(inits_10) == 10
+    np.testing.assert_array_equal(
+        np.sort(np.asarray([init['theta'] for init in inits_10])),
+        np.sort(vb.theta),
+    )
 
     inits_1 = vb.create_inits(chains=1)
     assert isinstance(inits_1, dict)

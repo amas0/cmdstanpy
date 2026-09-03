@@ -230,17 +230,17 @@ class MultiChainFit(StanFit[MethodT]):
             'stdout_files': stdout_files_list,
         }
 
-    def _comparable_config(self, config: StanConfig[MethodT]) -> dict[str, Any]:
+    @classmethod
+    def _comparable_config(cls, config: StanConfig[MethodT]) -> dict[str, Any]:
         """The config settings which must agree across chains: the model
         name and Stan version. Subclasses extend this with the settings
         that affect how their draws are laid out."""
-        extra = config.model_extra or {}
         return {
             'model': config.model_name,
             'stan_version_major': config.stan_major_version,
             'stan_version_minor': config.stan_minor_version,
             'stan_version_patch': config.stan_patch_version,
-            'stanc_version': extra.get('stanc_version'),
+            'stanc_version': config.stanc_version,
         }
 
     def _validate_configs(self) -> None:
@@ -360,6 +360,11 @@ class SingleFileFit(StanFit[MethodT]):
             for name, var in self.metadata.method_vars.items()
         }
 
+    def _draws_for_inits(self) -> np.ndarray:
+        """Return the rows from which ``create_inits`` may select."""
+        self._assemble()
+        return self._draws
+
     def create_inits(
         self, seed: int | None = None, chains: int = 4
     ) -> list[dict[str, np.ndarray]] | dict[str, np.ndarray]:
@@ -375,18 +380,18 @@ class SingleFileFit(StanFit[MethodT]):
         of dictionaries is returned, in the format expected for the
         ``inits`` argument of :meth:`CmdStanModel.sample`.
         """
-        self._assemble()
+        draws = self._draws_for_inits()
         rng = np.random.default_rng(seed)
-        idxs = rng.choice(self._draws.shape[0], size=chains, replace=False)
+        idxs = rng.choice(draws.shape[0], size=chains, replace=False)
         if chains == 1:
-            draw = self._draws[idxs[0]]
+            draw = draws[idxs[0]]
             return {
                 name: var.extract_reshape(draw)
                 for name, var in self.metadata.stan_vars.items()
             }
         return [
             {
-                name: var.extract_reshape(self._draws[idx])
+                name: var.extract_reshape(draws[idx])
                 for name, var in self.metadata.stan_vars.items()
             }
             for idx in idxs

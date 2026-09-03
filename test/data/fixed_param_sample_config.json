@@ -38,7 +38,7 @@
     "seed" : 12345
   },
   "output" : {
-    "file" : "\/tmp\/tmprpkb7hyk\/datagen_poisson_glm7b2072k4\/datagen_poisson_glm-20260720163159.csv",
+    "file" : "fixed_param_sample.csv",
     "diagnostic_file" : "",
     "refresh" : 100,
     "sig_figs" : 8,

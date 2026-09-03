@@ -22,7 +22,7 @@
   "seed": 1234
  },
  "output": {
-  "file": "/tmp/cmdstanpy-fixture/rosenbrock_laplace.csv",
+  "file": "rosenbrock_laplace.csv",
   "diagnostic_file": "",
   "refresh": 100,
   "sig_figs": 8,

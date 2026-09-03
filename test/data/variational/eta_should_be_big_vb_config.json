@@ -35,7 +35,7 @@
     "seed" : 999999
   },
   "output" : {
-    "file" : "\/tmp\/tmpmw9luosp\/eta_should_be_big0j7mxqbi\/eta_should_be_big-20260503123345.csv",
+    "file" : "eta_should_be_big_vb.csv",
     "diagnostic_file" : "",
     "refresh" : 100,
     "sig_figs" : 8,

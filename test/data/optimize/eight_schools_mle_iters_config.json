@@ -32,7 +32,7 @@
     "seed": 2951904511
   },
   "output": {
-    "file": "",
+    "file": "eight_schools_mle_iters.csv",
     "diagnostic_file": "",
     "refresh": 1,
     "sig_figs": -1,

@@ -10,6 +10,7 @@ from datetime import datetime
 
 from cmdstanpy import _TMPDIR
 from cmdstanpy.cmdstan_args import CmdStanArgs, Method
+from cmdstanpy.utils.filesystem import accompanying_json
 
 
 class RunSet:
@@ -91,25 +92,19 @@ class RunSet:
                     for id in self._chain_ids
                 ]
 
-        # CmdStan names these itself, deriving them from the output file names
-        # it is given: one metric per chain, named for that chain's output
-        # file, and one config per process, named for the first output file
-        # that process was given. Because every output file name is passed
-        # explicitly (CmdStan 2.37 accepts a comma-separated list), both
-        # follow the same pattern regardless of how chains map to processes.
         if args.method == Method.SAMPLE:
             self._metric_files = [
-                self._json_sidecar(csv_file, "metric")
+                accompanying_json(csv_file, "metric")
                 for csv_file in self._csv_files
             ]
         if one_process_per_chain:
             self._config_files = [
-                self._json_sidecar(csv_file, "config")
+                accompanying_json(csv_file, "config")
                 for csv_file in self._csv_files
             ]
         else:
             self._config_files = [
-                self._json_sidecar(self._csv_files[0], "config")
+                accompanying_json(self._csv_files[0], "config")
             ]
 
     def __repr__(self) -> str:
@@ -184,9 +179,6 @@ class RunSet:
                 ),
             )
         else:
-            # CmdStan 2.37 and up accept a comma-separated file name per
-            # chain, so name every output file rather than letting CmdStan
-            # append '_<id>' to a single base name.
             return self._args.compose_command(
                 idx,
                 csv_file=','.join(self.csv_files),
@@ -240,11 +232,6 @@ class RunSet:
     def metric_files(self) -> list[str]:
         """List of paths to CmdStan NUTS-HMC sampler metric files."""
         return self._metric_files
-
-    @staticmethod
-    def _json_sidecar(csv_file: str, kind: str) -> str:
-        """Name CmdStan gives a JSON written alongside ``csv_file``."""
-        return f"{os.path.splitext(csv_file)[0]}_{kind}.json"
 
     def gen_file_name(
         self, suffix: str, *, extra: str = "", id: int | None = None

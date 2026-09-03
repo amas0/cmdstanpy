@@ -30,7 +30,7 @@
     "seed": 999999
   },
   "output": {
-    "file": "",
+    "file": "eta_big_output.csv",
     "diagnostic_file": "",
     "refresh": 100,
     "sig_figs": -1,

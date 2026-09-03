@@ -52,7 +52,7 @@
     "seed" : 12345
   },
   "output" : {
-    "file" : "\/tmp\/tmp0g6lwtky\/multidim_varswjejesho\/multidim_vars-20260720162344.csv",
+    "file" : "multidim_vars.csv",
     "diagnostic_file" : "",
     "refresh" : 100,
     "sig_figs" : 8,

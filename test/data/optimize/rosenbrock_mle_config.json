@@ -32,7 +32,7 @@
     "seed": 1091167574
   },
   "output": {
-    "file": "",
+    "file": "rosenbrock_mle.csv",
     "diagnostic_file": "",
     "refresh": 100,
     "sig_figs": -1,

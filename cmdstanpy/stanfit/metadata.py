@@ -12,6 +12,7 @@ from pydantic import (
     BaseModel,
     ConfigDict,
     Discriminator,
+    Field,
     field_validator,
     model_validator,
 )
@@ -123,6 +124,7 @@ class SampleConfig(BaseModel):
     algorithm: str
     num_samples: int
     num_warmup: int
+    num_chains: int = Field(default=1, gt=0)
     save_warmup: bool = False
     thin: int = 1
     max_depth: int | None = None
@@ -191,6 +193,15 @@ AnyMethodConfig = Annotated[
 MethodT = TypeVar("MethodT", bound=BaseModel, default=AnyMethodConfig)
 
 
+class OutputConfig(BaseModel):
+    """Common CmdStan output settings used when reconstructing fits."""
+
+    model_config = ConfigDict(extra="allow")
+
+    file: str = ''
+    sig_figs: int = -1
+
+
 class StanConfig(BaseModel, Generic[MethodT]):
     """Common representation of a config JSON file output as part of a
     Stan inference run. Separate method-specific config classes handle
@@ -202,6 +213,9 @@ class StanConfig(BaseModel, Generic[MethodT]):
     stan_major_version: str
     stan_minor_version: str
     stan_patch_version: str
+    stanc_version: str | None = None
+    id: int | None = None
+    output: OutputConfig = Field(default_factory=OutputConfig)
 
     method_config: MethodT
 

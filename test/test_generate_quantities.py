@@ -23,11 +23,9 @@ DATAFILES_PATH = os.path.join(HERE, 'data')
 
 
 def test_from_output_files_files(caplog: pytest.LogCaptureFixture) -> None:
-    # fitted_params sample - list of filenames
+    # fitted_params sample - config JSONs are discovered for a CSV-only list
     goodfiles_path = os.path.join(DATAFILES_PATH, 'runset-good', 'bern')
-    csv_files = []
-    for i in range(4):
-        csv_files.append('{}-{}.csv'.format(goodfiles_path, i + 1))
+    csv_files = ['{}-{}.csv'.format(goodfiles_path, i + 1) for i in range(4)]
 
     # gq_model
     stan = os.path.join(DATAFILES_PATH, 'bernoulli_ppc.stan')
@@ -90,11 +88,9 @@ def test_from_output_files_files(caplog: pytest.LogCaptureFixture) -> None:
 
 
 def test_pd_xr_agreement() -> None:
-    # fitted_params sample - list of filenames
+    # fitted_params sample - config JSONs are discovered for a CSV-only list
     goodfiles_path = os.path.join(DATAFILES_PATH, 'runset-good', 'bern')
-    csv_files = []
-    for i in range(4):
-        csv_files.append('{}-{}.csv'.format(goodfiles_path, i + 1))
+    csv_files = ['{}-{}.csv'.format(goodfiles_path, i + 1) for i in range(4)]
 
     # gq_model
     stan = os.path.join(DATAFILES_PATH, 'bernoulli_ppc.stan')
@@ -142,9 +138,7 @@ def test_from_output_files_files_bad() -> None:
     goodfiles_path = os.path.join(
         DATAFILES_PATH, 'runset-bad', 'bad-draws-bern'
     )
-    csv_files = []
-    for i in range(4):
-        csv_files.append('{}-{}.csv'.format(goodfiles_path, i + 1))
+    csv_files = ['{}-{}.csv'.format(goodfiles_path, i + 1) for i in range(4)]
 
     with pytest.raises(Exception, match='Invalid sample from Stan CSV files'):
         model.generate_quantities(data=jdata, previous_fit=csv_files)

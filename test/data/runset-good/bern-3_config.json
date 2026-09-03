@@ -52,7 +52,7 @@
     "seed" : 12345
   },
   "output" : {
-    "file" : "\/tmp\/tmpuisjazeu\/bernoullik799pfr2\/bernoulli-20260720125836_3.csv",
+    "file" : "bern-3.csv",
     "diagnostic_file" : "",
     "refresh" : 100,
     "sig_figs" : 8,

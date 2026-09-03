@@ -32,7 +32,7 @@
     "seed": 12345
   },
   "output": {
-    "file": "",
+    "file": "rosenbrock_mle_iters.csv",
     "diagnostic_file": "",
     "refresh": 100,
     "sig_figs": -1,

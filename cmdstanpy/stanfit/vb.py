@@ -57,38 +57,9 @@ class CmdStanVB(SingleFileFit[VariationalConfig]):
                 f"An error occurred when parsing Stan csv {self.csv_file}"
             ) from exc
 
-    def create_inits(
-        self, seed: int | None = None, chains: int = 4
-    ) -> list[dict[str, np.ndarray]] | dict[str, np.ndarray]:
-        """
-        Create initial values for the parameters of the model
-        by randomly selecting draws from the variational approximation
-        draws.
-
-        :param seed: Used for random selection, defaults to None
-        :param chains: Number of initial values to return, defaults to 4
-        :return: The initial values for the parameters of the model.
-
-        If ``chains`` is 1, a dictionary is returned, otherwise a list
-        of dictionaries is returned, in the format expected for the
-        ``inits`` argument of :meth:`CmdStanModel.sample`.
-        """
-        sample = self.variational_sample
-        rng = np.random.default_rng(seed)
-        idxs = rng.choice(sample.shape[0], size=chains, replace=False)
-        if chains == 1:
-            draw = sample[idxs[0]]
-            return {
-                name: var.extract_reshape(draw)
-                for name, var in self.metadata.stan_vars.items()
-            }
-        return [
-            {
-                name: var.extract_reshape(sample[idx])
-                for name, var in self.metadata.stan_vars.items()
-            }
-            for idx in idxs
-        ]
+    def _draws_for_inits(self) -> np.ndarray:
+        """Exclude the variational mean stored in the first CSV row."""
+        return self.variational_sample
 
     def __repr__(self) -> str:
         mc = self.config.method_config

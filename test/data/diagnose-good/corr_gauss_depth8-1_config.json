@@ -49,7 +49,7 @@
     "seed": 1016009804
   },
   "output": {
-    "file": "",
+    "file": "corr_gauss_depth8-1.csv",
     "diagnostic_file": "",
     "refresh": 100,
     "sig_figs": -1,

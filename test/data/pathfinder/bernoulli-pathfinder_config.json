@@ -34,7 +34,7 @@
     "seed" : 12345
   },
   "output" : {
-    "file" : "\/tmp\/tmpj7vksit8\/bernoulli9hb1n4hj\/bernoulli-20260411203548.csv",
+    "file" : "bernoulli-pathfinder.csv",
     "diagnostic_file" : "",
     "refresh" : 100,
     "sig_figs" : 8,

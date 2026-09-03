@@ -21,11 +21,11 @@ except ImportError:
     XARRAY_INSTALLED = False
 
 from cmdstanpy.utils.data_munging import build_xarray_data
+from cmdstanpy.utils.filesystem import accompanying_json
 
 from .base import SingleFileFit
 from .metadata import LaplaceConfig, LaplaceRunConfig
 from .mle import CmdStanMLE
-from .naming import accompanying_json
 
 # TODO list:
 # - docs and example notebook
@@ -46,7 +46,7 @@ def _mode_from_files(
                 f'Mode file {mode_file} recorded in the laplace config not '
                 f'found.'
             )
-    mode_config = accompanying_json(mode_csv, 'config')
+    mode_config = Path(accompanying_json(mode_csv, 'config'))
     if not mode_config.exists():
         raise ValueError(
             f'No config file {mode_config.name} found alongside mode file '
@@ -77,9 +77,14 @@ class CmdStanLaplace(SingleFileFit[LaplaceConfig]):
         )
         if mode is None:
             mode = _mode_from_files(
-                kwargs['config'].method_config.mode, Path(csv_file).parent
+                kwargs['config'].method_config.mode, csv_file
             )
         return cls(mode=mode, **kwargs)
+
+    def save_output_files(self, dir: str | None = None) -> None:
+        """Move the Laplace outputs and optimization mode outputs together."""
+        self.mode.save_output_files(dir)
+        super().save_output_files(dir)
 
     def draws(self) -> np.ndarray:
         """

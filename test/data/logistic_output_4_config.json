@@ -52,7 +52,7 @@
     "seed" : 12345
   },
   "output" : {
-    "file" : "\/tmp\/tmp0g6lwtky\/logistickhkk1xer\/logistic-20260720162344_4.csv",
+    "file" : "logistic_output_4.csv",
     "diagnostic_file" : "",
     "refresh" : 100,
     "sig_figs" : 17,

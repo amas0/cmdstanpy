@@ -49,7 +49,7 @@
     "seed": 12345
   },
   "output": {
-    "file": "",
+    "file": "output_icar_nyc-1.csv",
     "diagnostic_file": "",
     "refresh": 10000,
     "sig_figs": -1,

@@ -52,7 +52,7 @@
     "seed" : 12345
   },
   "output" : {
-    "file" : "\/tmp\/tmprpkb7hyk\/datagen_poisson_glmos06jl3d\/datagen_poisson_glm-20260720163159.csv",
+    "file" : "no_param_hmc_sample.csv",
     "diagnostic_file" : "",
     "refresh" : 100,
     "sig_figs" : 8,

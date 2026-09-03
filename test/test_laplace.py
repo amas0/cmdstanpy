@@ -30,30 +30,45 @@ def test_laplace_from_opt_csv() -> None:
 def test_laplace_from_output_files() -> None:
     model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
     model = cmdstanpy.CmdStanModel(stan_file=model_file)
-    fit = model.laplace_sample(
-        data={},
-        seed=1234,
-    )
-    fit2 = from_output_files([fit.csv_file])
-    assert isinstance(fit2, cmdstanpy.CmdStanLaplace)
-    assert 'x' in fit2.stan_variables()
-    assert 'y' in fit2.stan_variables()
-    assert isinstance(fit2.mode, cmdstanpy.CmdStanMLE)
+    with TemporaryDirectory() as directory:
+        fit = model.laplace_sample(
+            data={},
+            seed=1234,
+            output_dir=directory,
+        )
+        fit2 = from_output_files(fit.csv_file)
+        assert isinstance(fit2, cmdstanpy.CmdStanLaplace)
+        assert 'x' in fit2.stan_variables()
+        assert 'y' in fit2.stan_variables()
+        assert isinstance(fit2.mode, cmdstanpy.CmdStanMLE)
 
-    with TemporaryDirectory() as dir:
-        model.laplace_sample(data={}, seed=1234, output_dir=dir)
-
+        # An explicit Laplace manifest includes the Laplace and mode CSV/config.
         fit3 = from_output_files(
             [
-                os.path.join(dir, f)
-                for f in os.listdir(dir)
-                if f.endswith(".csv") and "opt" not in f
+                os.path.join(directory, filename)
+                for filename in os.listdir(directory)
+                if filename.endswith((".csv", "_config.json"))
+                and "profile" not in filename
             ]
         )
         assert isinstance(fit3, cmdstanpy.CmdStanLaplace)
         assert 'x' in fit3.stan_variables()
         assert 'y' in fit3.stan_variables()
         assert isinstance(fit3.mode, cmdstanpy.CmdStanMLE)
+
+
+def test_laplace_save_output_files(tmp_path: Path) -> None:
+    model_file = os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock.stan')
+    model = cmdstanpy.CmdStanModel(stan_file=model_file)
+    fit = model.laplace_sample(data={}, seed=1234)
+
+    destination = tmp_path / 'saved'
+    fit.save_output_files(os.fspath(destination))
+
+    rebuilt = from_output_files(destination)
+    assert isinstance(rebuilt, cmdstanpy.CmdStanLaplace)
+    assert isinstance(rebuilt.mode, cmdstanpy.CmdStanMLE)
+    assert Path(rebuilt.mode.csv_file).parent == destination
 
 
 def test_laplace_missing_mode_files(tmp_path: Path) -> None:
@@ -66,7 +81,7 @@ def test_laplace_missing_mode_files(tmp_path: Path) -> None:
             os.path.join(DATAFILES_PATH, 'laplace', name),
             os.path.join(tmp_path, name),
         )
-    with pytest.raises(ValueError, match=r'Mode file'):
+    with pytest.raises(ValueError, match=r'optimization mode'):
         from_output_files(os.path.join(tmp_path, 'rosenbrock_laplace.csv'))
 
 
