@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 import cmdstanpy
-from cmdstanpy.stanfit import from_output_files
+from cmdstanpy.stanfit import from_csv, from_output_files
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 DATAFILES_PATH = os.path.join(HERE, 'data')
@@ -41,6 +41,11 @@ def test_laplace_from_output_files() -> None:
         assert 'x' in fit2.stan_variables()
         assert 'y' in fit2.stan_variables()
         assert isinstance(fit2.mode, cmdstanpy.CmdStanMLE)
+
+        with pytest.deprecated_call(match='use from_output_files instead'):
+            fit_from_csv = from_csv([fit.csv_file])
+        assert isinstance(fit_from_csv, cmdstanpy.CmdStanLaplace)
+        assert isinstance(fit_from_csv.mode, cmdstanpy.CmdStanMLE)
 
         # An explicit Laplace manifest includes the Laplace and mode CSV/config.
         fit3 = from_output_files(

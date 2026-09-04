@@ -886,6 +886,26 @@ def test_instantiate_from_output_filesfiles() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    'path',
+    [
+        [
+            os.path.join(DATAFILES_PATH, 'runset-good', f'bern-{chain}.csv')
+            for chain in range(1, 5)
+        ],
+        os.path.join(DATAFILES_PATH, 'runset-good', 'bern-*.csv'),
+    ],
+)
+def test_from_csv_deprecated_alias(
+    path: str | list[str],
+) -> None:
+    with pytest.deprecated_call(match='use from_output_files instead'):
+        fit = cmdstanpy.from_csv(path)
+
+    assert isinstance(fit, CmdStanMCMC)
+    assert fit.chains == 4
+
+
 def test_pd_xr_agreement() -> None:
     csvfiles_path = os.path.join(DATAFILES_PATH, 'runset-good')
     bern_fit = from_output_files(path=csvfiles_path)

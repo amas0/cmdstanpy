@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import glob
 import os
 import re
+import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
@@ -778,3 +780,38 @@ def from_output_files(
         raise ValueError(
             f'An error occurred processing the output files:\n\t{exc}'
         ) from exc
+
+
+def from_csv(
+    path: str | os.PathLike | Sequence[str | os.PathLike] | None = None,
+    method: str | None = None,
+) -> AnyStanFit:
+    """Load a fit from Stan CSV files; deprecated alias for from_output_files.
+
+    In addition to the path forms supported by :func:`from_output_files`, this
+    compatibility wrapper accepts legacy CSV-only lists and glob patterns. CSV
+    lists are supplemented with their adjacent config JSON files before being
+    passed to :func:`from_output_files`.
+    """
+    warnings.warn(
+        "from_csv is deprecated and will be removed in a future release; "
+        "use from_output_files instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    csv_files: tuple[Path, ...] | None = None
+    if isinstance(path, str) and '*' in path:
+        csv_files = tuple(Path(file) for file in glob.glob(path))
+    elif isinstance(path, Sequence) and not isinstance(
+        path, (str, os.PathLike)
+    ):
+        csv_files = tuple(Path(file) for file in path)
+
+    if csv_files is None:
+        return from_output_files(path, method)
+    if len(csv_files) == 1:
+        return from_output_files(csv_files[0], method)
+    return from_output_files(
+        (*csv_files, *(_json_for_csv(file, 'config') for file in csv_files)),
+        method,
+    )

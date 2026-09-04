@@ -32,6 +32,7 @@ from .stanfit import (
     CmdStanMLE,
     CmdStanPathfinder,
     CmdStanVB,
+    from_csv,
     from_output_files,
 )
 from .utils import (
@@ -61,6 +62,7 @@ __all__ = [
     'CmdStanPathfinder',
     'CmdStanModel',
     'from_output_files',
+    'from_csv',
     'write_stan_json',
     'show_versions',
     'rebuild_cmdstan',
