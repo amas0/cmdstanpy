@@ -29,6 +29,9 @@ def test_instantiate() -> None:
     assert 'CmdStanMLE: model=rosenbrock' in repr(mle)
     assert 'method=optimize' in repr(mle)
     assert mle.column_names == ('lp__', 'x', 'y')
+    # Pre-2.39 outputs have no convergence status, so retain the legacy
+    # assumption that successfully produced output converged.
+    assert mle.converged
     np.testing.assert_almost_equal(mle.optimized_params_dict['x'], 1, decimal=3)
     np.testing.assert_almost_equal(mle.optimized_params_dict['y'], 1, decimal=3)
 
@@ -75,6 +78,42 @@ def test_instantiate_from_output_filesfiles_save_iterations() -> None:
     )
     assert mle.optimized_iterations_np is not None
     assert mle.optimized_iterations_np.shape == (173, 11)
+
+
+@pytest.mark.parametrize(
+    ('status', 'expected'),
+    (
+        (10, True),
+        (20, True),
+        (21, True),
+        (30, True),
+        (31, True),
+        (0, False),
+        (40, False),
+        (-1, False),
+    ),
+)
+def test_convergence_status_from_csv(
+    tmp_path: Any, status: int, expected: bool
+) -> None:
+    csv_file = tmp_path / 'mle.csv'
+    csv_file.write_text(
+        'lp__,converged__,x,y\n' '-2,0,0,0\n' f'-1,{status},1,1\n'
+    )
+    config_file = tmp_path / 'mle_config.json'
+    shutil.copy(
+        os.path.join(DATAFILES_PATH, 'optimize', 'rosenbrock_mle_config.json'),
+        config_file,
+    )
+
+    # The final CSV status takes precedence over the process-status fallback.
+    mle = CmdStanMLE.from_files(csv_file, config_file, converged=not expected)
+    assert mle.converged is expected
+
+    # Reconstruction has no process status, so it must also use the column.
+    reconstructed = from_output_files(path=[csv_file, config_file])
+    assert isinstance(reconstructed, CmdStanMLE)
+    assert reconstructed.converged is expected
 
 
 def test_rosenbrock(caplog: pytest.LogCaptureFixture) -> None:

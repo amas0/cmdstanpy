@@ -9,7 +9,7 @@ import warnings
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import cast
+from typing import TypeAlias, cast
 
 from cmdstanpy.utils.filesystem import accompanying_json
 
@@ -26,7 +26,7 @@ from .mle import CmdStanMLE
 from .pathfinder import CmdStanPathfinder
 from .vb import CmdStanVB
 
-AnyStanFit = (
+AnyStanFit: TypeAlias = (
     CmdStanMCMC | CmdStanMLE | CmdStanVB | CmdStanPathfinder | CmdStanLaplace
 )
 

@@ -378,8 +378,10 @@ class CmdStanModel:
         :param save_iterations: When ``True``, save intermediate approximations
             to the output CSV file.  Default is ``False``.
 
-        :param require_converged: Whether or not to raise an error if Stan
-            reports that "The algorithm may not have converged".
+        :param require_converged: Whether or not to raise an error if the
+            optimizer fails to meet a convergence criterion. With CmdStan
+            2.39 and newer this is determined from the ``converged__`` output
+            column; older versions use the process return code.
 
         :param show_console: If ``True``, stream CmdStan messages sent to
             stdout and stderr to the console.  Default is ``False``.
@@ -441,8 +443,8 @@ class CmdStanModel:
             )
         runset.raise_for_timeouts()
 
-        converged = runset._check_retcodes()
-        if not converged:
+        process_succeeded = runset._check_retcodes()
+        if not process_succeeded:
             msg = "Error during optimization! Command '{}' failed: {}".format(
                 ' '.join(runset.cmd(0)), runset.get_err_msgs()
             )
@@ -450,12 +452,18 @@ class CmdStanModel:
                 get_logger().warning(msg)
             else:
                 raise RuntimeError(msg)
-        return CmdStanMLE.from_files(
+        mle = CmdStanMLE.from_files(
             csv_file=runset.csv_files[0],
             config_file=runset.config_files[0],
             stdout_file=runset.stdout_files[0],
-            converged=converged,
+            converged=process_succeeded,
         )
+        if process_succeeded and not mle.converged:
+            msg = 'Error during optimization! The algorithm did not converge.'
+            if require_converged:
+                raise RuntimeError(msg)
+            get_logger().warning(msg)
+        return mle
 
     # pylint: disable=too-many-arguments
     def sample(

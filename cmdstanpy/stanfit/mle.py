@@ -14,6 +14,10 @@ from cmdstanpy.utils import get_logger
 from .base import SingleFileFit
 from .metadata import OptimizeConfig, OptimizeRunConfig
 
+# Codes indicating successful convergence of MLE
+# See stan::optimize::TerminationCondition in stan-dev/stan for definitions
+_CONVERGED_CODES = frozenset((10, 20, 21, 30, 31))
+
 
 @dataclass(kw_only=True)
 class CmdStanMLE(SingleFileFit[OptimizeConfig]):
@@ -36,12 +40,19 @@ class CmdStanMLE(SingleFileFit[OptimizeConfig]):
         stdout_file: str | os.PathLike | None = None,
         converged: bool = True,
     ) -> CmdStanMLE:
-        return cls(
+        fit = cls(
             converged=converged,
             **cls._from_files_kwargs(
                 csv_file, config_file, stdout_file, OptimizeRunConfig
             ),
         )
+        # Below conditional only true in CmdStan 2.39+
+        if 'converged__' in fit.metadata.method_vars:
+            # Intermediate rows have status 0, so saved iterations require
+            # using the termination condition from the final row
+            status = fit.method_variables()['converged__'][-1]
+            fit.converged = status in _CONVERGED_CODES
+        return fit
 
     def _warn_if_not_converged(self) -> None:
         if not self.converged:
