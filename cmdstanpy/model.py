@@ -55,7 +55,7 @@ OptionalPath = str | os.PathLike | None
 
 
 def _output_files_for_generate_quantities(files: list[str]) -> list[str]:
-    """Add config sidecars for the historical CSV-only input form."""
+    """Add corresponding config files for the CSV-only input"""
     output_files = list(files)
     if all(os.path.splitext(path)[1] == '.csv' for path in files):
         output_files.extend(

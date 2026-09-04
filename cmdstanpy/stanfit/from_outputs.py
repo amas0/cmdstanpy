@@ -504,9 +504,9 @@ def _associate_metrics(
     if len(by_name) == len(metric_files) and set(wanted) == set(by_name):
         return tuple(by_name[name] for name in wanted)
     raise ValueError(
-        'Metric JSONs must use the standard draw sidecar names. Rename them '
-        'or call CmdStanMCMC.from_files() with an explicitly ordered '
-        'metric_files list.'
+        'Non-standard metric JSONs names found. Call '
+        'CmdStanMCMC.from_files() with an explicitly ordered '
+        'metric_files list instead.'
     )
 
 
