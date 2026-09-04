@@ -49,7 +49,7 @@ class CmdStanMLE(SingleFileFit[OptimizeConfig]):
                 'Invalid estimate, optimization failed to converge.'
             )
 
-    def _warn_if_no_iterations(self) -> bool:
+    def _check_for_saved_iterations(self) -> bool:
         """Whether saved iterations are available, warning when not."""
         if not self.config.method_config.save_iterations:
             get_logger().warning(
@@ -118,7 +118,7 @@ class CmdStanMLE(SingleFileFit[OptimizeConfig]):
         the value for `lp__` as well as all Stan program variables.
 
         """
-        if not self._warn_if_no_iterations():
+        if not self._check_for_saved_iterations():
             return None
         self._warn_if_not_converged()
         self._assemble()
@@ -189,7 +189,7 @@ class CmdStanMLE(SingleFileFit[OptimizeConfig]):
             )
         save_iterations = self.config.method_config.save_iterations
         if warn and inc_iterations and not save_iterations:
-            self._warn_if_no_iterations()
+            self._check_for_saved_iterations()
         if warn:
             self._warn_if_not_converged()
         self._assemble()
